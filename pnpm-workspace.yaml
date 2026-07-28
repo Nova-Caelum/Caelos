@@ -1,5 +1,17 @@
 packages:
   - '.'
+
+# Package build-script allowlist (pnpm 10.4+ per-repo policy).
+# These packages need native builds (Rust binary for tailwind oxide, esbuild binary).
+onlyBuiltDependencies:
+  - '@tailwindcss/oxide'
+  - esbuild
+
+# Version overrides (formerly under package.json's `pnpm.overrides` — deprecated in pnpm 11).
+overrides:
+  vite: 6.3.5
+
+# Restrict lockfile resolution to Linux (CI target — CF Pages runs Ubuntu).
 supportedArchitectures:
   os:
     - linux
