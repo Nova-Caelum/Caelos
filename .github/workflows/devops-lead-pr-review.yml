@@ -28,8 +28,16 @@ on:
 
 jobs:
   devops-lead-review:
-    # Trusted-committer gate (public-repo hygiene). External PRs skip review.
-    if: contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
+    # Trusted-committer gate (public-repo hygiene). Same-repo PRs run review;
+    # fork PRs skip (they wouldn't get secrets anyway, but explicit skip = clean
+    # green-check on the PR UI instead of a failed auth attempt).
+    #
+    # Note (2026-07-28): initially used `github.event.pull_request.author_association`
+    # here, but that context field silently evaluated to nothing on Caelos
+    # (workflow runs 30400886495, 30401203496, 30401437662 all skipped despite
+    # API-verified MEMBER association). `github.actor` and same-repo check both
+    # evaluated correctly; using the safer structural check.
+    if: ${{ github.event.pull_request.head.repo.owner.login == github.repository_owner }}
     permissions:
       contents: write
       pull-requests: write
