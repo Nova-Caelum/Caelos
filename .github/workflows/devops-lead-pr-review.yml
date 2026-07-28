@@ -28,8 +28,8 @@ on:
 
 jobs:
   devops-lead-review:
-    # DIAGNOSTIC 2026-07-28: gate temporarily open to isolate skip cause on Caelos
-    if: ${{ true }}
+    # Trusted-committer gate (public-repo hygiene). External PRs skip review.
+    if: ${{ github.event.pull_request.author_association == 'OWNER' || github.event.pull_request.author_association == 'MEMBER' || github.event.pull_request.author_association == 'COLLABORATOR' }}
     permissions:
       contents: write
       pull-requests: write
