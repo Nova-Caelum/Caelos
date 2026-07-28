@@ -128,3 +128,5 @@ License selection is deferred until v1.0. See [LICENSE](LICENSE) for the pre-alp
 ---
 
 *Caelos, from Nova Caelum & Co. — an AI-native strategy and transformation firm building the operator's substrate for the agentic age.*
+
+<!-- Caelos repo bootstrap verification test 2026-07-28: first PR after initial push; exercises DevOps-Lead PR-review workflow end-to-end on the new Caelos substrate. -->
