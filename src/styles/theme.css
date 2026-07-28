@@ -1,0 +1,568 @@
+@custom-variant dark (&:is(.dark *));
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Nova Caelum · Brand-UI tokens (product surface system)
+   Ratified 2026-07-26 · see skills_library/nova-caelum-brand-ui/SKILL.md
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --font-size: 14px;
+
+  /* ── Four-tier surface system ── */
+  --nc-chrome:      #12121E;   /* sidebar, top-nav, right-rail — R=G neutral, blue depth preserved */
+  --nc-ground:      #1C1B28;   /* main canvas — whisper of warm-purple (R−G=+1) */
+  --nc-elevated:    #221E33;   /* cards, panels, task groups */
+  --nc-elevated-2:  #2A2540;   /* popovers, hover states, floating menus */
+
+  /* ── Identity accent (Nova Caelum Indigo — new brand-palette token) ── */
+  --nc-accent:        #6D5AD1;
+  --nc-accent-hover:  #7E6DE5;
+  --nc-accent-tint:   rgba(109,90,209,0.10);
+  --nc-accent-line:   rgba(109,90,209,0.22);
+  --nc-accent-cream:  rgba(196,185,240,0.90);
+
+  /* ── Semantic palette assignments ── */
+  --nc-sage:                #7A9E93;   /* brand app-icon teal */
+  --nc-sea-green:           #5B7D73;   /* semantic done */
+  --nc-slate-violet:        #4E4C82;   /* structural cool accent */
+  --nc-desaturated-violet:  #8879A0;   /* engineer / refactor / atmospheric */
+  --nc-peach-gold:          #E8B87A;   /* high priority / in-progress */
+  --nc-deep-maroon:         #C25B62;   /* urgent / blocked (brightened for dark UI) */
+  --nc-light-indigo:        #8E96CC;   /* medium priority */
+  --nc-muted-stone:         #8F8A80;   /* low priority / neutral labels */
+
+  /* ── Text tiers ── */
+  --nc-text-cream:  #F4EAD5;
+  --nc-text-muted:  #9089A0;
+  --nc-text-dim:    #6E677E;
+  --nc-text-faint:  #55506A;
+
+  /* ── Hairlines ── */
+  --nc-hair:    rgba(255,255,255,0.045);
+  --nc-hair-2:  rgba(255,255,255,0.09);
+  --nc-hair-3:  rgba(255,255,255,0.14);
+
+  /* ── Font trinity (brand-ui v2.x) ──
+     IBM Plex Sans — all UI copy (Operational + Semantic voice).
+     IBM Plex Mono — structural coordinates only (paths / IDs / routes / versions / shortcuts).
+     Yrsa is retired from in-app text: the wordmark now renders from the raster brand asset. */
+  --nc-font-ui:   'IBM Plex Sans', system-ui, sans-serif;
+  --nc-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* ── Shadcn / Tailwind token bridge (map brand-ui → shadcn slots) ── */
+  --background: var(--nc-ground);
+  --foreground: var(--nc-text-cream);
+  --card: var(--nc-elevated);
+  --card-foreground: var(--nc-text-cream);
+  --popover: var(--nc-elevated-2);
+  --popover-foreground: var(--nc-text-cream);
+  --primary: var(--nc-accent);
+  --primary-foreground: var(--nc-text-cream);
+  --secondary: var(--nc-elevated);
+  --secondary-foreground: var(--nc-text-cream);
+  --muted: var(--nc-chrome);
+  --muted-foreground: var(--nc-text-muted);
+  --accent: var(--nc-accent-tint);
+  --accent-foreground: var(--nc-text-cream);
+  --destructive: var(--nc-deep-maroon);
+  --destructive-foreground: var(--nc-text-cream);
+  --border: var(--nc-hair-2);
+  --input: var(--nc-hair-2);
+  --input-background: rgba(255,255,255,0.02);
+  --switch-background: var(--nc-slate-violet);
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: var(--nc-accent);
+  --chart-1: var(--nc-accent);
+  --chart-2: var(--nc-sea-green);
+  --chart-3: var(--nc-peach-gold);
+  --chart-4: var(--nc-light-indigo);
+  --chart-5: var(--nc-deep-maroon);
+  --radius: 0.5rem;
+  --sidebar: var(--nc-chrome);
+  --sidebar-foreground: var(--nc-text-cream);
+  --sidebar-primary: var(--nc-accent);
+  --sidebar-primary-foreground: var(--nc-text-cream);
+  --sidebar-accent: var(--nc-accent-tint);
+  --sidebar-accent-foreground: var(--nc-text-cream);
+  --sidebar-border: var(--nc-hair);
+  --sidebar-ring: var(--nc-accent);
+}
+
+/* Dark class mirrors :root — this app runs always-dark */
+.dark {
+  --background: var(--nc-ground);
+  --foreground: var(--nc-text-cream);
+  --card: var(--nc-elevated);
+  --card-foreground: var(--nc-text-cream);
+  --popover: var(--nc-elevated-2);
+  --popover-foreground: var(--nc-text-cream);
+  --primary: var(--nc-accent);
+  --primary-foreground: var(--nc-text-cream);
+  --secondary: var(--nc-elevated);
+  --secondary-foreground: var(--nc-text-cream);
+  --muted: var(--nc-chrome);
+  --muted-foreground: var(--nc-text-muted);
+  --accent: var(--nc-accent-tint);
+  --accent-foreground: var(--nc-text-cream);
+  --destructive: var(--nc-deep-maroon);
+  --destructive-foreground: var(--nc-text-cream);
+  --border: var(--nc-hair-2);
+  --input: var(--nc-hair-2);
+  --input-background: rgba(255,255,255,0.02);
+  --switch-background: var(--nc-slate-violet);
+  --ring: var(--nc-accent);
+  --chart-1: var(--nc-accent);
+  --chart-2: var(--nc-sea-green);
+  --chart-3: var(--nc-peach-gold);
+  --chart-4: var(--nc-light-indigo);
+  --chart-5: var(--nc-deep-maroon);
+  --sidebar: var(--nc-chrome);
+  --sidebar-foreground: var(--nc-text-cream);
+  --sidebar-primary: var(--nc-accent);
+  --sidebar-primary-foreground: var(--nc-text-cream);
+  --sidebar-accent: var(--nc-accent-tint);
+  --sidebar-accent-foreground: var(--nc-text-cream);
+  --sidebar-border: var(--nc-hair);
+  --sidebar-ring: var(--nc-accent);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Tailwind font-family theme keys — drives the font-sans / font-mono utility classes */
+  --font-sans: var(--nc-font-ui);
+  --font-mono: var(--nc-font-mono);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--nc-font-ui);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  /* Operational Landmark — page/project titles. IBM Plex Sans 600, tight tracking.
+     Yrsa is reserved exclusively for the Nova Caelum wordmark (rendered as a raster
+     asset in the sidebar, not as live text) — see skill §Typographic intent. */
+  h1 {
+    font-family: var(--nc-font-ui);
+    font-size: var(--text-2xl);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+
+  h2 {
+    font-family: var(--nc-font-ui);
+    font-size: var(--text-xl);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  h4 {
+    font-size: var(--text-base);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  label {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  button {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  input {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Component utility classes (brand-ui recipes)
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Matte primary CTA — accent-carried identity, dulled via overlay (hex token unchanged).
+   Recipe: kill glow, kill gloss, overlay accent, soften text, neutral edge + shadow. */
+.nc-matte-cta {
+  background: linear-gradient(rgba(0,0,0,0.14), rgba(0,0,0,0.14)), var(--nc-accent);
+  color: rgba(244,234,213,0.94);
+  border: 1px solid rgba(0,0,0,0.18);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.30);
+  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 100ms ease;
+}
+.nc-matte-cta:hover:not(:disabled) {
+  background: linear-gradient(rgba(0,0,0,0.06), rgba(0,0,0,0.06)), var(--nc-accent-hover);
+  color: rgba(244,234,213,1);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.40);
+}
+.nc-matte-cta:active:not(:disabled) { transform: translateY(1px); }
+
+/* Ghost search field — hairline at rest, accent-tinted on hover */
+.nc-ghost-search {
+  background: transparent;
+  border: 1px solid var(--nc-hair-2);
+  transition: border-color 160ms ease, background 160ms ease;
+}
+.nc-ghost-search:hover, .nc-ghost-search:focus-within {
+  border-color: var(--nc-accent-line);
+  background: var(--nc-accent-tint);
+}
+
+/* Ghost button — secondary action, hairline border, hover raises weight */
+.nc-btn-ghost {
+  background: transparent;
+  color: var(--nc-text-muted);
+  border: 1px solid var(--nc-hair-2);
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+}
+.nc-btn-ghost:hover:not(:disabled) {
+  border-color: var(--nc-hair-3);
+  background: rgba(255,255,255,0.02);
+  color: var(--nc-text-cream);
+}
+
+/* Accent card — soft callout / tip surface */
+.nc-accent-card {
+  background: rgba(109,90,209,0.06);
+  border: 1px solid rgba(109,90,209,0.22);
+}
+
+/* Active nav item — accent-tint background + inset accent left edge (no layout shift) */
+.nc-nav-active {
+  background: var(--nc-accent-tint);
+  color: var(--nc-text-cream);
+  box-shadow: inset 2px 0 0 var(--nc-accent);
+}
+
+/* Kbd chip — accent-tinted keyboard shortcut indicator */
+.nc-kbd {
+  font-family: var(--nc-font-mono);
+  font-size: 10.5px;
+  color: var(--nc-accent-cream);
+  background: var(--nc-accent-tint);
+  border: 1px solid var(--nc-accent-line);
+  border-radius: 3px;
+  padding: 1px 5px;
+  letter-spacing: 0.03em;
+}
+
+/* Liquid-glass context menu / floating panel — frosted backdrop + accent-tinted edge.
+   Recipe: semi-transparent elevated-2 substrate + heavy blur + subtle saturate for depth,
+   accent-line border carries brand identity, deep shadow + inset highlight for lift. */
+.nc-glass-menu {
+  background: rgba(42, 37, 64, 0.55) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(109, 90, 209, 0.28) !important;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.02),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+}
+.nc-glass-menu [role="menuitem"] {
+  transition: background 120ms ease, color 120ms ease;
+  border-radius: 6px;
+}
+.nc-glass-menu [role="menuitem"]:focus,
+.nc-glass-menu [role="menuitem"][data-highlighted] {
+  background: rgba(109, 90, 209, 0.22) !important;
+  color: var(--nc-text-cream) !important;
+  outline: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Flat status chip — Linear-style. Replaces prior einUI liquid-glass pill.
+   Rationale: glass requires backdrop variance to earn its recipe; a status label
+   sitting on a solid header has nothing to blur behind it, so the depth becomes
+   decoration. Glass reserved for overlays (.nc-glass-menu).
+
+   Recipe:
+     - Opaque-looking tint chip (pill-color @ 14% over ground)
+     - Hairline border (pill-color @ 26%)
+     - Text: lightened pill-color for identity + contrast (WCAG ≥ 4.5:1 on ground)
+     - Leading 6px dot at full pill-color (glanceable identity)
+     - No gradient / no backdrop-filter / no inset highlight / no rim shadow
+
+   Two variants:
+     .nc-glass-pill        — interactive (StatusPill: has hover state + chevron)
+     .nc-glass-pill-static — read-only (StateBadge: no hover)
+   ────────────────────────────────────────────────────────────────────────── */
+.nc-glass-pill,
+.nc-glass-pill-static {
+  background: color-mix(in srgb, var(--pill-color, #6D5AD1) 14%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--pill-color, #6D5AD1) 26%, transparent) !important;
+  color: color-mix(in srgb, var(--pill-color, #6D5AD1) 45%, #F4EAD5) !important;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+/* Trigger override: force flex-start so [dot][label][chevron] group left-to-right
+   instead of justify-between spreading them apart across a 92px pill. */
+.nc-glass-pill { justify-content: flex-start !important; gap: 4px !important; }
+/* NOTE: Leading state-dot is NOT rendered via ::before here — both consumers
+   (StateBadge markup and NcSelect SelectItem markup) already own their own dot span.
+   Adding ::before would produce a double-dot. */
+.nc-glass-pill:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--pill-color, #6D5AD1) 22%, transparent) !important;
+  border-color: color-mix(in srgb, var(--pill-color, #6D5AD1) 40%, transparent) !important;
+  color: color-mix(in srgb, var(--pill-color, #6D5AD1) 30%, #F4EAD5) !important;
+}
+.nc-glass-pill:focus-visible {
+  outline: 2px solid var(--nc-accent);
+  outline-offset: 2px;
+}
+
+/* Legacy grid utility (retained for reference imports if any use it — do NOT apply on product surfaces) */
+.nc-grid-bg {
+  background-color: var(--nc-ground);
+  background-image:
+    linear-gradient(rgba(78,76,130,0.10) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(78,76,130,0.10) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-position: -1px -1px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Ambient depth — cures the "dead flat" feel without touching layout.
+   Two soft radial glows on the ground layer: a warm accent bloom at top-left
+   and a cool violet bloom at bottom-right. Sub-perceptible individually,
+   collectively give the canvas presence. Fixed-attachment so it doesn't
+   scroll away.
+   ────────────────────────────────────────────────────────────────────────── */
+body {
+  background-color: var(--nc-ground);
+  background-image:
+    radial-gradient(1200px 800px at 8% -8%, rgba(109, 90, 209, 0.10), transparent 60%),
+    radial-gradient(1000px 700px at 96% 104%, rgba(122, 158, 147, 0.06), transparent 60%);
+  background-attachment: fixed;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Scrollbars — thin, dark, brand. Kills the fat OS track between sidebar/main.
+   ────────────────────────────────────────────────────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--nc-hair-3) transparent;
+}
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb {
+  background: var(--nc-hair-2);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--nc-hair-3); background-clip: padding-box; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-corner { background: transparent; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Focus ring — global keyboard affordance. Replaces browser default outline.
+   ────────────────────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--nc-accent);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible),
+[role="combobox"]:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Elevated popover shadow upgrade — applies to Radix Select / Dropdown / Popper
+   content wrappers. Extends the .nc-glass-menu premium feel to non-glass popovers.
+   ────────────────────────────────────────────────────────────────────────── */
+[data-radix-popper-content-wrapper] > * {
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.45),
+    0 2px 6px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Motion — pop overlays open with a fast fade+scale (Linear/Apple pattern).
+   CSS-only; keyed on Radix's own [data-state] attributes.
+   ────────────────────────────────────────────────────────────────────────── */
+@keyframes nc-pop-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes nc-pop-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.96); }
+}
+[data-radix-popper-content-wrapper] > *[data-state="open"] {
+  animation: nc-pop-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: var(--radix-popper-transform-origin, center);
+}
+[data-radix-popper-content-wrapper] > *[data-state="closed"] {
+  animation: nc-pop-out 100ms cubic-bezier(0.4, 0, 1, 1);
+  transform-origin: var(--radix-popper-transform-origin, center);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Section shelf — sub-perceptible tab-like presence for nav-group headers
+   (PROJECTS / INITIATIVES). Barely visible at rest: whisper of ambient fill,
+   top hairline, dark down-shadow beneath (reads as a raised strip on dark bg).
+   Not a pill; not a border. Groups the section label + its `+` affordance
+   into one implied unit. Hover raises the ambient a tick.
+   ────────────────────────────────────────────────────────────────────────── */
+.nc-section-shelf {
+  padding: 6px 8px 6px 12px;
+  background: rgba(255, 255, 255, 0.006);
+  transition: background 200ms ease;
+  cursor: pointer;
+  user-select: none;
+}
+.nc-section-shelf:hover {
+  background: rgba(255, 255, 255, 0.018);
+}
+.nc-section-group {
+  border-top: 1px solid var(--nc-hair);
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0.014) 0%,
+    rgba(255, 255, 255, 0.006) 40%,
+    rgba(255, 255, 255, 0.000) 100%);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Ghost search field v2 — the flagship recipe on the app's most-used input.
+   Rounded-full, subtle inner ambient, hairline border, accent-glow on focus.
+   ────────────────────────────────────────────────────────────────────────── */
+.nc-search {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--nc-hair-2);
+  border-radius: 999px;
+  color: var(--nc-text-cream);
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+.nc-search::placeholder { color: var(--nc-text-dim); }
+.nc-search:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--nc-hair-3);
+}
+.nc-search:focus,
+.nc-search:focus-visible {
+  outline: none;
+  background: rgba(109, 90, 209, 0.06);
+  border-color: var(--nc-accent-line);
+  box-shadow: 0 0 0 3px rgba(109, 90, 209, 0.14);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Text input / textarea / select-trigger — einUI-inspired liquid-glass focus.
+   Rest: quiet fill + hairline border.
+   Focus: diagonal gradient fill (light-indigo → sage, non-accent to avoid
+   ground-collision), soft focus-purple hairline (#A896F0 @ 20%), diffuse
+   outer glow that fades to transparent (rounded/soft, not hard-ring), whisper
+   inset top highlight.
+   Smooth pop-in: @property lets the gradient color-stops interpolate over the
+   transition duration; without it, background transitions from solid → gradient
+   would snap. Falls back gracefully to snap on browsers without @property.
+   Replaces the harsh `focus:border-[#6D5AD1]` outline pattern.
+   ────────────────────────────────────────────────────────────────────────── */
+@property --nc-input-fill-a {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: rgba(255, 255, 255, 0.02);
+}
+@property --nc-input-fill-b {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: rgba(255, 255, 255, 0);
+}
+
+.nc-input {
+  --nc-input-fill-a: rgba(255, 255, 255, 0.02);
+  --nc-input-fill-b: rgba(255, 255, 255, 0);
+  background: linear-gradient(135deg, var(--nc-input-fill-a) 0%, var(--nc-input-fill-b) 100%);
+  border: 1px solid var(--nc-hair-2);
+  border-radius: 0.5rem;
+  color: var(--nc-text-cream);
+  transition:
+    --nc-input-fill-a 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    --nc-input-fill-b 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.nc-input::placeholder { color: var(--nc-text-dim); }
+.nc-input:hover:not(:disabled):not(:focus) {
+  --nc-input-fill-a: rgba(255, 255, 255, 0.03);
+  border-color: var(--nc-hair-3);
+}
+.nc-input:focus,
+.nc-input:focus-visible {
+  outline: none;
+  --nc-input-fill-a: rgba(142, 150, 204, 0.22);
+  --nc-input-fill-b: rgba(122, 158, 147, 0.16);
+  border-color: rgba(168, 150, 240, 0.16);
+  box-shadow: 0 0 10px rgba(168, 150, 240, 0.28);
+}
+.nc-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

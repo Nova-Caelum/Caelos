@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<!--
+  ════════════════════════════════════════════════════════════════
+  NOVA CAELUM — CANONICAL SURFACE TREATMENTS (graph-paper aesthetic)
+
+  🟡 SCOPE: html-artifacts quick-draft / artifact-as-thinking-tool outputs ONLY.
+  Use for: in-session HTML artifacts, audit reports, brainstorming surfaces,
+           internal writeups, ephemeral visual review docs.
+
+  DO NOT use for: formal stationery, client decks, PDFs, white papers,
+                  Associate business mockups, Analyst client deliverables,
+                  novacaelum.com marketing site, branded merchandise,
+                  any "official" Nova Caelum-branded artifact.
+
+  Formal deliverables use flat brand surfaces — NO graph-paper grid, NO
+  translucent-overlay glass. When in doubt, use formal style and ask Daniel.
+
+  Source-of-truth scope: skills/nova-caelum-brand-notes/SKILL.md § Surface Treatments
+  ════════════════════════════════════════════════════════════════
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nova Caelum — Canonical Surface Treatments (graph-paper aesthetic only)</title>
+
+  <!-- NC Brand Fonts: Yrsa (serif headings) + Inter (sans body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Yrsa:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ─────────────────────────────────────────────
+       NC BRAND TOKENS
+    ───────────────────────────────────────────── */
+    :root {
+      --nc-bg:            #1d1329;   /* Deep Midnight Indigo */
+      --nc-text:          #f5ebdd;   /* Dawn Cream */
+      --nc-slate-violet:  #3D426C;   /* Deep Slate Violet — also the gridline source */
+      --nc-sea-green:     #5B7D73;   /* Sea Green / Coastal Sage */
+      --nc-muted-stone:   #8A8580;   /* Muted Stone */
+      --nc-secondary:     #B0A99F;   /* Secondary Stone */
+
+      /* Grid: Deep Slate Violet at 0.12 opacity on --nc-bg.
+         Derived by rendering at 0.08–0.15 and selecting the lowest
+         value where the grid reads at arm's length but disappears
+         behind body text. 0.12 passes that test on a calibrated
+         display; reduce to 0.08 on very bright monitors. */
+      --nc-grid-line:     rgba(61, 66, 108, 0.12);
+      --nc-grid-size:     28px;
+    }
+
+    /* ─────────────────────────────────────────────
+       RESET
+    ───────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ─────────────────────────────────────────────
+       PATTERN 1 — GRIDLINE BACKGROUND
+       28 px crosshatch, Deep Slate Violet at 12 %
+       Low contrast, non-distracting on dark NC bg.
+       Source pattern: howtoproduct_guide.html
+       (adapted: light --rule:#C7CEC4 → dark rgba(61,66,108,0.12))
+    ───────────────────────────────────────────── */
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background-color: var(--nc-bg);
+      background-image:
+        linear-gradient(var(--nc-grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--nc-grid-line) 1px, transparent 1px);
+      background-size: var(--nc-grid-size) var(--nc-grid-size);
+      background-position: -1px -1px;
+      color: var(--nc-text);
+      min-height: 100vh;
+    }
+
+    /* ─────────────────────────────────────────────
+       LAYOUT
+    ───────────────────────────────────────────── */
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 64px 32px 96px;
+    }
+
+    .page-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(245, 235, 221, 0.35);
+      margin-bottom: 12px;
+    }
+
+    .page-title {
+      font-family: 'Yrsa', Georgia, serif;
+      font-size: 56px;         /* hero scale — Daniel calibrated 56–64px */
+      font-weight: 500;
+      line-height: 1.1;
+      color: var(--nc-text);
+      margin-bottom: 8px;
+    }
+
+    .page-sub {
+      font-family: 'Inter', sans-serif;
+      font-size: 18px;         /* body scale — 18–20px */
+      color: rgba(245, 235, 221, 0.65);
+      margin-bottom: 72px;
+      line-height: 1.6;
+    }
+
+    /* ─────────────────────────────────────────────
+       SECTION WRAPPERS
+    ───────────────────────────────────────────── */
+    .section {
+      margin-bottom: 72px;
+    }
+
+    .section-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(245, 235, 221, 0.30);
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: 'Yrsa', Georgia, serif;
+      font-size: 36px;         /* section head scale — 32–40px */
+      font-weight: 500;
+      line-height: 1.2;
+      color: var(--nc-text);
+      margin-bottom: 8px;
+    }
+
+    .annotation {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: rgba(245, 235, 221, 0.45);
+      line-height: 1.5;
+      margin-bottom: 28px;
+      font-style: italic;
+    }
+
+    /* ─────────────────────────────────────────────
+       PATTERN 1 DEMO — gridline context
+       (just a region that shows the bg pattern clearly)
+    ───────────────────────────────────────────── */
+    .grid-demo {
+      height: 140px;
+      border: 1px solid rgba(61, 66, 108, 0.20);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Overlay text floats directly over grid — shown intentionally
+       to demonstrate the legibility concern Daniel flagged. */
+    .grid-demo__float-text {
+      font-family: 'Yrsa', Georgia, serif;
+      font-size: 28px;         /* card-title scale — 28–32px */
+      font-weight: 400;
+      color: var(--nc-text);
+      text-align: center;
+      padding: 0 24px;
+    }
+
+    .grid-demo__callout {
+      position: absolute;
+      bottom: 12px;
+      right: 16px;
+      font-size: 11px;
+      color: rgba(245, 235, 221, 0.30);
+      font-style: italic;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* ─────────────────────────────────────────────
+       PATTERN 2 — CARD-OVER-GRID
+       Opaque raised surface: occlude the grid
+       behind any text-dense block.
+       Rule: "most of the important text here has
+       a card" — Daniel.
+    ───────────────────────────────────────────── */
+    .nc-card {
+      background: #1a1828;                  /* opaque indigo-raise — occlude grid */
+      border: 1px solid rgba(61, 66, 108, 0.28);
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.30);
+      padding: 28px 32px;
+    }
+
+    .nc-card__title {
+      font-family: 'Yrsa', Georgia, serif;
+      font-size: 28px;         /* card-title scale — 28–32px */
+      font-weight: 500;
+      line-height: 1.2;
+      color: var(--nc-text);
+      margin-bottom: 12px;
+    }
+
+    .nc-card__body {
+      font-family: 'Inter', sans-serif;
+      font-size: 18px;         /* body scale — 18–20px */
+      line-height: 1.7;
+      color: rgba(245, 235, 221, 0.82);    /* 0.82 — holds 4.5:1 on #1a1828 */
+    }
+
+    .nc-card__tag {
+      display: inline-block;
+      margin-top: 20px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: var(--nc-sea-green);
+      border: 1px solid rgba(91, 125, 115, 0.35);
+      border-radius: 4px;
+      padding: 4px 10px;
+    }
+
+    /* ─────────────────────────────────────────────
+       PATTERN 3 — LIQUID GLASS
+       Two canonical variants found in Figma library:
+
+       A. DARK GLASS (overlays / sticky nav)
+          Source: Header.tsx
+          background: rgba(29,19,41,0.80)
+          backdrop-filter: blur(24px)
+          border-bottom: 1px solid rgba(255,255,255,0.06)
+
+       B. LIGHT-ON-DARK GLASS (content panels, callouts)
+          Source: ChatbotBar.tsx
+          background: rgba(245,235,221,0.06)
+          backdrop-filter: blur(16px)
+          border: 1px solid rgba(245,235,221,0.10)
+
+       Both require -webkit-backdrop-filter for Safari.
+       Both are for sparse/callout text — NOT dense body copy.
+    ───────────────────────────────────────────── */
+
+    /* Glass showcase row */
+    .glass-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 640px) {
+      .glass-row { grid-template-columns: 1fr; }
+    }
+
+    /* Shared glass structure */
+    .nc-glass {
+      border-radius: 16px;
+      padding: 28px 24px;
+      position: relative;
+    }
+
+    .nc-glass__label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .nc-glass__title {
+      font-family: 'Yrsa', Georgia, serif;
+      font-size: 28px;         /* card-title scale — 28–32px */
+      font-weight: 500;
+      line-height: 1.25;
+      margin-bottom: 10px;
+    }
+
+    .nc-glass__body {
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* Variant A — dark glass */
+    .nc-glass--dark {
+      background: rgba(29, 19, 41, 0.80);
+      -webkit-backdrop-filter: blur(24px);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .nc-glass--dark .nc-glass__label { color: rgba(245, 235, 221, 0.35); }
+    .nc-glass--dark .nc-glass__title { color: var(--nc-text); }
+    .nc-glass--dark .nc-glass__body  { color: rgba(245, 235, 221, 0.82); } /* 0.82 — holds 4.5:1 on dark glass bg */
+
+    /* Variant B — light-on-dark glass */
+    .nc-glass--light {
+      background: rgba(245, 235, 221, 0.06);
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(245, 235, 221, 0.10);
+    }
+
+    .nc-glass--light .nc-glass__label { color: rgba(245, 235, 221, 0.35); }
+    .nc-glass--light .nc-glass__title { color: var(--nc-text); }
+    .nc-glass--light .nc-glass__body  { color: rgba(245, 235, 221, 0.82); } /* 0.82 — holds 4.5:1 on dark glass bg */
+
+    /* ─────────────────────────────────────────────
+       TYPOGRAPHY SCALE DEMO
+    ───────────────────────────────────────────── */
+    .type-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding: 36px 40px;
+      background: #1a1828;
+      border: 1px solid rgba(61, 66, 108, 0.28);
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.30);
+    }
+
+    .type-row {
+      display: flex;
+      align-items: baseline;
+      gap: 24px;
+    }
+
+    .type-row__meta {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      color: rgba(245, 235, 221, 0.28);
+      width: 110px;
+      flex-shrink: 0;
+      line-height: 1.4;
+    }
+
+    .type-hero    { font-family: 'Yrsa', serif; font-size: 60px; font-weight: 500; line-height: 1.05; color: var(--nc-text); }
+    .type-section { font-family: 'Yrsa', serif; font-size: 36px; font-weight: 500; line-height: 1.2; color: var(--nc-text); }
+    .type-card    { font-family: 'Yrsa', serif; font-size: 28px; font-weight: 500; line-height: 1.25; color: var(--nc-text); }
+    .type-body    { font-family: 'Inter', sans-serif; font-size: 18px; line-height: 1.7; color: rgba(245,235,221,0.82); }
+    .type-label   { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(245,235,221,0.35); }
+
+    /* ─────────────────────────────────────────────
+       RESPONSIVE
+    ───────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .page { padding: 48px 20px 80px; }
+      .page-title { font-size: 40px; }
+      .section-title { font-size: 28px; }
+      .type-hero { font-size: 40px; }
+      .type-row { flex-direction: column; gap: 4px; }
+      .type-row__meta { width: auto; }
+      .type-stack { padding: 24px 20px; }
+    }
+
+    /* ─────────────────────────────────────────────
+       MOTION GUARD
+    ───────────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; animation: none !important; }
+    }
+
+    /* ─────────────────────────────────────────────
+       DIVIDER
+    ───────────────────────────────────────────── */
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(61, 66, 108, 0.18);
+      margin: 64px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+
+    <!-- ──────────────────────────────────────────
+         PAGE HEADER
+         Floats directly on gridline background —
+         demonstrating the "float text on grid" case
+         (hero/sparse text only, per Daniel's rule)
+    ─────────────────────────────────────────────── -->
+    <p class="page-label">Nova Caelum — Reference</p>
+    <h1 class="page-title">Surface Treatments</h1>
+    <p class="page-sub">Canonical reference for the three NC surface patterns. Every visual layer that goes into production must derive from one of these three treatments.</p>
+
+    <hr class="divider" />
+
+    <!-- ──────────────────────────────────────────
+         PATTERN 1 — GRIDLINE BACKGROUND
+    ─────────────────────────────────────────────── -->
+    <div class="section" id="gridline">
+      <p class="section-label">Pattern 01</p>
+      <h2 class="section-title">Gridline Background</h2>
+      <p class="annotation">
+        28 px crosshatch via CSS linear-gradient. Color: Deep Slate Violet (#3D426C) at 12 % opacity on Deep Midnight Indigo. Grid reads at arm's length; disappears behind body text. Floating text is acceptable only for hero/sparse copy — dense text must use a card (see Pattern 02).
+      </p>
+
+      <!-- Demo region: shows text floating directly over grid -->
+      <div class="grid-demo" role="img" aria-label="Gridline pattern demonstration">
+        <p class="grid-demo__float-text">
+          Floating text on grid — acceptable for sparse or hero copy
+        </p>
+        <span class="grid-demo__callout" aria-hidden="true">page bg shown at normal scale</span>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- ──────────────────────────────────────────
+         PATTERN 2 — CARD-OVER-GRID
+    ─────────────────────────────────────────────── -->
+    <div class="section" id="card-over-grid">
+      <p class="section-label">Pattern 02</p>
+      <h2 class="section-title">Card Over Grid</h2>
+      <p class="annotation">
+        Opaque raised surface (#1a1828) that fully occludes the grid. Use for any block with dense or important text. Pairing: grid bg behind, card above — text never competes with grid lines. This is not a glass surface; opacity is intentional.
+      </p>
+
+      <div class="nc-card">
+        <h3 class="nc-card__title">Clarity of purpose shapes every engagement</h3>
+        <p class="nc-card__body">
+          We work with founders and operators who are building something worth building — and who need a thinking partner, not just a vendor. Our practice is small by design: fewer clients, deeper work, longer commitments.
+        </p>
+        <span class="nc-card__tag">Sea Green accent</span>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- ──────────────────────────────────────────
+         PATTERN 3 — LIQUID GLASS
+    ─────────────────────────────────────────────── -->
+    <div class="section" id="liquid-glass">
+      <p class="section-label">Pattern 03</p>
+      <h2 class="section-title">Liquid Glass</h2>
+      <p class="annotation">
+        Two canonical variants. Both require -webkit-backdrop-filter (Safari). For callouts and overlays only — not for dense body text over grid. The blur effect reads best when colorful or textured content sits behind the surface.
+      </p>
+
+      <div class="glass-row">
+        <!-- Variant A: dark glass -->
+        <div class="nc-glass nc-glass--dark">
+          <p class="nc-glass__label">Variant A — Dark</p>
+          <h3 class="nc-glass__title">Navigation &amp; overlays</h3>
+          <p class="nc-glass__body">
+            rgba(29,19,41,0.80) + blur(24px). Source: Header.tsx sticky nav. Deep Midnight Indigo at 80&nbsp;% occludence — strong anchoring, still lets depth show through.
+          </p>
+        </div>
+
+        <!-- Variant B: light-on-dark glass -->
+        <div class="nc-glass nc-glass--light">
+          <p class="nc-glass__label">Variant B — Light-on-dark</p>
+          <h3 class="nc-glass__title">Content panels &amp; callouts</h3>
+          <p class="nc-glass__body">
+            rgba(245,235,221,0.06) + blur(16px). Source: ChatbotBar.tsx chat panel. Dawn Cream at 6&nbsp;% — a whisper of warmth on the dark surface; very low opacity by design.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- ──────────────────────────────────────────
+         TYPOGRAPHY SCALE
+    ─────────────────────────────────────────────── -->
+    <div class="section" id="typography">
+      <p class="section-label">Typography Scale</p>
+      <h2 class="section-title">Yrsa + Inter</h2>
+      <p class="annotation">
+        Daniel's calibrated sizes — these override the provisional values in NOVA_CAELUM_DESIGN_LIBRARY.md. Yrsa for all headings (serif warmth); Inter for body, labels, and UI copy.
+      </p>
+
+      <div class="type-stack" role="list" aria-label="Typography scale">
+
+        <div class="type-row" role="listitem">
+          <span class="type-row__meta">Hero<br />56–64 px Yrsa</span>
+          <span class="type-hero" aria-label="Hero text example">Nova Caelum</span>
+        </div>
+
+        <div class="type-row" role="listitem">
+          <span class="type-row__meta">Section head<br />32–40 px Yrsa</span>
+          <span class="type-section" aria-label="Section heading example">Our Practice</span>
+        </div>
+
+        <div class="type-row" role="listitem">
+          <span class="type-row__meta">Card title<br />28–32 px Yrsa</span>
+          <span class="type-card" aria-label="Card title example">Clarity of Purpose</span>
+        </div>
+
+        <div class="type-row" role="listitem">
+          <span class="type-row__meta">Body<br />18–20 px Inter</span>
+          <span class="type-body" aria-label="Body text example">We work with founders and operators who need a thinking partner, not just a vendor.</span>
+        </div>
+
+        <div class="type-row" role="listitem">
+          <span class="type-row__meta">Label<br />11 px Inter / caps</span>
+          <span class="type-label" aria-label="Label text example">Offerings &amp; Engagements</span>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /page -->
+</body>
+</html>

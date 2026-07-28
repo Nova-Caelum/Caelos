@@ -1,0 +1,5 @@
+/* Nova Caelum brand-ui v2.x font trinity — IBM Plex Sans (all UI copy) + IBM Plex Mono
+   (structural coordinates only). Yrsa dropped 2026-07-27: the sidebar wordmark now renders
+   from the raster brand asset (src/imports/nova-caelum-wordmark-transparent.png), so no
+   in-app text is set in Yrsa anywhere in this codebase. See skills_library/nova-caelum-brand-ui/SKILL.md. */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');

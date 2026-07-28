@@ -1,0 +1,40 @@
+name: DevOps-Lead PR Review
+
+# THIN CALLER STUB — Option B source-of-truth/runtime split (2026-07-18).
+# All review logic lives in Nova-Caelum/devops-lead
+# .github/workflows/devops-lead-pr-review.yml (source of truth). This stub is
+# the only workflow content in THIS repo; the `uses:` pin below is the review
+# gate for logic changes.
+#
+# PIN: full-SHA pin is the review gate for logic changes. To update logic:
+# PR + review in devops-lead repo, then bump this pin (one-line PR — loudly
+# escalated by design since it touches .github/workflows/). Never re-point
+# to @main.
+#
+# PUBLIC-REPO CONSTRAINT (2026-07-28): Caelos is public. The job-level `if:`
+# gate below restricts review runs to trusted associations (OWNER / MEMBER /
+# COLLABORATOR) — external PRs from forks or unknown contributors do NOT
+# trigger the DevOps-Lead review, per the Config Split policy documented at
+# `_wiki/novacaelum_tech/07_repositories/00_INDEX.md` §"DevOps-Lead PR-review
+# workflow". External PRs stay open for human close-of-loop. Secondary safety:
+# GitHub does not pass `secrets: inherit` to fork PRs on public repos, so
+# even if the gate were bypassed, the Claude action would fail auth.
+#
+# Rollback: git revert this commit -> restores the pre-workflow state.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  devops-lead-review:
+    # Trusted-committer gate (public-repo hygiene). External PRs skip review.
+    if: contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
+      id-token: write
+    uses: Nova-Caelum/devops-lead/.github/workflows/devops-lead-pr-review.yml@4729b2b2301cffd0c2ca0ede15a987b2415e1fdb
+    secrets: inherit
