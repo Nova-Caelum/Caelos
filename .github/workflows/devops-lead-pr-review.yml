@@ -29,7 +29,11 @@ on:
 jobs:
   devops-lead-review:
     # Trusted-committer gate (public-repo hygiene). External PRs skip review.
-    if: contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
+    if: >-
+      github.event.pull_request.author_association == 'OWNER'
+      || github.event.pull_request.author_association == 'MEMBER'
+      || github.event.pull_request.author_association == 'COLLABORATOR'
+      || github.event.pull_request.author_association == 'CONTRIBUTOR' && contains(github.event.pull_request.labels.*.name, 'human-approved')
     permissions:
       contents: write
       pull-requests: write
