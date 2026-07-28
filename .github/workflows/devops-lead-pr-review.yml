@@ -28,8 +28,8 @@ on:
 
 jobs:
   devops-lead-review:
-    # Trusted-committer gate (public-repo hygiene). External PRs skip review.
-    if: ${{ github.event.pull_request.author_association == 'OWNER' || github.event.pull_request.author_association == 'MEMBER' || github.event.pull_request.author_association == 'COLLABORATOR' }}
+    # DIAGNOSTIC: test github.actor context (bypass pull_request event context)
+    if: ${{ github.actor == 'Highproofhero' }}
     permissions:
       contents: write
       pull-requests: write
