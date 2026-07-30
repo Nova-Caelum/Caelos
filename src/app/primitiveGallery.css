@@ -1,0 +1,291 @@
+.primitive-gallery {
+  display: grid;
+  gap: 16px;
+  padding: 18px 20px 22px;
+}
+
+.primitive-playground {
+  display: grid;
+  gap: var(--sys-space-3);
+  padding: var(--sys-space-4);
+  overflow: hidden;
+  border: 1px solid var(--sys-hair-2);
+  border-radius: var(--sys-radius-xl);
+  background:
+    radial-gradient(circle at 15% 0%, var(--sys-accent-tint), transparent 42%),
+    radial-gradient(circle at 100% 80%, var(--sys-sem-sage-tint), transparent 38%),
+    var(--sys-elevated);
+  box-shadow: var(--sys-elev-2);
+}
+
+.primitive-playground__heading,
+.primitive-gallery__divider,
+.primitive-card-content,
+.primitive-alignment-probe {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sys-space-3);
+}
+
+.primitive-playground__heading h2 {
+  margin: 3px 0 0;
+  color: var(--sys-text-primary);
+  font-size: 15px;
+  font-weight: 680;
+  letter-spacing: -.015em;
+}
+
+.primitive-gallery__eyebrow {
+  color: var(--sys-text-faint);
+  font-size: 9px;
+  font-weight: 760;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.primitive-playground .nc-row-group {
+  width: 100%;
+}
+
+.primitive-playground .nc-row-group .nc-row {
+  flex: 1 1 0;
+  justify-content: center;
+}
+
+.primitive-playground__toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--sys-space-2);
+}
+
+.primitive-playground__filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sys-space-2);
+}
+
+.primitive-playground__readout {
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--sys-text-tertiary);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.primitive-playground__cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sys-space-2);
+}
+
+.primitive-playground__cards .nc-card {
+  padding: var(--sys-space-3);
+}
+
+.primitive-card-content {
+  justify-content: flex-start;
+}
+
+.primitive-card-content__icon {
+  display: grid;
+  flex: 0 0 var(--sys-space-7);
+  width: var(--sys-space-7);
+  height: var(--sys-space-7);
+  place-items: center;
+  color: var(--sys-accent-on-tint);
+  border: 1px solid var(--sys-accent-line);
+  border-radius: var(--sys-radius-md);
+  background: var(--sys-accent-tint);
+}
+
+.primitive-card-content > div {
+  display: grid;
+  min-width: 0;
+  gap: var(--sys-space-1);
+  margin-right: auto;
+}
+
+.primitive-card-content strong,
+.foundry-card-matrix strong {
+  color: var(--sys-text-primary);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.primitive-card-content div span,
+.foundry-card-matrix .nc-card > span:last-child {
+  overflow: hidden;
+  color: var(--sys-text-tertiary);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.primitive-gallery__divider {
+  color: var(--sys-text-tertiary);
+  font-size: 10px;
+  font-weight: 720;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.primitive-gallery__divider span:last-child {
+  color: var(--sys-text-faint);
+  font-size: 8px;
+}
+
+.foundry-matrix {
+  overflow: hidden;
+  border: 1px solid var(--sys-hair-1);
+  border-radius: var(--sys-radius-lg);
+  background: color-mix(in srgb, var(--sys-elevated) 82%, transparent);
+}
+
+.foundry-matrix > summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--sys-space-2);
+  min-height: 44px;
+  padding: 0 var(--sys-space-3);
+  cursor: pointer;
+  list-style: none;
+}
+
+.foundry-matrix > summary::-webkit-details-marker { display: none; }
+
+.foundry-matrix__title {
+  color: var(--sys-text-primary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.foundry-matrix__description {
+  overflow: hidden;
+  color: var(--sys-text-faint);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.foundry-matrix__chevron {
+  color: var(--sys-text-faint);
+  transition: transform var(--sys-motion-fast) var(--sys-ease-out);
+}
+
+.foundry-matrix[open] .foundry-matrix__chevron { transform: rotate(90deg); }
+
+.foundry-matrix__body {
+  border-top: 1px solid var(--sys-hair-1);
+}
+
+.foundry-matrix__scroll {
+  overflow-x: auto;
+  padding: var(--sys-space-3);
+}
+
+.foundry-matrix__header,
+.foundry-matrix__row {
+  display: grid;
+  grid-template-columns: 92px repeat(4, minmax(88px, 1fr));
+  align-items: center;
+  gap: var(--sys-space-2);
+  min-width: 472px;
+}
+
+.foundry-matrix__header {
+  padding: 0 0 var(--sys-space-2);
+  color: var(--sys-text-faint);
+  font-size: 8px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.foundry-matrix__row {
+  min-height: 48px;
+  border-top: 1px solid var(--sys-hair-1);
+}
+
+.foundry-matrix__row > .nc-button,
+.foundry-matrix__row > .nc-row {
+  width: 100%;
+}
+
+.foundry-matrix code,
+.foundry-input-matrix code,
+.foundry-chip-matrix code {
+  color: var(--sys-text-tertiary);
+  font-family: var(--nc-font-mono, ui-monospace);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.foundry-matrix__subhead {
+  padding: var(--sys-space-4) 0 var(--sys-space-2);
+  color: var(--sys-sem-danger-on-tint);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.foundry-chip-matrix,
+.foundry-input-matrix,
+.foundry-card-matrix {
+  display: grid;
+  gap: var(--sys-space-3);
+  padding: var(--sys-space-3);
+}
+
+.foundry-chip-matrix > div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: start;
+  gap: var(--sys-space-3);
+}
+
+.foundry-chip-matrix > div > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sys-space-2);
+}
+
+.foundry-input-matrix > div {
+  display: grid;
+  grid-template-columns: 48px repeat(3, minmax(112px, 1fr));
+  align-items: center;
+  gap: var(--sys-space-2);
+  min-width: 436px;
+}
+
+.foundry-input-matrix { overflow-x: auto; }
+
+.foundry-card-matrix {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.foundry-card-matrix .nc-card {
+  display: grid;
+  gap: var(--sys-space-1);
+}
+
+.primitive-alignment-probe {
+  padding: var(--sys-space-3);
+  color: var(--sys-text-faint);
+  border: 1px dashed var(--sys-hair-2);
+  border-radius: var(--sys-radius-lg);
+  font-size: 9px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 560px) {
+  .primitive-playground__cards { grid-template-columns: 1fr; }
+  .primitive-playground__toolbar { grid-template-columns: 1fr; }
+  .primitive-playground__toolbar .nc-button { width: 100%; }
+  .foundry-card-matrix { grid-template-columns: 1fr; }
+}

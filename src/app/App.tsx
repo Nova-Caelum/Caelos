@@ -24,11 +24,9 @@ import {
   GripVertical, FileText, Folder, Users, UserPlus, Atom,
   Settings, FolderInput,
 } from "lucide-react";
-import {
-  Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator,
-} from "./components/ui/breadcrumb";
 import { GlassSeparator } from "./components/ui/glass-separator";
 import wordmarkUrl from "@/imports/nova-caelum-wordmark-transparent.png";
+import { NC } from "../design/tokens";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -733,45 +731,6 @@ const INIT_STATE_CFG = PROJECT_STATUS_CFG;
 const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ["planned", "in-progress", "paused"];
 const CLOSED_PROJECT_STATUSES: ProjectStatus[] = ["completed", "closed", "archived"];
 
-// Nova Caelum brand-UI tokens (product surface system, ratified 2026-07-26)
-// See: skills_library/nova-caelum-brand-ui/SKILL.md
-const NC = {
-  // Text tiers
-  cream: "#F4EAD5",
-  textMuted: "#9089A0",
-  textDim: "#6E677E",
-  textFaint: "#55506A",
-  // Surface tiers
-  bg: "#1C1B28",          // Product Ground (was #1d1329 Deep Midnight Indigo)
-  ground: "#1C1B28",      // alias
-  chrome: "#12121E",      // Sidebar / structural chrome
-  card: "#221E33",        // Elevated (was #1a1828 Midnight Slate)
-  elevated: "#221E33",    // alias
-  elevated2: "#2A2540",   // Popovers / hover surfaces
-  // Identity accent (new brand-palette token)
-  green: "#6D5AD1",       // REPURPOSED — accent indigo carries interactive identity
-  accent: "#6D5AD1",      // alias for clarity
-  accentHover: "#7E6DE5",
-  accentTint: "rgba(109,90,209,0.10)",
-  accentLine: "rgba(109,90,209,0.22)",
-  accentCream: "rgba(196,185,240,0.90)",
-  // Semantic palette
-  sage: "#7A9E93",              // brand app-icon teal
-  seaGreen: "#5B7D73",          // semantic done state (WAS what NC.green was)
-  peachGold: "#E8B87A",         // high priority / in-progress
-  deepMaroon: "#C25B62",        // urgent / blocked / destructive (brightened for dark UI)
-  lightIndigo: "#8E96CC",       // medium priority
-  desaturatedViolet: "#8879A0", // engineer / refactor / atmospheric
-  violet: "#4E4C82",            // structural cool accent (adj slate-violet)
-  slateViolet: "#4E4C82",       // alias
-  stone: "#8F8A80",             // low priority / muted labels
-  mutedStone: "#8F8A80",        // alias
-  // Hairlines
-  border: "rgba(255,255,255,0.09)",
-  borderFaint: "rgba(255,255,255,0.045)",
-  hair3: "rgba(255,255,255,0.14)",
-};
-
 // ── UI helpers ─────────────────────────────────────────────────────────────────
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -850,18 +809,44 @@ function NcSelect({
   );
 }
 
-function PrimaryBtn({ children, loading, className = "", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean }) {
+// ── 3-Tier Button Ladder — canonical per LockedStudio 2026-07-29 ─────────────
+//  T1 · PrimaryBtn — commit action, ONE per surface (Save changes, Create, Confirm)
+//  T2 · TonalBtn   — frequent CTAs (+ Add subtask, Add to cycle, Archive)
+//  T3 · TextBtn    — escape hatches (Cancel, Close, Dismiss)
+//  All three take an optional `danger` prop (family-swap: cool → warm hue).
+
+function PrimaryBtn({ children, loading, danger, className = "", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean; danger?: boolean }) {
   return (
-    <button className={`nc-matte-cta flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 ${className}`} disabled={loading || props.disabled} {...props}>
+    <button
+      className={`locked-btn-primary${danger ? " locked-btn-primary--danger" : ""}${className ? ` ${className}` : ""}`}
+      disabled={loading || props.disabled}
+      {...props}
+    >
       {loading && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
       {children}
     </button>
   );
 }
 
-function GhostBtn({ children, danger, className = "", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { danger?: boolean }) {
+function TonalBtn({ children, loading, danger, className = "", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean; danger?: boolean }) {
   return (
-    <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors hover:bg-white/5 ${className}`} style={{ color: danger ? "#C25B62" : NC.stone, border: `1px solid ${NC.border}` }} {...props}>
+    <button
+      className={`locked-btn-secondary${danger ? " locked-btn-secondary--danger" : ""}${className ? ` ${className}` : ""}`}
+      disabled={loading || props.disabled}
+      {...props}
+    >
+      {loading && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+      {children}
+    </button>
+  );
+}
+
+function TextBtn({ children, danger, className = "", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { danger?: boolean }) {
+  return (
+    <button
+      className={`locked-btn-text${danger ? " locked-btn-text--danger" : ""}${className ? ` ${className}` : ""}`}
+      {...props}
+    >
       {children}
     </button>
   );
@@ -924,12 +909,16 @@ function SlideOver({ open, onClose, title, actions, children }: { open: boolean;
     <>
       <div className="fixed inset-0 z-40 transition-opacity duration-300" style={{ background: "rgba(0,0,0,0.55)", pointerEvents: open ? "auto" : "none", opacity: open ? 1 : 0 }} onClick={onClose} />
       <div className="nc-lit-surface fixed right-0 top-0 h-full z-50 flex flex-col border-l" style={{ width: 480, borderColor: NC.border, transform: open ? "translateX(0)" : "translateX(100%)", transition: "transform 0.28s ease" }}>
-        <div className="flex items-start gap-2 px-6 py-4 flex-shrink-0">
+        {/* Header padding: pt-6 gives the breadcrumb breath from the top edge;
+            pb-4 pairs with body pt-2 to yield ~24px between the last header row
+            (title) and the first body row (description) — matching the ~24px
+            rhythm we want across every landmark. Daniel-directive 2026-07-29. */}
+        <div className="flex items-start gap-2 px-6 pt-6 pb-4 flex-shrink-0">
           <div className="flex-1 min-w-0">{title}</div>
           {actions}
           <button onClick={onClose} className="p-1 rounded hover:bg-white/5 flex-shrink-0" style={{ color: NC.stone }}><X size={15} /></button>
         </div>
-        <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
+        <div className="flex-1 overflow-y-auto px-6 pt-2.5 pb-6">{children}</div>
       </div>
     </>,
     document.body,
@@ -993,7 +982,7 @@ function ConfirmDelete({ open, onClose, onConfirm, label }: { open: boolean; onC
     <Modal open={open} onClose={onClose} title={`Archive ${label}?`} maxWidth="max-w-sm">
       <p className="text-sm mb-5" style={{ color: NC.stone }}>The record is preserved and can be un-archived later.</p>
       <div className="flex gap-2 justify-end">
-        <GhostBtn onClick={onClose}>Cancel</GhostBtn>
+        <TextBtn onClick={onClose}>Cancel</TextBtn>
         <button onClick={() => { onConfirm(); onClose(); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors hover:bg-white/5" style={{ color: NC.stone, border: `1px solid ${NC.border}` }}><Archive size={13} /> Archive</button>
       </div>
     </Modal>
@@ -1362,23 +1351,23 @@ function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onClose,
       title={
         <div className="flex flex-col gap-3 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
-            <Breadcrumb className="min-w-0">
-              <BreadcrumbList>
+            <div className="locked-bc min-w-0">
+              <div className="locked-bc-content">
                 {projectName && (
                   <>
-                    <BreadcrumbItem><BreadcrumbLink onClick={() => {}}>{projectName}</BreadcrumbLink></BreadcrumbItem>
-                    <BreadcrumbSeparator />
+                    <span className="locked-bc-seg" onClick={() => {}}>{projectName}</span>
+                    <span className="locked-bc-sep">·</span>
                   </>
                 )}
                 {moduleName && (
                   <>
-                    <BreadcrumbItem><BreadcrumbLink onClick={() => {}}>{moduleName}</BreadcrumbLink></BreadcrumbItem>
-                    <BreadcrumbSeparator />
+                    <span className="locked-bc-seg" onClick={() => {}}>{moduleName}</span>
+                    <span className="locked-bc-sep">·</span>
                   </>
                 )}
-                <BreadcrumbItem><BreadcrumbPage>…</BreadcrumbPage></BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
+                <span className="locked-bc-seg">…</span>
+              </div>
+            </div>
             <button
               type="button"
               onClick={() => { console.log('[caelos] Unit F: move-to-project picker for task', task.id); }}
@@ -1390,7 +1379,7 @@ function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onClose,
               <FolderInput size={13} />
             </button>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mt-1">
             <span
               className="text-xs font-semibold tracking-widest uppercase"
               style={{ color: "#8879A0", fontFamily: "'IBM Plex Sans', sans-serif" }}
@@ -1398,7 +1387,7 @@ function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onClose,
               Task
             </span>
           </div>
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3 min-w-0 -mt-0.5">
             <EditableTitleInline
               value={task.title}
               onSave={v => {
@@ -1492,7 +1481,7 @@ function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onClose,
           )}
           <div className="flex gap-2">
             <NcInput value={newSubtask} onChange={e => setNewSubtask(e.target.value)} placeholder="Add a subtask…" onKeyDown={e => e.key === "Enter" && handleAddSubtask()} />
-            <PrimaryBtn loading={addingSubtask} onClick={handleAddSubtask} className="flex-shrink-0"><Plus size={13} /></PrimaryBtn>
+            <TonalBtn loading={addingSubtask} onClick={handleAddSubtask} className="flex-shrink-0"><Plus size={13} /></TonalBtn>
           </div>
         </div>
 
@@ -1514,7 +1503,7 @@ function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onClose,
           )}
           <div className="flex gap-2">
             <NcInput value={newDocPath} onChange={e => setNewDocPath(e.target.value)} placeholder="/path/to/doc.md" onKeyDown={e => e.key === "Enter" && addDocPath()} style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 12 }} />
-            <PrimaryBtn onClick={addDocPath} className="flex-shrink-0"><Plus size={13} /></PrimaryBtn>
+            <TonalBtn onClick={addDocPath} className="flex-shrink-0"><Plus size={13} /></TonalBtn>
           </div>
         </div>
 
@@ -1658,17 +1647,17 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onClose, on
       title={
         <div className="flex flex-col gap-3 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
-            <Breadcrumb className="min-w-0">
-              <BreadcrumbList>
+            <div className="locked-bc min-w-0">
+              <div className="locked-bc-content">
                 {projectName && (
                   <>
-                    <BreadcrumbItem><BreadcrumbLink onClick={() => {}}>{projectName}</BreadcrumbLink></BreadcrumbItem>
-                    <BreadcrumbSeparator />
+                    <span className="locked-bc-seg" onClick={() => {}}>{projectName}</span>
+                    <span className="locked-bc-sep">·</span>
                   </>
                 )}
-                <BreadcrumbItem><BreadcrumbPage>…</BreadcrumbPage></BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
+                <span className="locked-bc-seg">…</span>
+              </div>
+            </div>
             <button
               type="button"
               onClick={() => { console.log('[caelos] Unit F: move-to-project picker for module', mod.id); }}
@@ -1680,7 +1669,7 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onClose, on
               <FolderInput size={13} />
             </button>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mt-1">
             <span
               className="text-xs font-semibold tracking-widest uppercase"
               style={{ color: "#7A9E93", fontFamily: "'IBM Plex Sans', sans-serif" }}
@@ -1688,7 +1677,7 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onClose, on
               Module
             </span>
           </div>
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3 min-w-0 -mt-0.5">
             <EditableTitleInline
               value={mod.name}
               onSave={v => {
@@ -1716,32 +1705,15 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onClose, on
       }
     >
       <div className="space-y-6 pb-6">
-        <div>
-          {modTasks.length > 0 && (
-            <div className="flex items-center gap-2">
-              <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: NC.green }} />
-              </div>
-              <span className="text-xs flex-shrink-0" style={{ color: NC.stone }}>{done}/{modTasks.length}</span>
-            </div>
-          )}
-
-          {form.folder_path && (
-            <p className="flex items-center gap-1.5 mt-2 text-xs font-mono" style={{ color: "rgba(138,133,128,0.7)" }}>
-              <Folder size={10} />{form.folder_path}
-            </p>
-          )}
-        </div>
-
-        {divider}
-
         {/* Description */}
         <div>
           <label className="block text-xs font-semibold tracking-widest uppercase mb-2" style={{ color: NC.stone }}>Description</label>
           <NcTextarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Describe this module…" rows={3} />
         </div>
 
-        {/* Folder path field */}
+        {/* Folder path field — the single canonical folder-path surface for this module.
+            (Prior standalone chip in the drawer body was removed 2026-07-29 — redundant
+            with this field. Progress bar moved to the Tasks section header.) */}
         <div>
           <label className="block text-xs font-semibold tracking-widest uppercase mb-2" style={{ color: NC.stone }}>Folder Path</label>
           <div className="flex items-center gap-2">
@@ -1752,8 +1724,8 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onClose, on
 
         <div className="flex items-center gap-2">
           <PrimaryBtn loading={saving} onClick={handleSave}>Save changes</PrimaryBtn>
-          <GhostBtn onClick={() => setCycleOpen(true)}><Calendar size={13} /> Add to cycle</GhostBtn>
-          <GhostBtn onClick={() => { onClose(); onDeleteMod(mod); }} className="ml-auto"><Archive size={13} /> Archive</GhostBtn>
+          <TonalBtn onClick={() => setCycleOpen(true)}><Calendar size={13} /> Add to cycle</TonalBtn>
+          <TonalBtn danger onClick={() => { onClose(); onDeleteMod(mod); }} className="ml-auto"><Archive size={13} /> Archive</TonalBtn>
         </div>
 
         {divider}
@@ -1761,7 +1733,17 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onClose, on
         {/* Tasks in module */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: NC.stone }}>Tasks ({modTasks.length})</p>
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="text-xs font-semibold tracking-widest uppercase flex-shrink-0" style={{ color: NC.stone }}>Tasks ({modTasks.length})</p>
+              {modTasks.length > 0 && (
+                <>
+                  <div className="flex-1 max-w-[140px] h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                    <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: NC.green }} />
+                  </div>
+                  <span className="text-[10px] font-mono flex-shrink-0" style={{ color: NC.stone }}>{done}/{modTasks.length}</span>
+                </>
+              )}
+            </div>
             <button className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors hover:bg-white/[0.05]" style={{ color: NC.stone, border: `1px solid ${NC.border}` }}
               onClick={() => { onAddTask(mod.id); onClose(); }}>
               <Plus size={11} /> Add task
@@ -2246,8 +2228,8 @@ function TasksPane({ projectId, projectName, pendingTaskId, onClearPending }: {
               ...Object.entries(STATE_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color })),
             ]}
           />
-          <GhostBtn onClick={() => { setModName(""); setModDescription(""); setCreatingMod(true); }}><Layers size={13} /> Module</GhostBtn>
-          <PrimaryBtn onClick={() => openAddTask()}><Plus size={13} /> Task</PrimaryBtn>
+          <TonalBtn onClick={() => { setModName(""); setModDescription(""); setCreatingMod(true); }}><Layers size={13} /> Module</TonalBtn>
+          <TonalBtn onClick={() => openAddTask()}><Plus size={13} /> Task</TonalBtn>
         </div>
 
         {/* Unified tree */}
@@ -2347,14 +2329,14 @@ function TasksPane({ projectId, projectName, pendingTaskId, onClearPending }: {
             <Field label="Priority"><NcSelect value={taskForm.priority} onValueChange={v => setTaskForm(p => ({ ...p, priority: v as WorkItemPriority }))} items={Object.entries(PRI_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color }))} /></Field>
           </div>
           <Field label="Assignee"><NcInput value={taskForm.assignee} onChange={e => setTaskForm(p => ({ ...p, assignee: e.target.value }))} placeholder="Name or email" /></Field>
-          <div className="flex gap-2 justify-end pt-1"><GhostBtn onClick={() => setCreatingTask(false)}>Cancel</GhostBtn><PrimaryBtn loading={taskSaving} onClick={createTask}>Create</PrimaryBtn></div>
+          <div className="flex gap-2 justify-end pt-1"><TextBtn onClick={() => setCreatingTask(false)}>Cancel</TextBtn><PrimaryBtn loading={taskSaving} onClick={createTask}>Create</PrimaryBtn></div>
         </Modal>
 
         {/* Create module modal */}
         <Modal open={creatingMod} onClose={() => setCreatingMod(false)} title="New Module" maxWidth="max-w-sm">
           <Field label="Name"><NcInput value={modName} onChange={e => setModName(e.target.value)} placeholder="Module name" autoFocus onKeyDown={e => e.key === "Enter" && createMod()} /></Field>
           <Field label="Description"><NcTextarea value={modDescription} onChange={e => setModDescription(e.target.value)} placeholder="Optional — what is this for?" rows={3} /></Field>
-          <div className="flex gap-2 justify-end pt-1"><GhostBtn onClick={() => setCreatingMod(false)}>Cancel</GhostBtn><PrimaryBtn loading={modSaving} onClick={createMod}>Create</PrimaryBtn></div>
+          <div className="flex gap-2 justify-end pt-1"><TextBtn onClick={() => setCreatingMod(false)}>Cancel</TextBtn><PrimaryBtn loading={modSaving} onClick={createMod}>Create</PrimaryBtn></div>
         </Modal>
 
         <ConfirmDelete open={!!deleteMod} onClose={() => setDeleteMod(null)} onConfirm={() => deleteMod && deleteMod_(deleteMod)} label="module" />
@@ -2428,9 +2410,9 @@ function TeamTab({ projectId }: { projectId: string }) {
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-6 py-3 flex-shrink-0" style={{ borderColor: NC.borderFaint }}>
         <span className="text-xs" style={{ color: NC.stone }}>{members.length} member{members.length !== 1 ? "s" : ""}</span>
-        <PrimaryBtn onClick={() => setAdding(true)} disabled={available.length === 0}>
+        <TonalBtn onClick={() => setAdding(true)} disabled={available.length === 0}>
           <UserPlus size={13} /> Add member
-        </PrimaryBtn>
+        </TonalBtn>
       </div>
 
       <div className="flex-1 overflow-auto p-6">
@@ -2462,7 +2444,7 @@ function TeamTab({ projectId }: { projectId: string }) {
           />
         </Field>
         <div className="flex gap-2 justify-end pt-1">
-          <GhostBtn onClick={() => setAdding(false)}>Cancel</GhostBtn>
+          <TextBtn onClick={() => setAdding(false)}>Cancel</TextBtn>
           <PrimaryBtn loading={saving} onClick={addMember}>Add</PrimaryBtn>
         </div>
       </Modal>
@@ -2546,7 +2528,7 @@ function CyclesTab({ projectId }: { projectId: string }) {
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3 flex-shrink-0" style={{ borderColor: NC.borderFaint }}>
         <span className="text-xs" style={{ color: NC.stone }}>{cycles.length} cycle{cycles.length !== 1 ? "s" : ""}</span>
-        <PrimaryBtn onClick={() => { setForm(EMPTY_CYCLE_FORM); setCreating(true); }}><Plus size={13} /> New cycle</PrimaryBtn>
+        <TonalBtn onClick={() => { setForm(EMPTY_CYCLE_FORM); setCreating(true); }}><Plus size={13} /> New cycle</TonalBtn>
       </div>
       <div className="flex-1 overflow-auto p-5 space-y-3">
         {loading ? <EmptyState icon={<Spinner />} text="Loading cycles…" /> :
@@ -2586,7 +2568,7 @@ function CyclesTab({ projectId }: { projectId: string }) {
           <Field label="Start Date"><NcInput type="date" value={form.start_date} onChange={e => setForm(p => ({ ...p, start_date: e.target.value }))} /></Field>
           <Field label="End Date"><NcInput type="date" value={form.end_date} onChange={e => setForm(p => ({ ...p, end_date: e.target.value }))} /></Field>
         </div>
-        <div className="flex gap-2 justify-end pt-1"><GhostBtn onClick={() => setCreating(false)}>Cancel</GhostBtn><PrimaryBtn loading={saving} onClick={create}>Create</PrimaryBtn></div>
+        <div className="flex gap-2 justify-end pt-1"><TextBtn onClick={() => setCreating(false)}>Cancel</TextBtn><PrimaryBtn loading={saving} onClick={create}>Create</PrimaryBtn></div>
       </Modal>
 
       {editCycle && (
@@ -2598,7 +2580,7 @@ function CyclesTab({ projectId }: { projectId: string }) {
             <Field label="End Date"><NcInput type="date" value={editCycle.end_date} onChange={e => setEditCycle(p => p ? { ...p, end_date: e.target.value } : p)} /></Field>
           </div>
           <div className="flex gap-2 justify-end pt-1">
-            <GhostBtn onClick={() => setEditCycle(null)}>Cancel</GhostBtn>
+            <TextBtn onClick={() => setEditCycle(null)}>Cancel</TextBtn>
             <PrimaryBtn loading={saving} onClick={async () => {
               setSaving(true);
               try { await api(`/projects/${projectId}/cycles/${editCycle.id}`, { method: "PATCH", body: JSON.stringify(editCycle) }); setCycles(p => p.map(c => c.id === editCycle.id ? editCycle : c)); setEditCycle(null); toast.success("Updated"); }
@@ -2842,15 +2824,15 @@ function ProjectView({ project, pendingTaskId, onClearPending, pendingTab, onCle
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="px-7 pt-8 pb-8 flex-shrink-0" style={{ borderColor: NC.borderFaint }}>
-        <p className="text-xs font-semibold tracking-widest uppercase mb-2" style={{ color: NC.accent }}>Project</p>
+        <p className="text-xs font-semibold tracking-widest uppercase mb-2.5" style={{ color: NC.accent }}>Project</p>
         <div className="flex items-center gap-3 flex-wrap">
           <h1 style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 30, color: NC.cream, fontWeight: 600, lineHeight: 1.12, letterSpacing: "-0.028em" }}>{project.name}</h1>
           <StatusPill status={project.status} onChange={s => onSaveProject(project.id, { status: s })} />
           <div className="ml-2"><ActivityButton entityType="project" entityId={project.id} /></div>
         </div>
-        {project.description && <p className="text-sm mt-3" style={{ color: NC.stone }}>{project.description}</p>}
+        {project.description && <p className="text-sm mt-4" style={{ color: NC.stone }}>{project.description}</p>}
         {project.folder_path && (
-          <p className="flex items-center gap-1.5 text-xs font-mono mt-3" style={{ color: "rgba(138,133,128,0.6)" }}>
+          <p className="flex items-center gap-1.5 text-xs font-mono mt-4" style={{ color: "rgba(138,133,128,0.6)" }}>
             <Folder size={11} />{project.folder_path}
           </p>
         )}
@@ -2983,7 +2965,7 @@ function InitiativeView({ initiative, allProjects, onUpdateInit }: {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: NC.stone }}>Linked Projects ({links.project_ids.length})</p>
-                <GhostBtn onClick={() => setLinkingProjects(true)}><Link2 size={12} /> Add</GhostBtn>
+                <TonalBtn onClick={() => setLinkingProjects(true)}><Link2 size={12} /> Add</TonalBtn>
               </div>
               {linkedProjects.length === 0 ? <p className="text-sm" style={{ color: NC.stone }}>None linked</p> : (
                 <div className="space-y-2">
@@ -3003,7 +2985,7 @@ function InitiativeView({ initiative, allProjects, onUpdateInit }: {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: NC.stone }}>Linked Modules ({links.module_ids.length})</p>
-                <GhostBtn onClick={() => setPickMods(true)} disabled={allMods.length === 0}><Link2 size={12} /> Add</GhostBtn>
+                <TonalBtn onClick={() => setPickMods(true)} disabled={allMods.length === 0}><Link2 size={12} /> Add</TonalBtn>
               </div>
               {linkedMods.length === 0 ? <p className="text-sm" style={{ color: NC.stone }}>{allMods.length === 0 ? "Link a project first" : "None linked"}</p> : (
                 <div className="space-y-2">
@@ -3023,7 +3005,7 @@ function InitiativeView({ initiative, allProjects, onUpdateInit }: {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: NC.stone }}>Linked Work Items ({links.work_item_ids.length})</p>
-                <GhostBtn onClick={() => setPickItems(true)} disabled={allItems.length === 0}><Link2 size={12} /> Add</GhostBtn>
+                <TonalBtn onClick={() => setPickItems(true)} disabled={allItems.length === 0}><Link2 size={12} /> Add</TonalBtn>
               </div>
               {linkedItems.length === 0 ? <p className="text-sm" style={{ color: NC.stone }}>{allItems.length === 0 ? "Link a project first" : "None linked"}</p> : (
                 <div className="space-y-2">
@@ -3055,7 +3037,7 @@ function InitiativeView({ initiative, allProjects, onUpdateInit }: {
               )}
               <div className="flex gap-2">
                 <NcInput value={newDocPath} onChange={e => setNewDocPath(e.target.value)} placeholder="/path/to/relevant/file.md" onKeyDown={e => e.key === "Enter" && addDocPath()} style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 12 }} />
-                <PrimaryBtn onClick={addDocPath} className="flex-shrink-0"><Plus size={13} /></PrimaryBtn>
+                <TonalBtn onClick={addDocPath} className="flex-shrink-0"><Plus size={13} /></TonalBtn>
               </div>
             </div>
           </>
@@ -3511,7 +3493,7 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
           <div className="flex items-center gap-2"><Folder size={13} style={{ color: NC.stone, flexShrink: 0 }} />
             <NcInput value={pForm.folder_path} onChange={e => setPForm(p => ({ ...p, folder_path: e.target.value }))} placeholder="/path/to/project" style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 12 }} /></div>
         </Field>
-        <div className="flex gap-2 justify-end pt-1"><GhostBtn onClick={() => setCreatingProject(false)}>Cancel</GhostBtn><PrimaryBtn loading={saving} onClick={createProject}>Create</PrimaryBtn></div>
+        <div className="flex gap-2 justify-end pt-1"><TextBtn onClick={() => setCreatingProject(false)}>Cancel</TextBtn><PrimaryBtn loading={saving} onClick={createProject}>Create</PrimaryBtn></div>
       </Modal>
 
       <Modal open={creatingInit} onClose={() => setCreatingInit(false)} title="New Initiative" maxWidth="max-w-sm">
@@ -3519,7 +3501,7 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
         <Field label="Description"><NcTextarea value={iForm.description} onChange={e => setIForm(p => ({ ...p, description: e.target.value }))} placeholder="Optional — what is this for?" rows={3} /></Field>
         <Field label="External ID"><NcInput value={iForm.external_id} onChange={e => setIForm(p => ({ ...p, external_id: e.target.value }))} placeholder="e.g. INIT-001" /></Field>
         <Field label="State"><NcSelect value={iForm.state} onValueChange={v => setIForm(p => ({ ...p, state: v as Initiative["state"] }))} items={Object.entries(INIT_STATE_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color }))} /></Field>
-        <div className="flex gap-2 justify-end pt-1"><GhostBtn onClick={() => setCreatingInit(false)}>Cancel</GhostBtn><PrimaryBtn loading={saving} onClick={createInit}>Create</PrimaryBtn></div>
+        <div className="flex gap-2 justify-end pt-1"><TextBtn onClick={() => setCreatingInit(false)}>Cancel</TextBtn><PrimaryBtn loading={saving} onClick={createInit}>Create</PrimaryBtn></div>
       </Modal>
 
       {editInit && (
@@ -3528,7 +3510,7 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
           <Field label="Description"><NcTextarea value={editInit.description ?? ""} onChange={e => setEditInit(p => p ? { ...p, description: e.target.value } : p)} placeholder="Optional — what is this for?" rows={3} /></Field>
           <Field label="External ID"><NcInput value={editInit.external_id} onChange={e => setEditInit(p => p ? { ...p, external_id: e.target.value } : p)} /></Field>
           <Field label="State"><NcSelect value={editInit.state} onValueChange={v => setEditInit(p => p ? { ...p, state: v as Initiative["state"] } : p)} items={Object.entries(INIT_STATE_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color }))} /></Field>
-          <div className="flex gap-2 justify-end pt-1"><GhostBtn onClick={() => setEditInit(null)}>Cancel</GhostBtn><PrimaryBtn loading={saving} onClick={() => saveInit(editInit.id, editInit)}>Save</PrimaryBtn></div>
+          <div className="flex gap-2 justify-end pt-1"><TextBtn onClick={() => setEditInit(null)}>Cancel</TextBtn><PrimaryBtn loading={saving} onClick={() => saveInit(editInit.id, editInit)}>Save</PrimaryBtn></div>
         </Modal>
       )}
 
