@@ -1,4 +1,6 @@
 import { hexToOklch, type Oklch } from "./color";
+import type { CharacterSeed } from "./characterSeed";
+import type { ShapeSeed } from "./shapeSeed";
 
 export type { Oklch } from "./color";
 
@@ -55,6 +57,38 @@ const authoredSeed: Seed = {
   hairAlphas: [0.045, 0.09, 0.14],
 };
 
+const authoredShapeSeed: ShapeSeed = {
+  spaceUnit: 4,
+  radius: {
+    base: 10,
+    curve: 1.4,
+    floor: 6,
+  },
+  borderAlphas: [0.045, 0.09, 0.14],
+  elevation: {
+    ambientAlpha: 0.18,
+    keyAlpha: 0.28,
+    liftCurve: 1.35,
+  },
+  motion: {
+    baseMs: 240,
+    ease: "cubic-bezier(0.16, 1, 0.3, 1)",
+    easeSnap: "cubic-bezier(0.2, 0.85, 0.25, 1)",
+  },
+};
+
+const authoredCharacter: CharacterSeed = {
+  modes: {
+    chrome: "plain",
+    ground: "plain",
+    elevated: "plain",
+    "elevated-2": "plain",
+    top: "plain",
+  },
+  graphIntensity: 0.12,
+  glassIntensity: 0.5,
+};
+
 function deepFreeze<T>(value: T): T {
   if (value && typeof value === "object") {
     Object.freeze(value);
@@ -64,6 +98,8 @@ function deepFreeze<T>(value: T): T {
 }
 
 export const DEFAULT_SEED: Seed = deepFreeze(authoredSeed);
+export const DEFAULT_SHAPE_SEED: ShapeSeed = deepFreeze(authoredShapeSeed);
+export const DEFAULT_CHARACTER: CharacterSeed = deepFreeze(authoredCharacter);
 
 export function cloneSeed(seed: Seed = DEFAULT_SEED): Seed {
   return {

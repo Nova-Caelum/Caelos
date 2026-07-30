@@ -2,11 +2,15 @@
   import { createRoot } from "react-dom/client";
   import App from "./app/App.tsx";
   import DesignLab from "./app/DesignLab.tsx";
-  import Foundry from "./app/Foundry.tsx";
   import LockedStudio from "./app/LockedStudio.tsx";
-  import { shapeTheme } from "./design/deriveShape.ts";
+  import { derive } from "./design/derive.ts";
+  import { applyCharacterCss, deriveCharacter } from "./design/deriveCharacter.ts";
+  import { deriveShape } from "./design/deriveShape.ts";
   import { injectTokens } from "./design/inject.ts";
-  import { theme } from "./design/tokens.ts";
+  import { applyOverride } from "./design/override.ts";
+  import seedOverride from "./design/seed.override.json";
+  import { DEFAULT_SEED } from "./design/seed.ts";
+  import { DEFAULT_SHAPE_SEED } from "./design/shapeSeed.ts";
   import "./styles/index.css";
 
   // URL toggles:
@@ -21,15 +25,22 @@
 
   // Layer A bridge: legacy --nc-* consumers now resolve through the derived
   // --sys-* color system while the migration surface remains stable.
-  injectTokens([theme.css, shapeTheme.css], { legacyBridge: true });
+  const stagedSeeds = applyOverride(DEFAULT_SEED, DEFAULT_SHAPE_SEED, seedOverride);
+  injectTokens([derive(stagedSeeds.color).css, deriveShape(stagedSeeds.shape).css], { legacyBridge: true });
+  applyCharacterCss(deriveCharacter(stagedSeeds.character, stagedSeeds.color));
 
   const root = createRoot(document.getElementById("root")!);
-  if (isFoundry) {
-    root.render(<><App /><Foundry /></>);
-  } else if (isLocked) {
-    root.render(<LockedStudio />);
-  } else if (isLab) {
-    root.render(<DesignLab />);
-  } else {
-    root.render(<App />);
+  async function renderRoute() {
+    if (isFoundry && import.meta.env.DEV) {
+      const { default: Foundry } = await import("./app/Foundry.tsx");
+      root.render(<><App foundryMode /><Foundry /></>);
+    } else if (isLocked) {
+      root.render(<LockedStudio />);
+    } else if (isLab) {
+      root.render(<DesignLab />);
+    } else {
+      root.render(<App />);
+    }
   }
+
+  void renderRoute();

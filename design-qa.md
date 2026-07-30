@@ -65,3 +65,14 @@ The live instrument panel and the open Button matrix were inspected at readable 
 ## Follow-up polish
 
 - P3: consider remembering the last open matrix during the same browser session after the primitive set is locked.
+
+## Foundry v2 authoring-pipeline worklog — 2026-07-30
+
+- Added an isolated dev-only Foundry route with sidecar staging, reset controls, human-readable diffs, and guarded branch/PR promotion.
+- Added systematic ground-hex authoring, plain/graph/glass character modes across all five surfaces, global graph/glass intensity controls, and major App surface tagging.
+- Added a populated Foundry calibration project, initiative and task hierarchy, persistent `Test against` targeting, plus an explicit empty-state target.
+- Unified Locked Studio and Foundry primitive chemistry through `src/primitives/primitives.css`; the manual refresh path pulses the live gallery.
+- Browser QA verified graph-ground on the canvas and specimen, visibly offset elevated-2 glass on a real task drawer, intensity-driven blur/radius output, target persistence, empty/project/initiative switching, and canonical primitive refresh.
+- Static gates passed: production build, no Foundry endpoint strings in the production bundle, zero raw literals under `src/primitives/`, one `.locked-btn-primary` definition, and no banned edge mechanisms in the new character/Foundry CSS.
+- Route probes returned 200 for `/`, `/?lab=1`, `/?locked=1`, and `/?foundry=1`; localhost browser diagnostics contained no warning or error entries.
+- Final real Save-to-staging → two-tab comparison → Commit + Push verification is intentionally performed after this implementation checkpoint so the generated promotion branch is based on reviewed code. The generated branch and PR are reported in the task handoff; no PR is merged by this workflow.

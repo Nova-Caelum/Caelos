@@ -1,6 +1,10 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 //  DESIGN LAB — Caelos component sandbox
 // ───────────────────────────────────────────────────────────────────────────────
+//  WORKFLOW: draft chemistry here in Lab → when Daniel locks it, move the CSS
+//  into src/primitives/primitives.css (+ a component variant when applicable) →
+//  Foundry and LockedStudio consume the canonical stylesheet automatically.
+//
 //  Toggle: append `?lab=1` to the URL. main.tsx swaps App→DesignLab on that flag.
 //
 //  Iteration 5 — 2026-07-29 — SLATE + INPUT BAR, SIDE BY SIDE

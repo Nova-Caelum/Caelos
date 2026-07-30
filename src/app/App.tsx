@@ -69,6 +69,93 @@ type Selection =
   | { type: "initiative"; item: Initiative }
   | null;
 
+const FOUNDRY_DEMO_PROJECT: Project = {
+  id: "foundry-project",
+  name: "Foundry calibration",
+  description: "A populated workspace for evaluating every surface, state, and primitive in context.",
+  folder_path: "/projects/foundry-calibration",
+  created_at: "2026-07-30T00:00:00.000Z",
+  status: "in-progress",
+  team: ["Da Vinci", "Codex"],
+  owner: "Daniel Eghdami",
+  client: "Nova Caelum",
+};
+
+const FOUNDRY_DEMO_INITIATIVE: Initiative = {
+  id: "foundry-initiative",
+  external_id: "INIT-FOUNDRY",
+  title: "Foundry v2 evaluation",
+  description: "Cross-surface design-system evaluation with staged promotion and preview review.",
+  state: "in-progress",
+  doc_paths: [],
+};
+
+const FOUNDRY_DEMO_MODULES: Mod[] = [{
+  id: "foundry-module",
+  project_id: FOUNDRY_DEMO_PROJECT.id,
+  name: "Foundry authoring pipeline",
+  folder_path: "/projects/foundry-calibration/modules/authoring-pipeline",
+  description: "A complete module specimen for validating hierarchy, states, and drawer surfaces.",
+  state: "in-progress",
+  team: ["Da Vinci", "Codex"],
+}];
+
+const FOUNDRY_DEMO_CYCLES: Cycle[] = [{
+  id: "foundry-cycle",
+  project_id: FOUNDRY_DEMO_PROJECT.id,
+  name: "Seed evaluation",
+  start_date: "2026-07-28",
+  end_date: "2026-08-04",
+  state: "in-progress",
+  description: "Visual QA across all Foundry layers before preview review.",
+}];
+
+const FOUNDRY_DEMO_ITEMS: WorkItem[] = [
+  {
+    id: "foundry-task-graph",
+    project_id: FOUNDRY_DEMO_PROJECT.id,
+    module_id: FOUNDRY_DEMO_MODULES[0].id,
+    cycle_id: FOUNDRY_DEMO_CYCLES[0].id,
+    title: "Evaluate graph-ground hierarchy",
+    description: "Check the 28px crosshatch at every surface boundary and content density.",
+    state: "ready",
+    priority: "high",
+    assignee: "Da Vinci",
+    team: ["Design"],
+    blocked_by: [],
+    doc_paths: [],
+    source_references: {},
+  },
+  {
+    id: "foundry-task-glass",
+    project_id: FOUNDRY_DEMO_PROJECT.id,
+    module_id: FOUNDRY_DEMO_MODULES[0].id,
+    cycle_id: FOUNDRY_DEMO_CYCLES[0].id,
+    title: "Inspect elevated glass drawer",
+    description: "Verify translucent fill, blur, and foreground legibility over realistic content.",
+    state: "in-progress",
+    priority: "urgent",
+    assignee: "Codex",
+    team: ["Engineering"],
+    blocked_by: [],
+    doc_paths: [],
+    source_references: {},
+  },
+  {
+    id: "foundry-task-preview",
+    project_id: FOUNDRY_DEMO_PROJECT.id,
+    title: "Review branch preview",
+    description: "Compare staging and branch preview before Daniel merges the promotion PR.",
+    state: "pending-review",
+    priority: "medium",
+    assignee: "Daniel Eghdami",
+    team: ["Product"],
+    blocked_by: [],
+    doc_paths: [],
+    source_references: {},
+  },
+];
+
 // ── Keyboard hooks ─────────────────────────────────────────────────────────────
 
 function useCmdEnter(callback: () => void, enabled = true) {
@@ -892,7 +979,7 @@ function Modal({ open, onClose, title, children, maxWidth = "max-w-md" }: { open
   if (!open) return null;
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)" }} onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className={`nc-lit-surface ${maxWidth} w-full rounded-xl border p-6`} style={{ borderColor: NC.border }}>
+      <div data-surface="top" className={`nc-lit-surface ${maxWidth} w-full rounded-xl border p-6`} style={{ borderColor: NC.border }}>
         <div className="flex items-center justify-between mb-5">
           <h3 style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 20, color: NC.cream, fontWeight: 600, letterSpacing: "-0.02em" }}>{title}</h3>
           <button onClick={onClose} className="p-1 rounded hover:bg-white/5" style={{ color: NC.stone }}><X size={15} /></button>
@@ -908,7 +995,7 @@ function SlideOver({ open, onClose, title, actions, children }: { open: boolean;
   return createPortal(
     <>
       <div className="fixed inset-0 z-40 transition-opacity duration-300" style={{ background: "rgba(0,0,0,0.55)", pointerEvents: open ? "auto" : "none", opacity: open ? 1 : 0 }} onClick={onClose} />
-      <div className="nc-lit-surface fixed right-0 top-0 h-full z-50 flex flex-col border-l" style={{ width: 480, borderColor: NC.border, transform: open ? "translateX(0)" : "translateX(100%)", transition: "transform 0.28s ease" }}>
+      <div data-surface="elevated-2" className="nc-lit-surface fixed right-0 top-0 h-full z-50 flex flex-col border-l" style={{ width: 480, right: "var(--foundry-panel-offset, 0px)", borderColor: NC.border, transform: open ? "translateX(0)" : "translateX(100%)", transition: "transform 0.28s ease" }}>
         {/* Header padding: pt-6 gives the breadcrumb breath from the top edge;
             pb-4 pairs with body pt-2 to yield ~24px between the last header row
             (title) and the first body row (description) — matching the ~24px
@@ -1940,8 +2027,8 @@ const EMPTY_TASK_FORM = {
   assignee: "", module_id: null as string | null, parent_item_id: null as string | null,
 };
 
-function TasksPane({ projectId, projectName, pendingTaskId, onClearPending }: {
-  projectId: string; projectName: string; pendingTaskId: string | null; onClearPending: () => void;
+function TasksPane({ projectId, projectName, pendingTaskId, onClearPending, fixtureMode = false }: {
+  projectId: string; projectName: string; pendingTaskId: string | null; onClearPending: () => void; fixtureMode?: boolean;
 }) {
   const [items, setItems]   = useState<WorkItem[]>([]);
   const [mods,  setMods]    = useState<Mod[]>([]);
@@ -1971,11 +2058,13 @@ function TasksPane({ projectId, projectName, pendingTaskId, onClearPending }: {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [itemsData, modsData, cyclesData] = await Promise.all([
-        api<WorkItem[]>(`/projects/${projectId}/work-items`),
-        api<Mod[]>(`/projects/${projectId}/modules`),
-        api<Cycle[]>(`/projects/${projectId}/cycles`),
-      ]);
+      const [itemsData, modsData, cyclesData] = fixtureMode
+        ? [FOUNDRY_DEMO_ITEMS, FOUNDRY_DEMO_MODULES, FOUNDRY_DEMO_CYCLES]
+        : await Promise.all([
+          api<WorkItem[]>(`/projects/${projectId}/work-items`),
+          api<Mod[]>(`/projects/${projectId}/modules`),
+          api<Cycle[]>(`/projects/${projectId}/cycles`),
+        ]);
       // Hide archived from the project view entirely — accessible only via Settings → Archived.
       // This keeps the state filter dropdown consistent (its "Archived" option is redundant here; kept for parity with other states).
       const activeMods  = modsData.filter(m => m.state !== "archived");
@@ -1989,7 +2078,7 @@ function TasksPane({ projectId, projectName, pendingTaskId, onClearPending }: {
       ]);
     } catch { toast.error("Failed to load project data"); }
     finally { setLoading(false); }
-  }, [projectId]);
+  }, [fixtureMode, projectId]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (pendingTaskId) { setSelectedTaskId(pendingTaskId); onClearPending(); } }, [pendingTaskId]);
@@ -2808,13 +2897,14 @@ function ProjectInfoTab({ project, onSave, onSwitchTab }: {
   );
 }
 
-function ProjectView({ project, pendingTaskId, onClearPending, pendingTab, onClearPendingTab, onSaveProject }: {
+function ProjectView({ project, pendingTaskId, onClearPending, pendingTab, onClearPendingTab, onSaveProject, foundryMode = false }: {
   project: Project;
   pendingTaskId: string | null;
   onClearPending: () => void;
   pendingTab: string | null;
   onClearPendingTab: () => void;
   onSaveProject: (id: string, patch: Partial<Project>) => Promise<void>;
+  foundryMode?: boolean;
 }) {
   const [tab, setTab] = useState<string>("tasks");
   useEffect(() => {
@@ -2855,7 +2945,7 @@ function ProjectView({ project, pendingTaskId, onClearPending, pendingTab, onCle
           <ProjectInfoTab project={project} onSave={onSaveProject} onSwitchTab={setTab} />
         </TabsPrimitive.Content>
         <TabsPrimitive.Content value="tasks" className="flex-1 flex flex-col overflow-hidden data-[state=inactive]:hidden">
-          <TasksPane projectId={project.id} projectName={project.name} pendingTaskId={pendingTaskId} onClearPending={onClearPending} />
+          <TasksPane projectId={project.id} projectName={project.name} pendingTaskId={pendingTaskId} onClearPending={onClearPending} fixtureMode={foundryMode && project.id === FOUNDRY_DEMO_PROJECT.id} />
         </TabsPrimitive.Content>
         <TabsPrimitive.Content value="cycles" className="flex-1 flex flex-col overflow-hidden data-[state=inactive]:hidden">
           <CyclesTab projectId={project.id} />
@@ -3331,7 +3421,7 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
   }
 
   return (
-    <aside className="relative flex-shrink-0 flex flex-col border-r overflow-hidden" style={{ width: sidebarWidth, background: NC.chrome, borderColor: NC.borderFaint }}>
+    <aside data-surface="chrome" className="relative flex-shrink-0 flex flex-col border-r overflow-hidden" style={{ width: sidebarWidth, background: NC.chrome, borderColor: NC.borderFaint }}>
       <div className="px-4 pt-2 pb-1 flex-shrink-0 flex items-center justify-center" style={{ borderColor: NC.borderFaint }}>
         <img
           src={wordmarkUrl}
@@ -3540,7 +3630,7 @@ function Welcome() {
   );
 }
 
-export default function App() {
+export default function App({ foundryMode = false }: { foundryMode?: boolean }) {
   const [projects, setProjects]       = useState<Project[]>([]);
   const [initiatives, setInitiatives] = useState<Initiative[]>([]);
   const [selection, setSelection]     = useState<Selection>(null);
@@ -3552,8 +3642,50 @@ export default function App() {
     Promise.all([
       api<Project[]>("/projects").catch(() => [] as Project[]),
       api<Initiative[]>("/initiatives").catch(() => [] as Initiative[]),
-    ]).then(([ps, is]) => { setProjects(ps); setInitiatives(is); }).finally(() => setBooting(false));
-  }, []);
+    ]).then(([ps, is]) => {
+      const nextProjects = ps.length || !foundryMode ? ps : [FOUNDRY_DEMO_PROJECT];
+      const nextInitiatives = is.length || !foundryMode ? is : [FOUNDRY_DEMO_INITIATIVE];
+      setProjects(nextProjects);
+      setInitiatives(nextInitiatives);
+      const foundryTarget = foundryMode ? window.localStorage.getItem("caelos.foundryTarget") : null;
+      let remembered: { type?: string; id?: string } | null = null;
+      try { remembered = JSON.parse(window.localStorage.getItem("caelos.lastSelection") ?? "null") as { type?: string; id?: string } | null; } catch { remembered = null; }
+      const targetId = foundryTarget ?? remembered?.id;
+      const project = nextProjects.find((item) => item.id === targetId);
+      const initiative = nextInitiatives.find((item) => item.id === targetId);
+      if (project) setSelection({ type: "project", item: project });
+      else if (initiative) setSelection({ type: "initiative", item: initiative });
+      else if (nextProjects[0]) setSelection({ type: "project", item: nextProjects[0] });
+      else if (nextInitiatives[0]) setSelection({ type: "initiative", item: nextInitiatives[0] });
+    }).finally(() => setBooting(false));
+  }, [foundryMode]);
+
+  useEffect(() => {
+    if (!selection) return;
+    window.localStorage.setItem("caelos.lastSelection", JSON.stringify({ type: selection.type, id: selection.item.id }));
+  }, [selection]);
+
+  useEffect(() => {
+    if (!foundryMode) return;
+    const targets = [
+      ...projects.map((item) => ({ id: item.id, type: "project" as const, label: item.name })),
+      ...initiatives.map((item) => ({ id: item.id, type: "initiative" as const, label: item.title })),
+    ];
+    const publish = () => window.dispatchEvent(new CustomEvent("caelos:foundry-options", { detail: { targets, selectedId: selection?.item.id ?? "" } }));
+    const select = (event: Event) => {
+      const id = (event as CustomEvent<{ id: string | null }>).detail.id;
+      const project = projects.find((item) => item.id === id);
+      const initiative = initiatives.find((item) => item.id === id);
+      setSelection(project ? { type: "project", item: project } : initiative ? { type: "initiative", item: initiative } : null);
+    };
+    window.addEventListener("caelos:foundry-request-options", publish);
+    window.addEventListener("caelos:foundry-select", select);
+    publish();
+    return () => {
+      window.removeEventListener("caelos:foundry-request-options", publish);
+      window.removeEventListener("caelos:foundry-select", select);
+    };
+  }, [foundryMode, initiatives, projects, selection]);
 
   async function saveProject(id: string, patch: Partial<Project>) {
     try {
@@ -3588,7 +3720,7 @@ export default function App() {
   }, [projects, initiatives]);
 
   return (
-    <div className="dark h-screen flex overflow-hidden" style={{ background: NC.ground, fontFamily: "'IBM Plex Sans', system-ui, sans-serif" }}>
+    <div data-surface="ground" className="dark h-screen flex overflow-hidden" style={{ background: NC.ground, fontFamily: "'IBM Plex Sans', system-ui, sans-serif" }}>
       <Sidebar
         projects={projects} initiatives={initiatives} selection={selection}
         onSelect={setSelection}
@@ -3599,7 +3731,7 @@ export default function App() {
         onSaveProject={saveProject}
         onUpdateInitiative={updateInitiative}
       />
-      <main className="flex-1 flex flex-col overflow-hidden" style={{ background: NC.card }}>
+      <main data-surface="elevated" className="flex-1 flex flex-col overflow-hidden" style={{ background: NC.card }}>
         {booting ? (
           <div className="flex-1 flex items-center justify-center"><Spinner /></div>
         ) : selection?.type === "project" ? (
@@ -3608,6 +3740,7 @@ export default function App() {
             pendingTaskId={pendingTaskId} onClearPending={() => setPendingTaskId(null)}
             pendingTab={pendingProjectTab} onClearPendingTab={() => setPendingProjectTab(null)}
             onSaveProject={saveProject}
+            foundryMode={foundryMode}
           />
         ) : selection?.type === "initiative" ? (
           <InitiativeView initiative={selection.item} allProjects={projects} onUpdateInit={updateInitiative} />

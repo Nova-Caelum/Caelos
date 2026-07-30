@@ -1,3 +1,11 @@
+/*
+ * CAELOS CANONICAL PRIMITIVE STYLESHEET
+ *
+ * Draft chemistry in Design Lab, promote locked decisions here, and consume
+ * this file from both Locked Studio and Foundry. Do not duplicate primitive
+ * chemistry in TSX style blocks.
+ */
+
 .nc-icon-slot > svg {
   display: block;
   height: 1em;
@@ -258,6 +266,175 @@
 .nc-row[data-variant="crumb"] {
   color: var(--sys-text-tertiary);
   padding-inline: var(--sys-space-2);
+}
+
+/* ── Locked chemistry (pre-primitive compatibility) ─────────────────────── */
+
+.locked-bc {
+  backdrop-filter: blur(var(--sys-radius-lg));
+  background: transparent;
+  border: none;
+  border-radius: var(--sys-radius-lg);
+  box-shadow: none;
+  display: inline-flex;
+  padding: var(--sys-space-2) var(--sys-space-4);
+  position: relative;
+}
+
+.locked-bc::before {
+  background: color-mix(in srgb, var(--sys-elevated) 70%, transparent);
+  border-radius: var(--sys-radius-lg);
+  box-shadow: 0 0 var(--sys-space-3) var(--sys-hair-3);
+  content: "";
+  filter: blur(var(--sys-radius-sm));
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+}
+
+.locked-bc > * {
+  position: relative;
+  z-index: 1;
+}
+
+.locked-bc-content {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--sys-space-1);
+}
+
+.locked-bc-seg {
+  border-radius: var(--sys-radius-sm);
+  color: var(--sys-text-secondary);
+  cursor: pointer;
+  padding: var(--sys-space-1) var(--sys-space-2);
+  transition: color var(--sys-motion-base) var(--sys-ease-out);
+}
+
+.locked-bc-seg:hover {
+  color: var(--sys-text-primary);
+}
+
+.locked-bc-sep {
+  color: var(--sys-text-faint);
+  padding: 0 var(--sys-space-1);
+  user-select: none;
+}
+
+.locked-folder-btn,
+.locked-btn-primary,
+.locked-btn-secondary,
+.locked-btn-text {
+  align-items: center;
+  border-radius: var(--sys-radius-md);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: inherit;
+  gap: var(--sys-space-2);
+  transition:
+    background var(--sys-motion-base) var(--sys-ease-out),
+    border-color var(--sys-motion-base) var(--sys-ease-out),
+    box-shadow var(--sys-motion-base) var(--sys-ease-out),
+    color var(--sys-motion-fast) var(--sys-ease-out);
+}
+
+.locked-folder-btn {
+  background: linear-gradient(135deg, var(--sys-hair-1), transparent);
+  border: var(--sys-border-width-2) solid var(--sys-hair-2);
+  color: var(--sys-text-secondary);
+  padding: var(--sys-space-2) var(--sys-space-3);
+}
+
+.locked-folder-btn:hover {
+  background: linear-gradient(135deg, var(--sys-hair-2), transparent);
+  border-color: var(--sys-hair-3);
+  box-shadow: 0 0 var(--sys-space-4) var(--sys-accent-glow);
+  color: var(--sys-text-primary);
+}
+
+.locked-btn-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sys-space-4);
+}
+
+.locked-btn-row-label {
+  color: var(--sys-text-faint);
+  font-family: inherit;
+  text-transform: uppercase;
+  width: calc(var(--sys-space-8) * 3);
+}
+
+.locked-btn-primary {
+  backdrop-filter: blur(var(--sys-radius-md));
+  background:
+    linear-gradient(135deg, var(--sys-sem-ready-tint), transparent, var(--sys-sem-sage-tint)),
+    color-mix(in srgb, var(--sys-accent) 90%, var(--sys-ground));
+  border: var(--sys-border-width-2) solid var(--sys-hair-2);
+  box-shadow: var(--sys-elev-1), 0 0 var(--sys-space-4) var(--sys-accent-glow);
+  color: var(--sys-text-primary);
+  padding: var(--sys-space-2) var(--sys-space-4);
+}
+
+.locked-btn-primary:hover {
+  background:
+    linear-gradient(135deg, var(--sys-sem-ready-line), transparent, var(--sys-sem-sage-line)),
+    color-mix(in srgb, var(--sys-accent-hover) 94%, var(--sys-ground));
+  border-color: var(--sys-hair-3);
+  box-shadow: var(--sys-elev-2), 0 0 var(--sys-space-6) var(--sys-accent-glow);
+}
+
+.locked-btn-primary--danger {
+  background:
+    linear-gradient(135deg, var(--sys-sem-progress-tint), transparent, var(--sys-sem-danger-tint)),
+    color-mix(in srgb, var(--sys-sem-danger) 90%, var(--sys-ground));
+  box-shadow: var(--sys-elev-1), 0 0 var(--sys-space-4) var(--sys-sem-danger-glow);
+}
+
+.locked-btn-primary--danger:hover {
+  background:
+    linear-gradient(135deg, var(--sys-sem-progress-line), transparent, var(--sys-sem-danger-line)),
+    color-mix(in srgb, var(--sys-sem-danger-hover) 94%, var(--sys-ground));
+  box-shadow: var(--sys-elev-2), 0 0 var(--sys-space-6) var(--sys-sem-danger-glow);
+}
+
+.locked-btn-secondary {
+  background: linear-gradient(135deg, var(--sys-hair-1), transparent);
+  border: var(--sys-border-width-2) solid var(--sys-hair-2);
+  color: var(--sys-text-secondary);
+  padding: var(--sys-space-2) var(--sys-space-4);
+}
+
+.locked-btn-secondary:hover {
+  background: linear-gradient(135deg, var(--sys-hair-2), transparent);
+  border-color: var(--sys-hair-3);
+  box-shadow: 0 0 var(--sys-space-4) var(--sys-accent-glow);
+  color: var(--sys-text-primary);
+}
+
+.locked-btn-secondary--danger,
+.locked-btn-text--danger {
+  color: var(--sys-sem-danger-on-tint);
+}
+
+.locked-btn-secondary--danger:hover,
+.locked-btn-text--danger:hover {
+  box-shadow: 0 0 var(--sys-space-4) var(--sys-sem-danger-glow);
+  color: var(--sys-sem-danger);
+}
+
+.locked-btn-text {
+  background: transparent;
+  border: var(--sys-border-width-2) solid transparent;
+  color: var(--sys-text-secondary);
+  padding: var(--sys-space-2) var(--sys-space-3);
+}
+
+.locked-btn-text:hover {
+  background: var(--sys-hair-1);
+  color: var(--sys-text-primary);
 }
 
 .nc-row[data-variant="crumb"][data-selected] {
