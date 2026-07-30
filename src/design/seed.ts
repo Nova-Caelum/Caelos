@@ -1,5 +1,5 @@
-import { hexToOklch, type Oklch } from "./color";
 import type { CharacterSeed } from "./characterSeed";
+import type { Oklch } from "./color";
 import type { ShapeSeed } from "./shapeSeed";
 
 export type { Oklch } from "./color";
@@ -28,65 +28,124 @@ export interface Seed {
   hairAlphas: [number, number, number];
 }
 
-const chrome = hexToOklch("#12121E");
-
 const authoredSeed: Seed = {
-  groundBase: chrome,
-  hueVector: { h: chrome.h, c: chrome.c, cRamp: 0.004 },
-  contrast: 1,
-  lightWarm: hexToOklch("#F4EAD5"),
-  accents: {
-    cool: hexToOklch("#6D5AD1"),
-    hot: hexToOklch("#C25B62"),
+  "groundBase": {
+    "l": 0.188502,
+    "c": 0.024254,
+    "h": 283.830366
   },
-  semantics: {
-    sage: hexToOklch("#7A9E93"),
-    done: hexToOklch("#5B7D73"),
-    progress: hexToOklch("#E8B87A"),
-    danger: hexToOklch("#C25B62"),
-    ready: hexToOklch("#8E96CC"),
-    atmospheric: hexToOklch("#8879A0"),
-    structural: hexToOklch("#4E4C82"),
-    neutral: hexToOklch("#8F8A80"),
+  "hueVector": {
+    "h": 283.830366,
+    "c": 0.024254,
+    "cRamp": 0.004
   },
-  // APCA |Lc| targets against the derived ground. Calibrated to sit near the
-  // legacy hand-authored tiers' measured contrast (93/39/23/14 against #1C1B28)
-  // while giving Daniel headroom to dial UP toward legibility in the Foundry —
-  // the seed-authoring session is where these get their final values.
-  textTargets: { primary: 90, secondary: 45, tertiary: 28, faint: 16 },
-  hairAlphas: [0.045, 0.09, 0.14],
+  "contrast": 1,
+  "lightWarm": {
+    "l": 0.939359,
+    "c": 0.029814,
+    "h": 85.564645
+  },
+  "accents": {
+    "cool": {
+      "l": 0.54893,
+      "c": 0.176248,
+      "h": 286.37183
+    },
+    "hot": {
+      "l": 0.59934,
+      "c": 0.132147,
+      "h": 17.740348
+    }
+  },
+  "semantics": {
+    "sage": {
+      "l": 0.669131,
+      "c": 0.042903,
+      "h": 174.28394
+    },
+    "done": {
+      "l": 0.560675,
+      "c": 0.041689,
+      "h": 174.643075
+    },
+    "progress": {
+      "l": 0.812101,
+      "c": 0.096644,
+      "h": 72.884383
+    },
+    "danger": {
+      "l": 0.59934,
+      "c": 0.132147,
+      "h": 17.740348
+    },
+    "ready": {
+      "l": 0.686927,
+      "c": 0.080059,
+      "h": 277.554877
+    },
+    "atmospheric": {
+      "l": 0.603884,
+      "c": 0.060618,
+      "h": 302.197598
+    },
+    "structural": {
+      "l": 0.443801,
+      "c": 0.087397,
+      "h": 283.925337
+    },
+    "neutral": {
+      "l": 0.634788,
+      "c": 0.015813,
+      "h": 84.592613
+    }
+  },
+  "textTargets": {
+    "primary": 90,
+    "secondary": 45,
+    "tertiary": 28,
+    "faint": 16
+  },
+  "hairAlphas": [
+    0.045,
+    0.09,
+    0.14
+  ]
 };
 
 const authoredShapeSeed: ShapeSeed = {
-  spaceUnit: 4,
-  radius: {
-    base: 10,
-    curve: 1.4,
-    floor: 6,
+  "spaceUnit": 4,
+  "radius": {
+    "base": 10,
+    "curve": 1.4,
+    "floor": 6
   },
-  borderAlphas: [0.045, 0.09, 0.14],
-  elevation: {
-    ambientAlpha: 0.18,
-    keyAlpha: 0.28,
-    liftCurve: 1.35,
+  "borderAlphas": [
+    0.045,
+    0.09,
+    0.14
+  ],
+  "elevation": {
+    "ambientAlpha": 0.18,
+    "keyAlpha": 0.28,
+    "liftCurve": 1.35
   },
-  motion: {
-    baseMs: 240,
-    ease: "cubic-bezier(0.16, 1, 0.3, 1)",
-    easeSnap: "cubic-bezier(0.2, 0.85, 0.25, 1)",
-  },
+  "motion": {
+    "baseMs": 240,
+    "ease": "cubic-bezier(0.16, 1, 0.3, 1)",
+    "easeSnap": "cubic-bezier(0.2, 0.85, 0.25, 1)"
+  }
 };
 
 const authoredCharacter: CharacterSeed = {
-  modes: {
-    chrome: "plain",
-    ground: "plain",
-    elevated: "plain",
-    "elevated-2": "plain",
-    top: "plain",
+  "modes": {
+    "chrome": "plain",
+    "ground": "graph",
+    "elevated": "plain",
+    "elevated-2": "glass",
+    "top": "plain"
   },
-  graphIntensity: 0.12,
-  glassIntensity: 0.5,
+  "graphIntensity": 0.12,
+  "glassIntensity": 0.5
 };
 
 function deepFreeze<T>(value: T): T {
