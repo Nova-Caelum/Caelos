@@ -62,7 +62,7 @@ async function getPromoteStatus(root: string): Promise<{
   ]);
   return {
     currentBranch,
-    manualSeedDiff: headSeed !== workingSeed,
+    manualSeedDiff: headSeed !== workingSeed.trimEnd(),
     ghReady: ghStatus,
   };
 }
