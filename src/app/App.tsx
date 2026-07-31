@@ -410,11 +410,11 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
     for (const k of ["name", "description", "status", "team", "folder_path", "owner", "client", "next_action", "parent_code"]) {
       if (body[k] !== undefined) args[k] = body[k];
     }
-    const r = await mcpCall<any>("update_project", args);
+    const r = await mcpCall<any>("upsert_project", args);
     return adaptProjectRead(unwrapRow(r)) as T;
   }
   if (projMatch && method === "DELETE") {
-    await mcpCall("update_project", { code: projMatch[1], status: "archived" });
+    await mcpCall("upsert_project", { code: projMatch[1], status: "archived" });
     return undefined as T;
   }
 
@@ -556,7 +556,7 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
   }
   if (path === "/initiatives" && method === "POST") {
     const backendBody = {
-      external_id: body.external_id ?? idempKey("init"),
+      external_id: body.external_id || idempKey("init"),
       title: body.title ?? "Untitled",
       description: body.description || null,
       state: body.state ?? "planned",
@@ -1936,6 +1936,16 @@ function TaskRow({ task, allItems, depth, gripRef, onSelect, onDelete, onDuplica
               {task.assignee && <span className="text-xs max-w-[72px] truncate hidden sm:block" style={{ color: NC.stone }}>{task.assignee}</span>}
               {subtasks.length > 0 && <span className="text-xs" style={{ color: NC.stone }}>{subtasks.length} sub</span>}
             </div>
+            <button
+              type="button"
+              title="Archive task"
+              aria-label={`Archive ${task.title}`}
+              className="flex-shrink-0 w-6 h-6 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-white/[0.08]"
+              style={{ color: NC.stone }}
+              onClick={e => { e.stopPropagation(); onDelete(task); }}
+            >
+              <Archive size={12} />
+            </button>
             <span ref={gripRef} className="flex-shrink-0 w-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing ml-1" style={{ color: NC.stone }} onClick={e => e.stopPropagation()}>
               <GripVertical size={12} />
             </span>
@@ -2047,7 +2057,7 @@ function ModuleSection({ mod, modTasks, allItems, gripRef, onOpenMod, onDeleteMo
 
 const EMPTY_TASK_FORM = {
   title: "", description: "",
-  state: "ready" as WorkItemState, priority: "none" as WorkItemPriority,
+  state: "ready" as WorkItemState,
   assignee: "", module_id: null as string | null, parent_item_id: null as string | null,
 };
 
@@ -2057,6 +2067,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
   const [items, setItems]   = useState<WorkItem[]>([]);
   const [mods,  setMods]    = useState<Mod[]>([]);
   const [cycles, setCycles] = useState<Cycle[]>([]);
+  const [members, setMembers] = useState<ProjectMember[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [itemOrder, setItemOrder] = useState<string[]>([]);
@@ -2082,12 +2093,18 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [itemsData, modsData, cyclesData] = fixtureMode
-        ? [FOUNDRY_DEMO_ITEMS, FOUNDRY_DEMO_MODULES, FOUNDRY_DEMO_CYCLES]
+      const [itemsData, modsData, cyclesData, membersData] = fixtureMode
+        ? [
+          FOUNDRY_DEMO_ITEMS,
+          FOUNDRY_DEMO_MODULES,
+          FOUNDRY_DEMO_CYCLES,
+          FOUNDRY_DEMO_PROJECT.team.map((name, index) => ({ id: `foundry-member-${index}`, project_id: projectId, name })),
+        ]
         : await Promise.all([
           api<WorkItem[]>(`/projects/${projectId}/work-items`),
           api<Mod[]>(`/projects/${projectId}/modules`),
           api<Cycle[]>(`/projects/${projectId}/cycles`),
+          api<ProjectMember[]>(`/projects/${projectId}/members`).catch(() => [] as ProjectMember[]),
         ]);
       // Hide archived from the project view entirely — accessible only via Settings → Archived.
       // This keeps the state filter dropdown consistent (its "Archived" option is redundant here; kept for parity with other states).
@@ -2096,6 +2113,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
       setItems(activeItems);
       setMods(activeMods);
       setCycles(cyclesData.filter(c => c.state !== "archived"));
+      setMembers(membersData);
       setItemOrder([
         ...activeMods.map(m => m.id),
         ...activeItems.filter(w => !w.module_id && !w.parent_item_id).map(w => w.id),
@@ -2273,7 +2291,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
 
   async function saveMod(id: string, patch: Partial<Mod>) {
     try {
-      const updated = await api<Mod>(`/modules/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
+      const updated = await api<Mod>(`/modules/${id}`, { method: "PATCH", body: JSON.stringify({ ...patch, project_id: projectId }) });
       setMods(p => p.map(m => m.id === id ? updated : m));
       toast.success("Module updated");
     } catch { toast.error("Failed to update module"); }
@@ -2281,11 +2299,11 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
 
   async function deleteMod_(m: Mod) {
     try {
-      await api(`/modules/${m.id}`, { method: "DELETE" });
+      await api(`/modules/${m.id}`, { method: "DELETE", body: JSON.stringify({ project_id: m.project_id }) });
       setMods(p => p.filter(x => x.id !== m.id));
       setItemOrder(prev => prev.filter(id => id !== m.id));
-      toast.success("Module deleted");
-    } catch { toast.error("Failed to delete module"); }
+      toast.success("Module archived");
+    } catch { toast.error("Failed to archive module"); }
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -2457,11 +2475,17 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
         <Modal open={creatingTask} onClose={() => setCreatingTask(false)} title={taskForm.parent_item_id ? "New Subtask" : "New Task"}>
           <Field label="Title"><NcInput value={taskForm.title} onChange={e => setTaskForm(p => ({ ...p, title: e.target.value }))} placeholder="Task title" autoFocus onKeyDown={e => e.key === "Enter" && createTask()} /></Field>
           <Field label="Description"><NcTextarea value={taskForm.description} onChange={e => setTaskForm(p => ({ ...p, description: e.target.value }))} placeholder="Optional description" /></Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="State"><NcSelect value={taskForm.state} onValueChange={v => setTaskForm(p => ({ ...p, state: v as WorkItemState }))} items={Object.entries(STATE_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color }))} /></Field>
-            <Field label="Priority"><NcSelect value={taskForm.priority} onValueChange={v => setTaskForm(p => ({ ...p, priority: v as WorkItemPriority }))} items={Object.entries(PRI_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color }))} /></Field>
-          </div>
-          <Field label="Assignee"><NcInput value={taskForm.assignee} onChange={e => setTaskForm(p => ({ ...p, assignee: e.target.value }))} placeholder="Name or email" /></Field>
+          <Field label="State"><NcSelect value={taskForm.state} onValueChange={v => setTaskForm(p => ({ ...p, state: v as WorkItemState }))} items={Object.entries(STATE_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color }))} /></Field>
+          <Field label="Assignee">
+            <NcSelect
+              value={taskForm.assignee || "__unassigned__"}
+              onValueChange={v => setTaskForm(p => ({ ...p, assignee: v === "__unassigned__" ? "" : v }))}
+              items={[
+                { value: "__unassigned__", label: "(unassigned)" },
+                ...members.map(member => ({ value: member.name, label: member.name })),
+              ]}
+            />
+          </Field>
           <div className="flex gap-2 justify-end pt-1"><TextBtn onClick={() => setCreatingTask(false)}>Cancel</TextBtn><PrimaryBtn loading={taskSaving} onClick={createTask}>Create</PrimaryBtn></div>
         </Modal>
 
@@ -3305,7 +3329,7 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
   const [deleteProject, setDeleteProject] = useState<Project | null>(null);
   const [deleteInit, setDeleteInit] = useState<Initiative | null>(null);
   const [pForm, setPForm] = useState({ name: "", description: "", folder_path: "" });
-  const [iForm, setIForm] = useState({ title: "", description: "", external_id: "", state: "open" as Initiative["state"] });
+  const [iForm, setIForm] = useState({ title: "", description: "", external_id: "", state: "planned" as Initiative["state"] });
   const [saving, setSaving] = useState(false);
   const [sidebarSearch, setSidebarSearch] = useState("");
   const clampSidebarWidth = (width: number) => Math.min(480, Math.max(200, width));
@@ -3394,7 +3418,7 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
     try {
       const init = await api<Initiative>("/initiatives", { method: "POST", body: JSON.stringify(iForm) });
       onInitiativesChange([...initiatives, init]);
-      setCreatingInit(false); setIForm({ title: "", description: "", external_id: "", state: "open" });
+      setCreatingInit(false); setIForm({ title: "", description: "", external_id: "", state: "planned" });
       toast.success("Initiative created");
       onSelect({ type: "initiative", item: init });
     } catch { toast.error("Failed to create initiative"); }
