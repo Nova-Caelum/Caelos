@@ -527,17 +527,29 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
   }
 
   // === Cycles — patch/archive (Path B — /mcp upsert_cycle; FULL-REPLACE semantics —
-  // caller must pass name + all current fields, not just the delta) ===
+  // upsert_cycle validates via CycleUpsertArgs server-side: any field omitted from the
+  // call gets that schema's static default (e.g. name has no default and would reject;
+  // state defaults to "planned"), NOT "keep the existing value." A delta-shaped PATCH
+  // (e.g. {state:"done"} from the drawer's state select) would otherwise silently wipe
+  // name/description/dates back to defaults. Read-merge-write: fetch the current row,
+  // then let only fields explicitly present in `body` override it before the full
+  // upsert. Single-user MVP: the get_cycle read and the upsert below are not
+  // transactional — a concurrent write landing between them would be clobbered by this
+  // stale read. Acceptable for now; no concurrent editors on this surface today.) ===
   const cycleMatch = path.match(/^\/projects\/([^/]+)\/cycles\/([^/]+)$/);
   if (cycleMatch && (method === "PATCH" || method === "DELETE")) {
     const [, project, external_id] = cycleMatch;
+    const current = await mcpCall<any>("get_cycle", { project, external_id });
+    if (!current || typeof current.name !== "string" || !current.name) {
+      throw new Error(`Cycle PATCH/DELETE: could not load current row for ${project}/${external_id} to merge (upsert_cycle is full-replace)`);
+    }
     const args: Record<string, unknown> = {
       project, external_id,
-      name: body?.name ?? "Untitled",
-      description: body?.description ?? null,
-      state: method === "DELETE" ? "archived" : (body?.state ?? "planned"),
-      start_date: body?.start_date || null,
-      end_date: body?.end_date || null,
+      name: body?.name !== undefined ? body.name : current.name,
+      description: body?.description !== undefined ? body.description : (current.description ?? null),
+      state: method === "DELETE" ? "archived" : (body?.state !== undefined ? body.state : current.state),
+      start_date: body?.start_date !== undefined ? (body.start_date || null) : (current.start_date ?? null),
+      end_date: body?.end_date !== undefined ? (body.end_date || null) : (current.end_date ?? null),
       idempotency_key: idempKey("cy"),
     };
     const r = await mcpCall<any>("upsert_cycle", args);
@@ -545,19 +557,33 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
   }
 
   // === Modules — patch/archive (Path B — /mcp upsert_module; FULL-REPLACE semantics —
-  // caller must include project code in body since /modules/{id} carries no project scope) ===
+  // same class of bug as cycles above (ModuleUpsertArgs has no "keep existing" concept
+  // for omitted fields — team defaults to [], folder_path to null, state to
+  // "pending-review"). Read-merge-write, same pattern and same single-user-MVP caveat
+  // as the cycles block. NOTE: `parent_module_id` preservation is intentionally left
+  // untouched below — the existing call-site convention already passes the child's
+  // *external_id* through `body.parent_module_id` into `args.parent_module` (which the
+  // server expects to be a external_id), while a freshly-fetched `current` row only
+  // exposes the parent's internal UUID via `parent_module_id`. Merging that would need
+  // a second lookup to resolve the parent's external_id and is a separate, pre-existing
+  // gap outside this fix's scope — flagged for a follow-up, not fixed here. Caller must
+  // still include project code in body since /modules/{id} carries no project scope.) ===
   const modMatch = path.match(/^\/modules\/([^/]+)$/);
   if (modMatch && (method === "PATCH" || method === "DELETE")) {
     const external_id = modMatch[1];
     const project = body?.project_id ?? body?.project;
     if (!project) throw new Error("Module PATCH/DELETE requires project_id in body (adapter routing — Path B)");
+    const current = await mcpCall<any>("get_module", { project, external_id });
+    if (!current || typeof current.name !== "string" || !current.name) {
+      throw new Error(`Module PATCH/DELETE: could not load current row for ${project}/${external_id} to merge (upsert_module is full-replace)`);
+    }
     const args: Record<string, unknown> = {
       project, external_id,
-      name: body?.name ?? "Untitled",
-      description: body?.description ?? null,
-      state: method === "DELETE" ? "archived" : (body?.state ?? "pending-review"),
-      team: body?.team ?? [],
-      folder_path: body?.folder_path ?? null,
+      name: body?.name !== undefined ? body.name : current.name,
+      description: body?.description !== undefined ? body.description : (current.description ?? null),
+      state: method === "DELETE" ? "archived" : (body?.state !== undefined ? body.state : current.state),
+      team: body?.team !== undefined ? body.team : (current.team ?? []),
+      folder_path: body?.folder_path !== undefined ? body.folder_path : (current.folder_path ?? null),
       idempotency_key: idempKey("mod"),
     };
     if (body?.parent_module_id) args.parent_module = body.parent_module_id;
