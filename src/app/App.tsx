@@ -28,7 +28,7 @@ import { GlassSeparator } from "./components/ui/glass-separator";
 import wordmarkUrl from "@/imports/nova-caelum-wordmark-transparent.png";
 import { NC } from "../design/tokens";
 import { ProjectViewLayeredShell } from "./ProjectViewLayeredShell";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbSeparator } from "../primitives";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbSeparator, Button as NcButton, Chip, type ChipTone } from "../primitives";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -918,18 +918,17 @@ function NcSelect({
 //  T3 · TextBtn    — escape hatches (Cancel, Close, Dismiss)
 //  All three take an optional `danger` prop (family-swap: cool → warm hue).
 
+// PrimaryBtn is now a thin wrapper around the primitive <Button variant="primary">
+// (nc-button chemistry). Kills the drift between the legacy .locked-btn-primary
+// (muddied on glass surfaces per Daniel 2026-07-31) and the clean primitive.
+// All existing consumers keep their call-site shape ({loading, danger, children,
+// onClick, disabled, className}).
 const PrimaryBtn = forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean; danger?: boolean }>(
   function PrimaryBtn({ children, loading, danger, className = "", ...props }, ref) {
     return (
-      <button
-        ref={ref}
-        className={`locked-btn-primary${danger ? " locked-btn-primary--danger" : ""}${className ? ` ${className}` : ""}`}
-        disabled={loading || props.disabled}
-        {...props}
-      >
-        {loading && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+      <NcButton ref={ref} variant="primary" loading={loading} danger={danger} className={className} {...props}>
         {children}
-      </button>
+      </NcButton>
     );
   }
 );
@@ -2913,19 +2912,47 @@ function CyclesPanel({ open, onClose, projects, defaultProjectId }: {
 // Status pill — colored badge in project header + wraps NcSelect for status change.
 // Defensive default: rows created before status was populated fall back to 'planned'.
 // Glass treatment via .nc-glass-pill (einUI-inspired) — see theme.css.
+// ProjectStatus → primitive Chip tone. Semantic mapping (not literal color match)
+// so the chip renders through the design-system palette instead of the legacy
+// nc-glass-pill hex overrides. Fixes the "colors don't match Foundry chips" drift.
+const STATUS_TONE: Record<ProjectStatus, ChipTone> = {
+  planned:       "neutral",
+  "in-progress": "progress",
+  paused:        "atmospheric",
+  completed:     "done",
+  closed:        "neutral",
+  archived:      "structural",
+};
+
 export function StatusPill({ status, onChange, disabled }: { status: ProjectStatus | undefined; onChange: (s: ProjectStatus) => Promise<void> | void; disabled?: boolean }) {
   const safeStatus: ProjectStatus = status && status in PROJECT_STATUS_CFG ? status : "planned";
   const cfg = PROJECT_STATUS_CFG[safeStatus];
-  const items = Object.entries(PROJECT_STATUS_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color }));
+  const tone = STATUS_TONE[safeStatus] ?? "neutral";
+  if (disabled) {
+    return <Chip tone={tone} variant="status">{cfg.label}</Chip>;
+  }
   return (
-    <NcSelect
-      value={safeStatus}
-      onValueChange={v => { void onChange(v as ProjectStatus); }}
-      disabled={disabled}
-      triggerClassName="nc-glass-pill text-xs font-medium rounded-full px-2.5 py-0.5 gap-1 whitespace-nowrap"
-      triggerStyle={{ ["--pill-color" as string]: cfg.color }}
-      items={items}
-    />
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Chip interactive tone={tone} variant="status">{cfg.label}</Chip>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="bottom" align="start" sideOffset={6} className="nc-glass-menu min-w-[160px]" style={{ color: NC.cream }}>
+        {(Object.entries(PROJECT_STATUS_CFG) as [ProjectStatus, { label: string; color: string }][]).map(([v, c]) => (
+          <DropdownMenuItem
+            key={v}
+            className="gap-2 text-sm cursor-pointer"
+            onSelect={() => { void onChange(v); }}
+          >
+            <span
+              className="inline-block flex-shrink-0"
+              style={{ width: 8, height: 8, borderRadius: 999, background: c.color }}
+              aria-hidden="true"
+            />
+            {c.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

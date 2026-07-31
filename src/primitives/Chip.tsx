@@ -1,4 +1,4 @@
-import type { HTMLAttributes } from "react";
+import { forwardRef, type HTMLAttributes } from "react";
 
 export type ChipVariant = "status" | "category" | "count";
 export type ChipTone = "danger" | "progress" | "done" | "ready" | "atmospheric" | "structural" | "sage" | "neutral";
@@ -10,7 +10,8 @@ export interface ChipProps extends Omit<HTMLAttributes<HTMLElement>, "onClick"> 
   tone?: ChipTone;
   variant?: ChipVariant;
 }
-export function Chip({
+// forwardRef so Radix (DropdownMenuTrigger asChild etc.) can anchor to the chip.
+export const Chip = forwardRef<HTMLElement, ChipProps>(function Chip({
   children,
   className = "",
   interactive = false,
@@ -19,7 +20,7 @@ export function Chip({
   tone = "neutral",
   variant = "status",
   ...props
-}: ChipProps) {
+}, ref) {
   const shared = {
     ...props,
     "data-selected": selected || undefined,
@@ -30,11 +31,21 @@ export function Chip({
 
   if (interactive || onClick) {
     return (
-      <button {...shared} type="button" onClick={onClick} aria-pressed={selected}>
+      <button
+        {...shared}
+        ref={ref as React.Ref<HTMLButtonElement>}
+        type="button"
+        onClick={onClick}
+        aria-pressed={selected}
+      >
         <span className="nc-primitive__label">{children}</span>
       </button>
     );
   }
 
-  return <span {...shared}><span className="nc-primitive__label">{children}</span></span>;
-}
+  return (
+    <span {...shared} ref={ref as React.Ref<HTMLSpanElement>}>
+      <span className="nc-primitive__label">{children}</span>
+    </span>
+  );
+});

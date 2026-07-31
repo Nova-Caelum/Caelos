@@ -95,8 +95,11 @@ export function ProjectViewLayeredShell({
         })}
       </div>
 
-      {/* ── Glass card — <Card variant="glass"> primitive, ground shows through ── */}
-      <Card variant="glass" className="flex-1 flex flex-col overflow-hidden">
+      {/* ── Glass card — tagged data-surface="elevated" so the Foundry's surface
+          character mechanic controls its chemistry (character CSS uses !important
+          and wins over the Card's own nc-card[data-variant="glass"] rules).
+          When Foundry sets elevated=plain/graph/glass, this card follows. ── */}
+      <Card variant="glass" data-surface="elevated" className="flex-1 flex flex-col overflow-hidden">
         <TabsPrimitive.Root
           value={tab}
           onValueChange={setTab}
