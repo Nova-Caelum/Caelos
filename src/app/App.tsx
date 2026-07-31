@@ -18,7 +18,7 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/app/components/ui/dropdown-menu";
 import {
-  Plus, ChevronRight, ChevronDown, Edit2, Copy, Archive, ArchiveRestore, X,
+  Plus, ChevronLeft, ChevronRight, ChevronDown, Edit2, Copy, Archive, ArchiveRestore, X,
   Search, Link2, Unlink, Calendar, Layers, Target, FolderOpen,
   Hash, Zap, ArrowRight, TrendingUp, AlertTriangle,
   GripVertical, FileText, Folder, Users, UserPlus, Atom,
@@ -1382,8 +1382,8 @@ function ProjectNavTree({ project, onSelectTask }: {
 //  TASK DETAIL SLIDE-OVER
 // ════════════════════════════════════════════════════════════════════════════════
 
-function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onClose, onSave, onAddSubtask, onDeleteSubtask, onAddBlocker, onRemoveBlocker, onOpenTask }: {
-  task: WorkItem; allItems: WorkItem[]; projectName: string; moduleName?: string; onClose: () => void;
+function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onBack, onClose, onSave, onAddSubtask, onDeleteSubtask, onAddBlocker, onRemoveBlocker, onOpenTask }: {
+  task: WorkItem; allItems: WorkItem[]; projectName: string; moduleName?: string; onBack: () => void; onClose: () => void;
   onSave: (id: string, patch: Partial<WorkItem>) => Promise<void>;
   onAddSubtask: (parentId: string, title: string) => Promise<void>;
   onDeleteSubtask: (id: string) => Promise<void>;
@@ -1438,6 +1438,16 @@ function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onClose,
       title={
         <div className="flex flex-col gap-3 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex-shrink-0 p-1 rounded hover:bg-white/[0.06] transition-colors"
+              style={{ color: "var(--nc-text-muted)" }}
+              title="Back"
+              aria-label="Back"
+            >
+              <ChevronLeft size={14} />
+            </button>
             <div className="locked-bc min-w-0">
               <div className="locked-bc-content">
                 {projectName && (
@@ -1698,8 +1708,8 @@ function CyclePicker({ open, onClose, cycles, onPick, onCreateAndPick }: {
 //  MODULE DETAIL SLIDE-OVER
 // ════════════════════════════════════════════════════════════════════════════════
 
-function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onClose, onSave, onAddTask, onSelectTask, onDeleteMod, onAddToCycle }: {
-  mod: Mod; allItems: WorkItem[]; cycles: Cycle[]; projectName: string; onClose: () => void;
+function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onBack, onClose, onSave, onAddTask, onSelectTask, onDeleteMod, onAddToCycle }: {
+  mod: Mod; allItems: WorkItem[]; cycles: Cycle[]; projectName: string; onBack: () => void; onClose: () => void;
   onSave: (id: string, patch: Partial<Mod>) => Promise<void>;
   onAddTask: (moduleId: string) => void;
   onSelectTask: (task: WorkItem) => void;
@@ -1734,6 +1744,16 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onClose, on
       title={
         <div className="flex flex-col gap-3 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex-shrink-0 p-1 rounded hover:bg-white/[0.06] transition-colors"
+              style={{ color: "var(--nc-text-muted)" }}
+              title="Back"
+              aria-label="Back"
+            >
+              <ChevronLeft size={14} />
+            </button>
             <div className="locked-bc min-w-0">
               <div className="locked-bc-content">
                 {projectName && (
@@ -2368,6 +2388,10 @@ function TasksPane({ projectId, projectName, pendingTaskId, onClearPending, fixt
           <TaskDetailSlideOver
             task={selectedTask} allItems={items} projectName={projectName}
             moduleName={selectedTask.module_id ? mods.find(mod => mod.id === selectedTask.module_id)?.name : undefined}
+            onBack={() => {
+              setSelectedTaskId(null);
+              if (selectedTask.module_id) setSelectedModId(selectedTask.module_id);
+            }}
             onClose={() => setSelectedTaskId(null)}
             onSave={saveTask}
             onAddSubtask={addSubtask}
@@ -2382,6 +2406,7 @@ function TasksPane({ projectId, projectName, pendingTaskId, onClearPending, fixt
         {selectedMod && (
           <ModuleDetailSlideOver
             mod={selectedMod} allItems={items} cycles={cycles} projectName={projectName}
+            onBack={() => setSelectedModId(null)}
             onClose={() => setSelectedModId(null)}
             onSave={saveMod}
             onAddTask={id => { openAddTask(id); setSelectedModId(null); }}
