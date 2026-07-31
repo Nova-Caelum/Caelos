@@ -44,5 +44,41 @@ jobs:
       issues: write
       actions: read
       id-token: write
-    uses: Nova-Caelum/devops-lead/.github/workflows/devops-lead-pr-review.yml@4729b2b2301cffd0c2ca0ede15a987b2415e1fdb
+    uses: Nova-Caelum/devops-lead/.github/workflows/devops-lead-pr-review.yml@0d1b16cee071fcd8896c7dc5130a2644f0360a30
+    # PIN NOTE: bumped 2026-07-31 from 4729b2b2 (single-tenant, ops-mirror-shaped
+    # hardcoded policy) to 0d1b16ce (multi-tenant parameterization — inputs added
+    # to workflow_call, defaults preserve ops-mirror behavior). Caelos passes
+    # repo-shaped policy below.
     secrets: inherit
+    with:
+      # Fetch canonical DevOps-Lead persona from the reusable-workflow repo
+      # itself (public since 2026-07-30). Caelos does not carry the ops-mirror
+      # `_agentOS/agent_profiles/...` layout, so the default caller-tree persona
+      # path would 404. Pointing at devops-lead@main keeps a single source of
+      # truth for the persona across all callers.
+      persona_source_repo: 'Nova-Caelum/devops-lead'
+      persona_source_ref: 'main'
+      persona_path: '.persona-source/.claude/agents/devops-lead.md'
+
+      # AUTO-MERGE-SAFE for Caelos (Vite/React design-system console):
+      #   - all markdown (docs, handoff notes, design-QA writeups)
+      #   - project meta (README, LICENSE, ATTRIBUTIONS)
+      #   - Foundry-authored design-token seed promotions — these ARE the point
+      #     of the Foundry Commit-and-Push flow; Daniel curates via Foundry UI
+      #     BEFORE the PR opens, so post-hoc review adds no signal
+      auto_merge_paths: |
+        **/*.md, README.md, LICENSE, ATTRIBUTIONS.md, src/design/seed.ts, src/design/seed.override.json, src/design/shapeSeed.ts, .gitignore
+
+      # ESCALATE-ALWAYS for Caelos:
+      #   - workflow files (self-review deadlock — handled by the reusable
+      #     workflow's validation-skip layer too, but belt-and-suspenders here)
+      #   - dependency manifests (supply-chain surface)
+      #   - build/dev config (Vite plugins can pwn the dev server)
+      # Everything else (application source `src/app/**`, `src/primitives/**`,
+      # `src/styles/**`, `src/main.tsx`, etc.) falls through to the reviewer's
+      # "any diff you cannot confidently classify" backstop → escalate.
+      escalate_paths: |
+        .github/workflows/**, package.json, package-lock.json, pnpm-lock.yaml, pnpm-workspace.yaml, vite.config.ts, vite-plugins/**, postcss.config.mjs, tsconfig*.json, tailwind.config.*
+
+      worklog_project: 'caelos-console'
+      repo_context_description: 'the Caelos design-system console — a public Vite/React/TypeScript frontend whose canonical design tokens promote through the in-app Foundry flow (not through raw source edits)'
