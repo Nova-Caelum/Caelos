@@ -30,14 +30,14 @@ export interface Seed {
 
 const authoredSeed: Seed = {
   "groundBase": {
-    "l": 0.188502,
+    "l": 0.145,
     "c": 0.024254,
     "h": 283.830366
   },
   "hueVector": {
-    "h": 283.830366,
-    "c": 0.024254,
-    "cRamp": 0.004
+    "h": 283,
+    "c": 0.031,
+    "cRamp": 0.001
   },
   "contrast": 1,
   "lightWarm": {
@@ -47,12 +47,12 @@ const authoredSeed: Seed = {
   },
   "accents": {
     "cool": {
-      "l": 0.54893,
-      "c": 0.176248,
-      "h": 286.37183
+      "l": 0.655,
+      "c": 0.151,
+      "h": 267
     },
     "hot": {
-      "l": 0.59934,
+      "l": 0.614,
       "c": 0.132147,
       "h": 17.740348
     }
@@ -113,10 +113,10 @@ const authoredSeed: Seed = {
 };
 
 const authoredShapeSeed: ShapeSeed = {
-  "spaceUnit": 4,
+  "spaceUnit": 3,
   "radius": {
     "base": 10,
-    "curve": 1.4,
+    "curve": 1.35,
     "floor": 6
   },
   "borderAlphas": [
@@ -126,7 +126,7 @@ const authoredShapeSeed: ShapeSeed = {
   ],
   "elevation": {
     "ambientAlpha": 0.18,
-    "keyAlpha": 0.28,
+    "keyAlpha": 0.24,
     "liftCurve": 1.35
   },
   "motion": {
@@ -138,14 +138,14 @@ const authoredShapeSeed: ShapeSeed = {
 
 const authoredCharacter: CharacterSeed = {
   "modes": {
-    "chrome": "plain",
+    "chrome": "graph",
     "ground": "graph",
-    "elevated": "plain",
+    "elevated": "glass",
     "elevated-2": "glass",
-    "top": "plain"
+    "top": "glass"
   },
-  "graphIntensity": 0.12,
-  "glassIntensity": 0.5
+  "graphIntensity": 0.07,
+  "glassIntensity": 0.52
 };
 
 function deepFreeze<T>(value: T): T {

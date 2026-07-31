@@ -270,55 +270,54 @@
 
 /* ── Locked chemistry (pre-primitive compatibility) ─────────────────────── */
 
-.locked-bc {
-  backdrop-filter: blur(var(--sys-radius-lg));
-  background: transparent;
-  border: none;
-  border-radius: var(--sys-radius-lg);
-  box-shadow: none;
-  display: inline-flex;
-  padding: var(--sys-space-2) var(--sys-space-4);
-  position: relative;
-}
+/* ── Breadcrumb (primitive, 2026-07-31 rebuild) ─────────────────────────────
+   Replaces the .locked-bc-* chip-container style (which used a ::before
+   glass pseudo + soft glow — the "weird" pattern Daniel called out).
+   Now: pure typography, no own surface, inherits from parent.
+   Old .locked-bc-* class names retained as aliases below for legacy consumers;
+   remove aliases once no consumer references them (grep should be empty). */
 
-.locked-bc::before {
-  background: color-mix(in srgb, var(--sys-elevated) 70%, transparent);
-  border-radius: var(--sys-radius-lg);
-  box-shadow: 0 0 var(--sys-space-3) var(--sys-hair-3);
-  content: "";
-  filter: blur(var(--sys-radius-sm));
-  inset: 0;
-  pointer-events: none;
-  position: absolute;
-  z-index: 0;
-}
-
-.locked-bc > * {
-  position: relative;
-  z-index: 1;
-}
-
-.locked-bc-content {
+.nc-breadcrumb {
   align-items: center;
   display: inline-flex;
   gap: var(--sys-space-1);
+  min-width: 0;
 }
 
-.locked-bc-seg {
+.nc-breadcrumb__item {
+  background: transparent;
+  border: none;
   border-radius: var(--sys-radius-sm);
   color: var(--sys-text-secondary);
-  cursor: pointer;
-  padding: var(--sys-space-1) var(--sys-space-2);
-  transition: color var(--sys-motion-base) var(--sys-ease-out);
-}
-
-.locked-bc-seg:hover {
-  color: var(--sys-text-primary);
-}
-
-.locked-bc-sep {
-  color: var(--sys-text-faint);
+  cursor: default;
+  display: inline-block;
+  font: inherit;
+  max-width: 22ch;
+  overflow: hidden;
   padding: 0 var(--sys-space-1);
+  text-overflow: ellipsis;
+  transition: color var(--sys-motion-base) var(--sys-ease-out);
+  white-space: nowrap;
+}
+
+.nc-breadcrumb__item--clickable {
+  cursor: pointer;
+}
+
+.nc-breadcrumb__item--clickable:hover,
+.nc-breadcrumb__item--clickable:focus-visible {
+  color: var(--sys-text-primary);
+  outline: none;
+}
+
+.nc-breadcrumb__item--current {
+  color: var(--sys-text-primary);
+  cursor: default;
+}
+
+.nc-breadcrumb__sep {
+  color: var(--sys-text-faint);
+  padding: 0;
   user-select: none;
 }
 

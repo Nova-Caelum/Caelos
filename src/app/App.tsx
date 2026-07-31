@@ -28,6 +28,7 @@ import { GlassSeparator } from "./components/ui/glass-separator";
 import wordmarkUrl from "@/imports/nova-caelum-wordmark-transparent.png";
 import { NC } from "../design/tokens";
 import { ProjectViewLayeredShell } from "./ProjectViewLayeredShell";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbSeparator } from "../primitives";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -410,11 +411,11 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
     for (const k of ["name", "description", "status", "team", "folder_path", "owner", "client", "next_action", "parent_code"]) {
       if (body[k] !== undefined) args[k] = body[k];
     }
-    const r = await mcpCall<any>("update_project", args);
+    const r = await mcpCall<any>("upsert_project", args);
     return adaptProjectRead(unwrapRow(r)) as T;
   }
   if (projMatch && method === "DELETE") {
-    await mcpCall("update_project", { code: projMatch[1], status: "archived" });
+    await mcpCall("upsert_project", { code: projMatch[1], status: "archived" });
     return undefined as T;
   }
 
@@ -473,10 +474,21 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
   const wiMatch = path.match(/^\/work-items\/([^/]+)$/);
   if (wiMatch && (method === "PATCH" || method === "DELETE")) {
     const external_id = wiMatch[1];
-    const patchBody: Record<string, unknown> = {};
+    // Backend has NO DELETE handler on /api/work-items/{id} — archive = PATCH state.
+    // restFetch would strip the body on DELETE (line 348), producing an empty DELETE
+    // request that 404s. Bypass by issuing an explicit PATCH here.
     if (method === "DELETE") {
-      patchBody.state = "archived";
-    } else {
+      const resp = await fetch(`${API_BASE}/api/work-items/${external_id}`, {
+        method: "PATCH", headers, body: JSON.stringify({ state: "archived" }),
+      });
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => "");
+        throw new Error(`PATCH archive /api/work-items/${external_id} → ${resp.status}: ${text.slice(0, 200)}`);
+      }
+      return adaptWorkItemRead(unwrapRow(await resp.json())) as T;
+    }
+    const patchBody: Record<string, unknown> = {};
+    {
       if (body.title !== undefined) patchBody.name = body.title;
       if (body.name !== undefined) patchBody.name = body.name;
       if (body.description !== undefined) patchBody.description = body.description;
@@ -485,10 +497,13 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
       if (body.assignee_agent !== undefined) patchBody.assignee_agent = body.assignee_agent;
       if (body.team !== undefined) patchBody.team = body.team;
       if (body.module_id !== undefined) patchBody.module = body.module_id;
+      if (body.project_id !== undefined) patchBody.project = body.project_id;
       if (body.parent_item_id !== undefined) patchBody.parent_work_item = body.parent_item_id;
       // TODO(bi-dir-mvp): blocked_by / cycle_id / doc_paths / priority are not backend-mutable
       // fields on PATCH /api/work-items/{id} (blocked_by needs link_work_items/unlink_work_items;
       // cycle_id needs assign_cycle_work_items — out of Phase 4 scope, flagged for Phase 5+).
+      // NOTE (2026-07-31): `project` mutation on this PATCH is empirically untested against
+      // the ops-server contract. If backend rejects/ignores, moveTask_ will surface the error.
     }
     if (Object.keys(patchBody).length === 0) return {} as T;
     const data = await restFetch(`/api/work-items/${external_id}`, patchBody);
@@ -556,7 +571,7 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
   }
   if (path === "/initiatives" && method === "POST") {
     const backendBody = {
-      external_id: body.external_id ?? idempKey("init"),
+      external_id: body.external_id || idempKey("init"),
       title: body.title ?? "Untitled",
       description: body.description || null,
       state: body.state ?? "planned",
@@ -1386,7 +1401,7 @@ function ProjectNavTree({ project, onSelectTask }: {
 //  TASK DETAIL SLIDE-OVER
 // ════════════════════════════════════════════════════════════════════════════════
 
-function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onBack, onClose, onSave, onAddSubtask, onDeleteSubtask, onAddBlocker, onRemoveBlocker, onOpenTask }: {
+function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onBack, onClose, onSave, onAddSubtask, onDeleteSubtask, onAddBlocker, onRemoveBlocker, onOpenTask, onOpenMove }: {
   task: WorkItem; allItems: WorkItem[]; projectName: string; moduleName?: string; onBack: () => void; onClose: () => void;
   onSave: (id: string, patch: Partial<WorkItem>) => Promise<void>;
   onAddSubtask: (parentId: string, title: string) => Promise<void>;
@@ -1394,6 +1409,7 @@ function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onBack, 
   onAddBlocker: (taskId: string, blockerId: string) => Promise<void>;
   onRemoveBlocker: (taskId: string, blockerId: string) => Promise<void>;
   onOpenTask: (taskId: string) => void;
+  onOpenMove: () => void;
 }) {
   const [form, setForm] = useState({
     title: task.title, description: task.description, state: task.state,
@@ -1452,30 +1468,28 @@ function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onBack, 
             >
               <ChevronLeft size={14} />
             </button>
-            <div className="locked-bc min-w-0">
-              <div className="locked-bc-content">
-                {projectName && (
-                  <>
-                    <span className="locked-bc-seg" onClick={() => {}}>{projectName}</span>
-                    <span className="locked-bc-sep">·</span>
-                  </>
-                )}
-                {moduleName && (
-                  <>
-                    <span className="locked-bc-seg" onClick={() => {}}>{moduleName}</span>
-                    <span className="locked-bc-sep">·</span>
-                  </>
-                )}
-                <span className="locked-bc-seg">…</span>
-              </div>
-            </div>
+            <Breadcrumb className="min-w-0">
+              {projectName && (
+                <>
+                  <BreadcrumbItem onClick={() => {}}>{projectName}</BreadcrumbItem>
+                  <BreadcrumbSeparator />
+                </>
+              )}
+              {moduleName && (
+                <>
+                  <BreadcrumbItem onClick={() => {}}>{moduleName}</BreadcrumbItem>
+                  <BreadcrumbSeparator />
+                </>
+              )}
+              <BreadcrumbItem current>…</BreadcrumbItem>
+            </Breadcrumb>
             <button
               type="button"
-              onClick={() => { console.log('[caelos] Unit F: move-to-project picker for task', task.id); }}
+              onClick={onOpenMove}
               className="flex-shrink-0 p-1 rounded hover:bg-white/[0.06] transition-colors"
               style={{ color: "var(--nc-text-muted)" }}
-              title="Move to different project"
-              aria-label="Move to different project"
+              title="Move to different project or module"
+              aria-label="Move to different project or module"
             >
               <FolderInput size={13} />
             </button>
@@ -1758,17 +1772,15 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onBack, onC
             >
               <ChevronLeft size={14} />
             </button>
-            <div className="locked-bc min-w-0">
-              <div className="locked-bc-content">
-                {projectName && (
-                  <>
-                    <span className="locked-bc-seg" onClick={() => {}}>{projectName}</span>
-                    <span className="locked-bc-sep">·</span>
-                  </>
-                )}
-                <span className="locked-bc-seg">…</span>
-              </div>
-            </div>
+            <Breadcrumb className="min-w-0">
+              {projectName && (
+                <>
+                  <BreadcrumbItem onClick={() => {}}>{projectName}</BreadcrumbItem>
+                  <BreadcrumbSeparator />
+                </>
+              )}
+              <BreadcrumbItem current>…</BreadcrumbItem>
+            </Breadcrumb>
             <button
               type="button"
               onClick={() => { console.log('[caelos] Unit F: move-to-project picker for module', mod.id); }}
@@ -1898,9 +1910,10 @@ type TaskRowProps = {
   onAddSubtask: (parentId: string) => void;
   onAddToCycle: (task: WorkItem) => void;
   onSaveState?: (id: string, state: WorkItemState) => void;
+  onMove?: (t: WorkItem) => void;
 };
 
-function TaskRow({ task, allItems, depth, gripRef, onSelect, onDelete, onDuplicate, onPromote, onAddSubtask, onAddToCycle, onSaveState }: TaskRowProps) {
+function TaskRow({ task, allItems, depth, gripRef, onSelect, onDelete, onDuplicate, onPromote, onAddSubtask, onAddToCycle, onSaveState, onMove }: TaskRowProps) {
   const [expanded, setExpanded] = useState(false);
   const subtasks  = allItems.filter(i => i.parent_item_id === task.id);
   const isBlocked = task.blocked_by.length > 0;
@@ -1936,6 +1949,16 @@ function TaskRow({ task, allItems, depth, gripRef, onSelect, onDelete, onDuplica
               {task.assignee && <span className="text-xs max-w-[72px] truncate hidden sm:block" style={{ color: NC.stone }}>{task.assignee}</span>}
               {subtasks.length > 0 && <span className="text-xs" style={{ color: NC.stone }}>{subtasks.length} sub</span>}
             </div>
+            <button
+              type="button"
+              title="Archive task"
+              aria-label={`Archive ${task.title}`}
+              className="flex-shrink-0 w-6 h-6 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-white/[0.08]"
+              style={{ color: NC.stone }}
+              onClick={e => { e.stopPropagation(); onDelete(task); }}
+            >
+              <Archive size={12} />
+            </button>
             <span ref={gripRef} className="flex-shrink-0 w-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing ml-1" style={{ color: NC.stone }} onClick={e => e.stopPropagation()}>
               <GripVertical size={12} />
             </span>
@@ -1949,6 +1972,9 @@ function TaskRow({ task, allItems, depth, gripRef, onSelect, onDelete, onDuplica
           <ContextMenuItem className="gap-2 text-sm" style={{ color: "#c9a84c" }} onClick={() => onPromote(task)}><TrendingUp size={13} /> Promote to Module</ContextMenuItem>
           <ContextMenuItem className="gap-2 text-sm" style={{ color: NC.cream }} onClick={() => onDuplicate(task)}><Copy size={13} /> Duplicate</ContextMenuItem>
           <ContextMenuSeparator style={{ background: NC.border }} />
+          {onMove && (
+            <ContextMenuItem className="gap-2 text-sm" onClick={() => onMove(task)}><FolderInput size={13} /> Move…</ContextMenuItem>
+          )}
           <ContextMenuItem className="gap-2 text-sm" onClick={() => onDelete(task)}><Archive size={13} /> Archive</ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
@@ -1956,7 +1982,7 @@ function TaskRow({ task, allItems, depth, gripRef, onSelect, onDelete, onDuplica
       {expanded && subtasks.map(sub => (
         <TaskRow key={sub.id} task={sub} allItems={allItems} depth={depth + 1}
           onSelect={onSelect} onDelete={onDelete} onDuplicate={onDuplicate} onPromote={onPromote}
-          onAddSubtask={onAddSubtask} onAddToCycle={onAddToCycle} />
+          onAddSubtask={onAddSubtask} onAddToCycle={onAddToCycle} onMove={onMove} />
       ))}
     </div>
   );
@@ -2047,7 +2073,7 @@ function ModuleSection({ mod, modTasks, allItems, gripRef, onOpenMod, onDeleteMo
 
 const EMPTY_TASK_FORM = {
   title: "", description: "",
-  state: "ready" as WorkItemState, priority: "none" as WorkItemPriority,
+  state: "ready" as WorkItemState,
   assignee: "", module_id: null as string | null, parent_item_id: null as string | null,
 };
 
@@ -2057,6 +2083,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
   const [items, setItems]   = useState<WorkItem[]>([]);
   const [mods,  setMods]    = useState<Mod[]>([]);
   const [cycles, setCycles] = useState<Cycle[]>([]);
+  const [members, setMembers] = useState<ProjectMember[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [itemOrder, setItemOrder] = useState<string[]>([]);
@@ -2069,6 +2096,33 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
   const [taskForm, setTaskForm] = useState(EMPTY_TASK_FORM);
   const [taskSaving, setTaskSaving] = useState(false);
   const [deleteTask, setDeleteTask] = useState<WorkItem | null>(null);
+  // Move-task machinery: list of ALL projects for the picker + per-project module cache
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const [modulesByProject, setModulesByProject] = useState<Record<string, Mod[]>>({});
+  useEffect(() => { api<Project[]>("/projects").then(setAllProjects).catch(() => setAllProjects([])); }, []);
+  const loadModulesFor = useCallback(async (pid: string) => {
+    if (modulesByProject[pid]) return modulesByProject[pid];
+    try {
+      const list = await api<Mod[]>(`/projects/${pid}/modules`);
+      setModulesByProject(prev => ({ ...prev, [pid]: list }));
+      return list;
+    } catch { return [] as Mod[]; }
+  }, [modulesByProject]);
+  // Move modal is HOISTED — shared by the task drawer's FolderInput button AND
+  // the TaskRow right-click ContextMenu → Move item. Single source of state.
+  const [moveTargetTask, setMoveTargetTask] = useState<WorkItem | null>(null);
+  const [moveProject, setMoveProject] = useState<string>("");
+  const [moveModule, setMoveModule] = useState<string>("");
+  const [moveSaving, setMoveSaving] = useState(false);
+  const moveTargetModules = modulesByProject[moveProject] ?? [];
+  const openMoveFor = useCallback((t: WorkItem) => {
+    setMoveTargetTask(t);
+    setMoveProject(t.project_id);
+    setMoveModule(t.module_id ?? "");
+    void loadModulesFor(t.project_id);
+  }, [loadModulesFor]);
+  useEffect(() => { if (moveTargetTask && moveProject) void loadModulesFor(moveProject); }, [moveTargetTask, moveProject, loadModulesFor]);
+  const isMoveNoop = !!moveTargetTask && moveProject === moveTargetTask.project_id && (moveModule || null) === (moveTargetTask.module_id ?? null);
 
   const [creatingMod, setCreatingMod] = useState(false);
   const [modName, setModName] = useState("");
@@ -2082,12 +2136,18 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [itemsData, modsData, cyclesData] = fixtureMode
-        ? [FOUNDRY_DEMO_ITEMS, FOUNDRY_DEMO_MODULES, FOUNDRY_DEMO_CYCLES]
+      const [itemsData, modsData, cyclesData, membersData] = fixtureMode
+        ? [
+          FOUNDRY_DEMO_ITEMS,
+          FOUNDRY_DEMO_MODULES,
+          FOUNDRY_DEMO_CYCLES,
+          FOUNDRY_DEMO_PROJECT.team.map((name, index) => ({ id: `foundry-member-${index}`, project_id: projectId, name })),
+        ]
         : await Promise.all([
           api<WorkItem[]>(`/projects/${projectId}/work-items`),
           api<Mod[]>(`/projects/${projectId}/modules`),
           api<Cycle[]>(`/projects/${projectId}/cycles`),
+          api<ProjectMember[]>(`/projects/${projectId}/members`).catch(() => [] as ProjectMember[]),
         ]);
       // Hide archived from the project view entirely — accessible only via Settings → Archived.
       // This keeps the state filter dropdown consistent (its "Archived" option is redundant here; kept for parity with other states).
@@ -2096,6 +2156,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
       setItems(activeItems);
       setMods(activeMods);
       setCycles(cyclesData.filter(c => c.state !== "archived"));
+      setMembers(membersData);
       setItemOrder([
         ...activeMods.map(m => m.id),
         ...activeItems.filter(w => !w.module_id && !w.parent_item_id).map(w => w.id),
@@ -2177,6 +2238,39 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
       if (selectedTaskId === task.id) setSelectedTaskId(null);
       toast.success("Deleted");
     } catch { toast.error("Failed to delete"); }
+  }
+
+  // Move a task to a different project and/or module. If newProjectId differs from
+  // the current project, the task disappears from THIS TasksPane view (which is
+  // project-scoped) — that's why we filter it out of `items`. Same-project module
+  // moves also work through this path (moduleId change only).
+  async function moveTask_(task: WorkItem, newProjectId: string, newModuleId: string | null) {
+    try {
+      // Cross-project move: backend nulls module_id + parent_work_item_id atomically
+      // (module belongs to source project — can't carry across). Send project_id ONLY.
+      // Same-project change: send module_id only. Never send both — the module lookup
+      // is scoped to the CURRENT project_code server-side, so a target-project module
+      // sent alongside project_id would 404.
+      const patch: Record<string, unknown> = newProjectId !== task.project_id
+        ? { project_id: newProjectId }
+        : { module_id: newModuleId };
+      const updated = await api<WorkItem>(`/work-items/${task.id}`, { method: "PATCH", body: JSON.stringify(patch) });
+      if (newProjectId !== task.project_id) {
+        // Cross-project move — task leaves this view
+        setItems(p => p.filter(i => i.id !== task.id && i.parent_item_id !== task.id));
+        setItemOrder(prev => prev.filter(id => id !== task.id));
+        if (selectedTaskId === task.id) setSelectedTaskId(null);
+        const projectName = allProjects.find(pj => pj.id === newProjectId)?.name || "project";
+        toast.success(`Moved to ${projectName}`);
+      } else {
+        // Same-project, only module changed — task stays, refresh in place
+        setItems(p => p.map(i => i.id === task.id ? updated : i));
+        toast.success("Moved");
+      }
+    } catch (e: any) {
+      const msg = (e?.message || "unknown error").slice(0, 140);
+      toast.error(`Failed to move: ${msg}`);
+    }
   }
 
   async function duplicateTask(task: WorkItem) {
@@ -2273,7 +2367,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
 
   async function saveMod(id: string, patch: Partial<Mod>) {
     try {
-      const updated = await api<Mod>(`/modules/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
+      const updated = await api<Mod>(`/modules/${id}`, { method: "PATCH", body: JSON.stringify({ ...patch, project_id: projectId }) });
       setMods(p => p.map(m => m.id === id ? updated : m));
       toast.success("Module updated");
     } catch { toast.error("Failed to update module"); }
@@ -2281,11 +2375,11 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
 
   async function deleteMod_(m: Mod) {
     try {
-      await api(`/modules/${m.id}`, { method: "DELETE" });
+      await api(`/modules/${m.id}`, { method: "DELETE", body: JSON.stringify({ project_id: m.project_id }) });
       setMods(p => p.filter(x => x.id !== m.id));
       setItemOrder(prev => prev.filter(id => id !== m.id));
-      toast.success("Module deleted");
-    } catch { toast.error("Failed to delete module"); }
+      toast.success("Module archived");
+    } catch { toast.error("Failed to archive module"); }
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -2321,6 +2415,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
     onPromote: promoteTask,
     onAddSubtask: openAddSubtask,
     onAddToCycle: (t: WorkItem) => setCycleTarget({ type: "task", task: t }),
+    onMove: openMoveFor,
   };
 
   return (
@@ -2418,6 +2513,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
             onAddBlocker={addBlocker}
             onRemoveBlocker={removeBlocker}
             onOpenTask={taskId => setSelectedTaskId(taskId)}
+            onOpenMove={() => openMoveFor(selectedTask)}
           />
         )}
 
@@ -2453,15 +2549,62 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
           />
         )}
 
+        {/* Move task modal — hoisted from TaskDetailSlideOver so right-click ContextMenu shares it */}
+        {moveTargetTask && (
+          <Modal open={!!moveTargetTask} onClose={() => setMoveTargetTask(null)} title="Move task">
+            <div className="text-xs mb-3" style={{ color: NC.stone }}>
+              Currently in <span style={{ color: NC.cream }}>{allProjects.find(p => p.id === moveTargetTask.project_id)?.name ?? moveTargetTask.project_id}</span>
+              {moveTargetTask.module_id ? <> · <span style={{ color: NC.cream }}>{mods.find(m => m.id === moveTargetTask.module_id)?.name ?? moveTargetTask.module_id}</span></> : ""}
+            </div>
+            <Field label="Project">
+              <NcSelect
+                value={moveProject}
+                onValueChange={(v) => { setMoveProject(v); setMoveModule(""); }}
+                items={allProjects.map((p) => ({ value: p.id, label: p.name }))}
+              />
+            </Field>
+            <Field label="Module">
+              <NcSelect
+                value={moveModule || "__none__"}
+                onValueChange={(v) => setMoveModule(v === "__none__" ? "" : v)}
+                items={[
+                  { value: "__none__", label: "(no module — project root)" },
+                  ...moveTargetModules.map((m) => ({ value: m.id, label: m.name })),
+                ]}
+              />
+            </Field>
+            <div className="flex gap-2 justify-end pt-1">
+              <TextBtn onClick={() => setMoveTargetTask(null)}>Cancel</TextBtn>
+              <PrimaryBtn
+                loading={moveSaving}
+                disabled={isMoveNoop || moveSaving}
+                onClick={async () => {
+                  setMoveSaving(true);
+                  try {
+                    await moveTask_(moveTargetTask, moveProject, moveModule || null);
+                    setMoveTargetTask(null);
+                  } finally { setMoveSaving(false); }
+                }}
+              >Move</PrimaryBtn>
+            </div>
+          </Modal>
+        )}
+
         {/* Create task modal */}
         <Modal open={creatingTask} onClose={() => setCreatingTask(false)} title={taskForm.parent_item_id ? "New Subtask" : "New Task"}>
           <Field label="Title"><NcInput value={taskForm.title} onChange={e => setTaskForm(p => ({ ...p, title: e.target.value }))} placeholder="Task title" autoFocus onKeyDown={e => e.key === "Enter" && createTask()} /></Field>
           <Field label="Description"><NcTextarea value={taskForm.description} onChange={e => setTaskForm(p => ({ ...p, description: e.target.value }))} placeholder="Optional description" /></Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="State"><NcSelect value={taskForm.state} onValueChange={v => setTaskForm(p => ({ ...p, state: v as WorkItemState }))} items={Object.entries(STATE_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color }))} /></Field>
-            <Field label="Priority"><NcSelect value={taskForm.priority} onValueChange={v => setTaskForm(p => ({ ...p, priority: v as WorkItemPriority }))} items={Object.entries(PRI_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color }))} /></Field>
-          </div>
-          <Field label="Assignee"><NcInput value={taskForm.assignee} onChange={e => setTaskForm(p => ({ ...p, assignee: e.target.value }))} placeholder="Name or email" /></Field>
+          <Field label="State"><NcSelect value={taskForm.state} onValueChange={v => setTaskForm(p => ({ ...p, state: v as WorkItemState }))} items={Object.entries(STATE_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color }))} /></Field>
+          <Field label="Assignee">
+            <NcSelect
+              value={taskForm.assignee || "__unassigned__"}
+              onValueChange={v => setTaskForm(p => ({ ...p, assignee: v === "__unassigned__" ? "" : v }))}
+              items={[
+                { value: "__unassigned__", label: "(unassigned)" },
+                ...members.map(member => ({ value: member.name, label: member.name })),
+              ]}
+            />
+          </Field>
           <div className="flex gap-2 justify-end pt-1"><TextBtn onClick={() => setCreatingTask(false)}>Cancel</TextBtn><PrimaryBtn loading={taskSaving} onClick={createTask}>Create</PrimaryBtn></div>
         </Modal>
 
@@ -3305,7 +3448,7 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
   const [deleteProject, setDeleteProject] = useState<Project | null>(null);
   const [deleteInit, setDeleteInit] = useState<Initiative | null>(null);
   const [pForm, setPForm] = useState({ name: "", description: "", folder_path: "" });
-  const [iForm, setIForm] = useState({ title: "", description: "", external_id: "", state: "open" as Initiative["state"] });
+  const [iForm, setIForm] = useState({ title: "", description: "", external_id: "", state: "planned" as Initiative["state"] });
   const [saving, setSaving] = useState(false);
   const [sidebarSearch, setSidebarSearch] = useState("");
   const clampSidebarWidth = (width: number) => Math.min(480, Math.max(200, width));
@@ -3394,7 +3537,7 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
     try {
       const init = await api<Initiative>("/initiatives", { method: "POST", body: JSON.stringify(iForm) });
       onInitiativesChange([...initiatives, init]);
-      setCreatingInit(false); setIForm({ title: "", description: "", external_id: "", state: "open" });
+      setCreatingInit(false); setIForm({ title: "", description: "", external_id: "", state: "planned" });
       toast.success("Initiative created");
       onSelect({ type: "initiative", item: init });
     } catch { toast.error("Failed to create initiative"); }
