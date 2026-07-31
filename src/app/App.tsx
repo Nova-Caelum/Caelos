@@ -1,5 +1,5 @@
 // Nova Caelum — Task Management Dashboard
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, forwardRef } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Toaster } from "sonner";
@@ -18,24 +18,27 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/app/components/ui/dropdown-menu";
 import {
-  Plus, ChevronRight, ChevronDown, Edit2, Copy, Archive, ArchiveRestore, X,
+  Plus, ChevronLeft, ChevronRight, ChevronDown, Edit2, Copy, Archive, ArchiveRestore, X,
   Search, Link2, Unlink, Calendar, Layers, Target, FolderOpen,
   Hash, Zap, ArrowRight, TrendingUp, AlertTriangle,
-  GripVertical, FileText, Folder, Users, UserPlus, Shield, Code2, Briefcase, Atom,
-  Settings,
+  GripVertical, FileText, Folder, Users, UserPlus, Atom,
+  Settings, FolderInput,
 } from "lucide-react";
+import { GlassSeparator } from "./components/ui/glass-separator";
 import wordmarkUrl from "@/imports/nova-caelum-wordmark-transparent.png";
+import { NC } from "../design/tokens";
+import { ProjectViewLayeredShell } from "./ProjectViewLayeredShell";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 // Set A — task_workflow_state (work_items, modules)
 type WorkItemState = "pending-review" | "ready" | "in-progress" | "blocked" | "done" | "deferred" | "archived";
 // Set B — project_lifecycle_state (projects, initiatives, cycles)
-type ProjectStatus    = "planned" | "in-progress" | "paused" | "completed" | "closed" | "archived";
+export type ProjectStatus    = "planned" | "in-progress" | "paused" | "completed" | "closed" | "archived";
 type InitiativeStatus = ProjectStatus;
 type CycleStatus       = ProjectStatus;
 
-type Project  = { id: string; name: string; description: string; folder_path: string; created_at: string; status: ProjectStatus; team: string[]; owner: string; client: string };
+export type Project  = { id: string; name: string; description: string; folder_path: string; created_at: string; status: ProjectStatus; team: string[]; owner: string; client: string };
 type Mod      = { id: string; project_id: string; name: string; folder_path: string; description: string; state: WorkItemState; team: string[]; parent_module_id?: string | null };
 type Cycle    = { id: string; project_id: string; name: string; start_date: string; end_date: string; state: CycleStatus; description: string };
 
@@ -57,8 +60,7 @@ type WorklogEntry = { id: string; author: string; project?: string; summary: str
 // Agent registry row (advisory source for dropdowns — list_agents MCP tool)
 type Agent = { agent_name: string; harness: string; substrate: string; team: string; tier: string; proposed_lifecycle: string; can_spawn: boolean };
 
-type MemberRole = "owner" | "engineer" | "pm" | "designer" | "lead";
-type ProjectMember = { id: string; project_id: string; name: string; role: MemberRole };
+type ProjectMember = { id: string; project_id: string; name: string };
 
 // ROSTER hardcoded const — DELETED (2026-07-27 bi-directional MVP). Replaced by useAgents() below,
 // which fetches the live agent_registry via the `list_agents` MCP tool and caches per session.
@@ -67,6 +69,93 @@ type Selection =
   | { type: "project"; item: Project }
   | { type: "initiative"; item: Initiative }
   | null;
+
+export const FOUNDRY_DEMO_PROJECT: Project = {
+  id: "foundry-project",
+  name: "Foundry calibration",
+  description: "A populated workspace for evaluating every surface, state, and primitive in context.",
+  folder_path: "/projects/foundry-calibration",
+  created_at: "2026-07-30T00:00:00.000Z",
+  status: "in-progress",
+  team: ["Da Vinci", "Codex"],
+  owner: "Daniel Eghdami",
+  client: "Nova Caelum",
+};
+
+const FOUNDRY_DEMO_INITIATIVE: Initiative = {
+  id: "foundry-initiative",
+  external_id: "INIT-FOUNDRY",
+  title: "Foundry v2 evaluation",
+  description: "Cross-surface design-system evaluation with staged promotion and preview review.",
+  state: "in-progress",
+  doc_paths: [],
+};
+
+const FOUNDRY_DEMO_MODULES: Mod[] = [{
+  id: "foundry-module",
+  project_id: FOUNDRY_DEMO_PROJECT.id,
+  name: "Foundry authoring pipeline",
+  folder_path: "/projects/foundry-calibration/modules/authoring-pipeline",
+  description: "A complete module specimen for validating hierarchy, states, and drawer surfaces.",
+  state: "in-progress",
+  team: ["Da Vinci", "Codex"],
+}];
+
+const FOUNDRY_DEMO_CYCLES: Cycle[] = [{
+  id: "foundry-cycle",
+  project_id: FOUNDRY_DEMO_PROJECT.id,
+  name: "Seed evaluation",
+  start_date: "2026-07-28",
+  end_date: "2026-08-04",
+  state: "in-progress",
+  description: "Visual QA across all Foundry layers before preview review.",
+}];
+
+const FOUNDRY_DEMO_ITEMS: WorkItem[] = [
+  {
+    id: "foundry-task-graph",
+    project_id: FOUNDRY_DEMO_PROJECT.id,
+    module_id: FOUNDRY_DEMO_MODULES[0].id,
+    cycle_id: FOUNDRY_DEMO_CYCLES[0].id,
+    title: "Evaluate graph-ground hierarchy",
+    description: "Check the 28px crosshatch at every surface boundary and content density.",
+    state: "ready",
+    priority: "high",
+    assignee: "Da Vinci",
+    team: ["Design"],
+    blocked_by: [],
+    doc_paths: [],
+    source_references: {},
+  },
+  {
+    id: "foundry-task-glass",
+    project_id: FOUNDRY_DEMO_PROJECT.id,
+    module_id: FOUNDRY_DEMO_MODULES[0].id,
+    cycle_id: FOUNDRY_DEMO_CYCLES[0].id,
+    title: "Inspect elevated glass drawer",
+    description: "Verify translucent fill, blur, and foreground legibility over realistic content.",
+    state: "in-progress",
+    priority: "urgent",
+    assignee: "Codex",
+    team: ["Engineering"],
+    blocked_by: [],
+    doc_paths: [],
+    source_references: {},
+  },
+  {
+    id: "foundry-task-preview",
+    project_id: FOUNDRY_DEMO_PROJECT.id,
+    title: "Review branch preview",
+    description: "Compare staging and branch preview before Daniel merges the promotion PR.",
+    state: "pending-review",
+    priority: "medium",
+    assignee: "Daniel Eghdami",
+    team: ["Product"],
+    blocked_by: [],
+    doc_paths: [],
+    source_references: {},
+  },
+];
 
 // ── Keyboard hooks ─────────────────────────────────────────────────────────────
 
@@ -276,11 +365,11 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
     if (method === "GET" && !mem[2]) {
       const agents = await fetchAgentsOnce();
       return agents.map(a => ({
-        id: `member-${a.agent_name}`, project_id: mem[1], name: a.agent_name, role: (a.tier || "engineer") as MemberRole,
+        id: `member-${a.agent_name}`, project_id: mem[1], name: a.agent_name,
       })) as T;
     }
     if (method === "POST") {
-      return { id: `member-${body?.name ?? "x"}`, project_id: mem[1], name: body?.name ?? "", role: body?.role ?? "engineer" } as T;
+      return { id: `member-${body?.name ?? "x"}`, project_id: mem[1], name: body?.name ?? "" } as T;
     }
     return (method === "DELETE" ? undefined : (body ?? {})) as T;
   }
@@ -730,45 +819,6 @@ const INIT_STATE_CFG = PROJECT_STATUS_CFG;
 const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ["planned", "in-progress", "paused"];
 const CLOSED_PROJECT_STATUSES: ProjectStatus[] = ["completed", "closed", "archived"];
 
-// Nova Caelum brand-UI tokens (product surface system, ratified 2026-07-26)
-// See: skills_library/nova-caelum-brand-ui/SKILL.md
-const NC = {
-  // Text tiers
-  cream: "#F4EAD5",
-  textMuted: "#9089A0",
-  textDim: "#6E677E",
-  textFaint: "#55506A",
-  // Surface tiers
-  bg: "#1C1B28",          // Product Ground (was #1d1329 Deep Midnight Indigo)
-  ground: "#1C1B28",      // alias
-  chrome: "#12121E",      // Sidebar / structural chrome
-  card: "#221E33",        // Elevated (was #1a1828 Midnight Slate)
-  elevated: "#221E33",    // alias
-  elevated2: "#2A2540",   // Popovers / hover surfaces
-  // Identity accent (new brand-palette token)
-  green: "#6D5AD1",       // REPURPOSED — accent indigo carries interactive identity
-  accent: "#6D5AD1",      // alias for clarity
-  accentHover: "#7E6DE5",
-  accentTint: "rgba(109,90,209,0.10)",
-  accentLine: "rgba(109,90,209,0.22)",
-  accentCream: "rgba(196,185,240,0.90)",
-  // Semantic palette
-  sage: "#7A9E93",              // brand app-icon teal
-  seaGreen: "#5B7D73",          // semantic done state (WAS what NC.green was)
-  peachGold: "#E8B87A",         // high priority / in-progress
-  deepMaroon: "#C25B62",        // urgent / blocked / destructive (brightened for dark UI)
-  lightIndigo: "#8E96CC",       // medium priority
-  desaturatedViolet: "#8879A0", // engineer / refactor / atmospheric
-  violet: "#4E4C82",            // structural cool accent (adj slate-violet)
-  slateViolet: "#4E4C82",       // alias
-  stone: "#8F8A80",             // low priority / muted labels
-  mutedStone: "#8F8A80",        // alias
-  // Hairlines
-  border: "rgba(255,255,255,0.09)",
-  borderFaint: "rgba(255,255,255,0.045)",
-  hair3: "rgba(255,255,255,0.14)",
-};
-
 // ── UI helpers ─────────────────────────────────────────────────────────────────
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -847,18 +897,47 @@ function NcSelect({
   );
 }
 
-function PrimaryBtn({ children, loading, className = "", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean }) {
+// ── 3-Tier Button Ladder — canonical per LockedStudio 2026-07-29 ─────────────
+//  T1 · PrimaryBtn — commit action, ONE per surface (Save changes, Create, Confirm)
+//  T2 · TonalBtn   — frequent CTAs (+ Add subtask, Add to cycle, Archive)
+//  T3 · TextBtn    — escape hatches (Cancel, Close, Dismiss)
+//  All three take an optional `danger` prop (family-swap: cool → warm hue).
+
+const PrimaryBtn = forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean; danger?: boolean }>(
+  function PrimaryBtn({ children, loading, danger, className = "", ...props }, ref) {
+    return (
+      <button
+        ref={ref}
+        className={`locked-btn-primary${danger ? " locked-btn-primary--danger" : ""}${className ? ` ${className}` : ""}`}
+        disabled={loading || props.disabled}
+        {...props}
+      >
+        {loading && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+        {children}
+      </button>
+    );
+  }
+);
+
+function TonalBtn({ children, loading, danger, className = "", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean; danger?: boolean }) {
   return (
-    <button className={`nc-matte-cta flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 ${className}`} disabled={loading || props.disabled} {...props}>
+    <button
+      className={`locked-btn-secondary${danger ? " locked-btn-secondary--danger" : ""}${className ? ` ${className}` : ""}`}
+      disabled={loading || props.disabled}
+      {...props}
+    >
       {loading && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
       {children}
     </button>
   );
 }
 
-function GhostBtn({ children, danger, className = "", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { danger?: boolean }) {
+function TextBtn({ children, danger, className = "", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { danger?: boolean }) {
   return (
-    <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors hover:bg-white/5 ${className}`} style={{ color: danger ? "#C25B62" : NC.stone, border: `1px solid ${NC.border}` }} {...props}>
+    <button
+      className={`locked-btn-text${danger ? " locked-btn-text--danger" : ""}${className ? ` ${className}` : ""}`}
+      {...props}
+    >
       {children}
     </button>
   );
@@ -904,7 +983,7 @@ function Modal({ open, onClose, title, children, maxWidth = "max-w-md" }: { open
   if (!open) return null;
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)" }} onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className={`${maxWidth} w-full rounded-xl border shadow-2xl p-6`} style={{ background: NC.card, borderColor: NC.border }}>
+      <div data-surface="top" className={`nc-lit-surface ${maxWidth} w-full rounded-xl border p-6`} style={{ borderColor: NC.border }}>
         <div className="flex items-center justify-between mb-5">
           <h3 style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 20, color: NC.cream, fontWeight: 600, letterSpacing: "-0.02em" }}>{title}</h3>
           <button onClick={onClose} className="p-1 rounded hover:bg-white/5" style={{ color: NC.stone }}><X size={15} /></button>
@@ -916,20 +995,73 @@ function Modal({ open, onClose, title, children, maxWidth = "max-w-md" }: { open
   );
 }
 
-function SlideOver({ open, onClose, title, actions, children }: { open: boolean; onClose: () => void; title: string; actions?: React.ReactNode; children: React.ReactNode }) {
+function SlideOver({ open, onClose, title, actions, children }: { open: boolean; onClose: () => void; title: React.ReactNode; actions?: React.ReactNode; children: React.ReactNode }) {
   return createPortal(
     <>
       <div className="fixed inset-0 z-40 transition-opacity duration-300" style={{ background: "rgba(0,0,0,0.55)", pointerEvents: open ? "auto" : "none", opacity: open ? 1 : 0 }} onClick={onClose} />
-      <div className="fixed right-0 top-0 h-full z-50 flex flex-col border-l" style={{ width: 480, background: NC.card, borderColor: NC.border, transform: open ? "translateX(0)" : "translateX(100%)", transition: "transform 0.28s ease" }}>
-        <div className="flex items-center gap-2 px-6 py-4 flex-shrink-0 border-b" style={{ borderColor: NC.borderFaint }}>
-          <span className="flex-1 truncate" style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 18, color: NC.cream, fontWeight: 600, letterSpacing: "-0.02em" }}>{title}</span>
+      <div data-surface="elevated-2" className="nc-lit-surface fixed right-0 top-0 h-full z-50 flex flex-col border-l" style={{ width: 480, right: "var(--foundry-panel-offset, 0px)", borderColor: NC.border, transform: open ? "translateX(0)" : "translateX(100%)", transition: "transform 0.28s ease" }}>
+        {/* Header padding: pt-6 gives the breadcrumb breath from the top edge;
+            pb-4 pairs with body pt-2 to yield ~24px between the last header row
+            (title) and the first body row (description) — matching the ~24px
+            rhythm we want across every landmark. Daniel-directive 2026-07-29. */}
+        <div className="flex items-start gap-2 px-6 pt-6 pb-4 flex-shrink-0">
+          <div className="flex-1 min-w-0">{title}</div>
           {actions}
           <button onClick={onClose} className="p-1 rounded hover:bg-white/5 flex-shrink-0" style={{ color: NC.stone }}><X size={15} /></button>
         </div>
-        <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
+        <div className="flex-1 overflow-y-auto px-6 pt-2.5 pb-6">{children}</div>
       </div>
     </>,
     document.body,
+  );
+}
+
+// Inline title editor shared by task and module drawer headers.
+function EditableTitleInline({ value, onSave, className = "" }: { value: string; onSave: (v: string) => void; className?: string }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const cancelRef = useRef(false);
+
+  useEffect(() => { setDraft(value); }, [value]);
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={() => {
+          const next = draft.trim();
+          if (!cancelRef.current && next && next !== value) onSave(next);
+          cancelRef.current = false;
+          setEditing(false);
+        }}
+        onKeyDown={e => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            cancelRef.current = true;
+            setDraft(value);
+            e.currentTarget.blur();
+          }
+        }}
+        className={`nc-input px-2 py-1 flex-1 min-w-0 ${className}`}
+      />
+    );
+  }
+
+  return (
+    <h2
+      onDoubleClick={() => { cancelRef.current = false; setDraft(value); setEditing(true); }}
+      className={`cursor-text truncate min-w-0 ${className}`}
+      style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
+      title="Double-click to edit"
+    >
+      {value}
+    </h2>
   );
 }
 
@@ -941,7 +1073,7 @@ function ConfirmDelete({ open, onClose, onConfirm, label }: { open: boolean; onC
     <Modal open={open} onClose={onClose} title={`Archive ${label}?`} maxWidth="max-w-sm">
       <p className="text-sm mb-5" style={{ color: NC.stone }}>The record is preserved and can be un-archived later.</p>
       <div className="flex gap-2 justify-end">
-        <GhostBtn onClick={onClose}>Cancel</GhostBtn>
+        <TextBtn onClick={onClose}>Cancel</TextBtn>
         <button onClick={() => { onConfirm(); onClose(); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors hover:bg-white/5" style={{ color: NC.stone, border: `1px solid ${NC.border}` }}><Archive size={13} /> Archive</button>
       </div>
     </Modal>
@@ -954,7 +1086,7 @@ function ConfirmDelete({ open, onClose, onConfirm, label }: { open: boolean; onC
 // UUID FK. For project/module/cycle, entityId is the project code — get_activity_for_entity
 // isn't built yet (target-state §5.5 capability #6), so rollup approximates via project-code
 // match on get_recent_activity rather than a precise module/cycle-scoped JOIN. TODO(bi-dir-mvp).
-function ActivityButton({ entityType, entityId, projectId, onAddNote }: {
+export function ActivityButton({ entityType, entityId, projectId, onAddNote }: {
   entityType: "project" | "task" | "module" | "cycle";
   entityId: string;
   projectId?: string;
@@ -1026,7 +1158,7 @@ function loadEntries() {
           }}
           onClick={e => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: NC.borderFaint }}>
+          <div className="flex items-center justify-between px-4 py-3" style={{ borderColor: NC.borderFaint }}>
             <div className="flex items-center gap-2">
               <Atom size={13} style={{ color: NC.green }} />
               <span className="text-xs font-semibold tracking-widest uppercase" style={{ color: NC.stone }}>Activity</span>
@@ -1039,7 +1171,7 @@ function loadEntries() {
             ) : entries.length === 0 ? (
               <div className="py-8 text-center text-xs" style={{ color: NC.stone }}>No activity yet</div>
             ) : (
-              <div className="divide-y" style={{ borderColor: NC.borderFaint }}>
+              <div style={{ borderColor: NC.borderFaint }}>
                 {entries.map(e => (
                   <div key={e.id} className="px-4 py-3 flex items-start gap-3">
                     <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: NC.green }} />
@@ -1055,7 +1187,7 @@ function loadEntries() {
             )}
           </div>
           {onAddNote && (
-            <div className="flex items-center gap-1.5 px-3 py-2.5 border-t" style={{ borderColor: NC.borderFaint }}>
+            <div className="flex items-center gap-1.5 px-3 py-2.5" style={{ borderColor: NC.borderFaint }}>
               <input
                 className="nc-input flex-1 px-2.5 py-1.5 rounded-lg text-xs outline-none"
                 placeholder="Add a worklog note…"
@@ -1219,16 +1351,17 @@ function ProjectNavTree({ project, onSelectTask }: {
         return (
           <div key={mod.id}>
             <button
-              className="w-full flex items-center gap-1.5 py-1 transition-colors hover:bg-white/[0.06]"
+              className="w-full h-8 flex items-center gap-1.5 transition-colors hover:bg-white/[0.06]"
               style={{ paddingLeft: 28 }}
               onClick={() => setExpandedMods(prev => { const n = new Set(prev); n.has(mod.id) ? n.delete(mod.id) : n.add(mod.id); return n; })}
+              title={mod.name}
             >
-              {open ? <ChevronDown size={10} style={{ color: NC.stone, flexShrink: 0 }} /> : <ChevronRight size={10} style={{ color: NC.stone, flexShrink: 0 }} />}
-              <Layers size={10} style={{ color: NC.green, flexShrink: 0 }} />
+              {open ? <ChevronDown size={11} style={{ color: NC.stone, flexShrink: 0 }} /> : <ChevronRight size={11} style={{ color: NC.stone, flexShrink: 0 }} />}
+              <Layers size={12} style={{ color: NC.green, flexShrink: 0 }} />
               <span className="text-xs truncate" style={{ color: "rgba(245,235,221,0.55)" }}>{mod.name}</span>
             </button>
             {open && modTasks.map(task => (
-              <button key={task.id} className="w-full flex items-center gap-1.5 py-0.5 transition-colors hover:bg-white/[0.06] text-left" style={{ paddingLeft: 44 }} onClick={() => onSelectTask(task.id)}>
+              <button key={task.id} className="w-full h-8 flex items-center gap-1.5 transition-colors hover:bg-white/[0.06] text-left" style={{ paddingLeft: 44 }} onClick={() => onSelectTask(task.id)} title={task.title}>
                 <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: STATE_CFG[task.state].color }} />
                 <span className="text-xs truncate" style={{ color: "rgba(245,235,221,0.4)" }}>{task.title}</span>
               </button>
@@ -1237,7 +1370,7 @@ function ProjectNavTree({ project, onSelectTask }: {
         );
       })}
       {rootTasks.map(task => (
-        <button key={task.id} className="w-full flex items-center gap-1.5 py-0.5 transition-colors hover:bg-white/[0.06] text-left" style={{ paddingLeft: 32 }} onClick={() => onSelectTask(task.id)}>
+        <button key={task.id} className="w-full h-8 flex items-center gap-1.5 transition-colors hover:bg-white/[0.06] text-left" style={{ paddingLeft: 32 }} onClick={() => onSelectTask(task.id)} title={task.title}>
           <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: STATE_CFG[task.state].color }} />
           <span className="text-xs truncate" style={{ color: "rgba(245,235,221,0.4)" }}>{task.title}</span>
         </button>
@@ -1253,8 +1386,8 @@ function ProjectNavTree({ project, onSelectTask }: {
 //  TASK DETAIL SLIDE-OVER
 // ════════════════════════════════════════════════════════════════════════════════
 
-function TaskDetailSlideOver({ task, allItems, onClose, onSave, onAddSubtask, onDeleteSubtask, onAddBlocker, onRemoveBlocker, onOpenTask }: {
-  task: WorkItem; allItems: WorkItem[]; onClose: () => void;
+function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onBack, onClose, onSave, onAddSubtask, onDeleteSubtask, onAddBlocker, onRemoveBlocker, onOpenTask }: {
+  task: WorkItem; allItems: WorkItem[]; projectName: string; moduleName?: string; onBack: () => void; onClose: () => void;
   onSave: (id: string, patch: Partial<WorkItem>) => Promise<void>;
   onAddSubtask: (parentId: string, title: string) => Promise<void>;
   onDeleteSubtask: (id: string) => Promise<void>;
@@ -1300,32 +1433,93 @@ function TaskDetailSlideOver({ task, allItems, onClose, onSave, onAddSubtask, on
     await onSave(task.id, { doc_paths: task.doc_paths.filter(p => p !== path) });
   }
 
-  const divider = <div className="border-t" style={{ borderColor: NC.borderFaint }} />;
+  const divider = <GlassSeparator />;
 
   return (
-    <SlideOver open onClose={onClose} title={task.title} actions={<ActivityButton entityType="task" entityId={task.id} />}>
-      <div className="space-y-5 pb-6">
-        <Field label="Title">
-          <NcInput value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} />
-        </Field>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="State">
+    <SlideOver
+      open
+      onClose={onClose}
+      title={
+        <div className="flex flex-col gap-3 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex-shrink-0 p-1 rounded hover:bg-white/[0.06] transition-colors"
+              style={{ color: "var(--nc-text-muted)" }}
+              title="Back"
+              aria-label="Back"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <div className="locked-bc min-w-0">
+              <div className="locked-bc-content">
+                {projectName && (
+                  <>
+                    <span className="locked-bc-seg" onClick={() => {}}>{projectName}</span>
+                    <span className="locked-bc-sep">·</span>
+                  </>
+                )}
+                {moduleName && (
+                  <>
+                    <span className="locked-bc-seg" onClick={() => {}}>{moduleName}</span>
+                    <span className="locked-bc-sep">·</span>
+                  </>
+                )}
+                <span className="locked-bc-seg">…</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => { console.log('[caelos] Unit F: move-to-project picker for task', task.id); }}
+              className="flex-shrink-0 p-1 rounded hover:bg-white/[0.06] transition-colors"
+              style={{ color: "var(--nc-text-muted)" }}
+              title="Move to different project"
+              aria-label="Move to different project"
+            >
+              <FolderInput size={13} />
+            </button>
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <span
+              className="text-xs font-semibold tracking-widest uppercase"
+              style={{ color: "#8879A0", fontFamily: "'IBM Plex Sans', sans-serif" }}
+            >
+              Task
+            </span>
+          </div>
+          <div className="flex items-center gap-3 min-w-0 -mt-0.5">
+            <EditableTitleInline
+              value={task.title}
+              onSave={v => {
+                setForm(p => ({ ...p, title: v }));
+                void onSave(task.id, { title: v });
+              }}
+              className="text-xl font-semibold text-[color:var(--nc-text-cream)] tracking-tight"
+            />
             <NcSelect
-              value={form.state}
-              onValueChange={v => setForm(p => ({ ...p, state: v as WorkItemState }))}
+              value={task.state}
+              onValueChange={v => {
+                const state = v as WorkItemState;
+                setForm(p => ({ ...p, state }));
+                void onSave(task.id, { state });
+              }}
+              onTriggerClick={e => e.stopPropagation()}
+              triggerClassName="text-xs rounded px-2 py-1 flex-shrink-0"
+              triggerStyle={{ color: STATE_CFG[task.state].color, fontFamily: "'IBM Plex Sans', sans-serif" }}
               items={Object.entries(STATE_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color }))}
             />
-          </Field>
-          <Field label="Priority">
-            <NcSelect
-              value={form.priority}
-              onValueChange={v => setForm(p => ({ ...p, priority: v as WorkItemPriority }))}
-              items={Object.entries(PRI_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color }))}
+            <ActivityButton
+              entityType="task"
+              entityId={task.id}
+              projectId={task.project_id}
+              onAddNote={async () => {}}
             />
-          </Field>
+          </div>
         </div>
-
+      }
+    >
+      <div className="space-y-6 pb-6">
         {/* Inline blocker picker when state = blocked */}
         {form.state === "blocked" && (
           <div className="rounded-lg border p-3 space-y-2" style={{ borderColor: "rgba(201,76,76,0.3)", background: "rgba(201,76,76,0.05)" }}>
@@ -1388,7 +1582,7 @@ function TaskDetailSlideOver({ task, allItems, onClose, onSave, onAddSubtask, on
           )}
           <div className="flex gap-2">
             <NcInput value={newSubtask} onChange={e => setNewSubtask(e.target.value)} placeholder="Add a subtask…" onKeyDown={e => e.key === "Enter" && handleAddSubtask()} />
-            <PrimaryBtn loading={addingSubtask} onClick={handleAddSubtask} className="flex-shrink-0"><Plus size={13} /></PrimaryBtn>
+            <TonalBtn loading={addingSubtask} onClick={handleAddSubtask} className="flex-shrink-0"><Plus size={13} /></TonalBtn>
           </div>
         </div>
 
@@ -1410,7 +1604,7 @@ function TaskDetailSlideOver({ task, allItems, onClose, onSave, onAddSubtask, on
           )}
           <div className="flex gap-2">
             <NcInput value={newDocPath} onChange={e => setNewDocPath(e.target.value)} placeholder="/path/to/doc.md" onKeyDown={e => e.key === "Enter" && addDocPath()} style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 12 }} />
-            <PrimaryBtn onClick={addDocPath} className="flex-shrink-0"><Plus size={13} /></PrimaryBtn>
+            <TonalBtn onClick={addDocPath} className="flex-shrink-0"><Plus size={13} /></TonalBtn>
           </div>
         </div>
 
@@ -1503,7 +1697,7 @@ function CyclePicker({ open, onClose, cycles, onPick, onCreateAndPick }: {
           ))}
         </div>
       )}
-      <div className={cycles.length > 0 ? "border-t pt-4" : ""} style={{ borderColor: NC.borderFaint }}>
+      <div className={cycles.length > 0 ? "pt-4" : ""} style={{ borderColor: NC.borderFaint }}>
         <p className="text-xs font-semibold tracking-widest uppercase mb-2" style={{ color: NC.stone }}>New cycle</p>
         <div className="flex gap-2">
           <NcInput value={newName} onChange={e => setNewName(e.target.value)} placeholder="Cycle name" autoFocus={cycles.length === 0} onKeyDown={e => e.key === "Enter" && handleCreate()} />
@@ -1518,8 +1712,8 @@ function CyclePicker({ open, onClose, cycles, onPick, onCreateAndPick }: {
 //  MODULE DETAIL SLIDE-OVER
 // ════════════════════════════════════════════════════════════════════════════════
 
-function ModuleDetailSlideOver({ mod, allItems, cycles, onClose, onSave, onAddTask, onSelectTask, onDeleteMod, onAddToCycle }: {
-  mod: Mod; allItems: WorkItem[]; cycles: Cycle[]; onClose: () => void;
+function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onBack, onClose, onSave, onAddTask, onSelectTask, onDeleteMod, onAddToCycle }: {
+  mod: Mod; allItems: WorkItem[]; cycles: Cycle[]; projectName: string; onBack: () => void; onClose: () => void;
   onSave: (id: string, patch: Partial<Mod>) => Promise<void>;
   onAddTask: (moduleId: string) => void;
   onSelectTask: (task: WorkItem) => void;
@@ -1545,55 +1739,93 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, onClose, onSave, onAddTa
   }
   useCmdEnter(handleSave);
 
+  const divider = <GlassSeparator />;
+
   return (
-    <SlideOver open onClose={onClose} title={form.name} actions={<ActivityButton entityType="module" entityId={mod.id} />}>
-      <div className="space-y-0 pb-6 -mt-2">
-        {/* Pronounced module header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: "rgba(91,125,115,0.18)", border: "1px solid rgba(91,125,115,0.3)" }}>
-              <Layers size={14} style={{ color: NC.green }} />
-            </div>
-            <span className="text-xs font-semibold tracking-widest uppercase" style={{ color: NC.green }}>Module</span>
-          </div>
-
-          {/* Large editable name */}
-          <input
-            className="w-full bg-transparent border-none outline-none font-semibold leading-tight mb-1"
-            style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 28, fontWeight: 600, letterSpacing: "-0.026em", color: NC.cream, padding: 0 }}
-            value={form.name}
-            onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-            placeholder="Module name"
-          />
-
-          {/* Progress bar */}
-          {modTasks.length > 0 && (
-            <div className="flex items-center gap-2 mt-2">
-              <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: NC.green }} />
+    <SlideOver
+      open
+      onClose={onClose}
+      title={
+        <div className="flex flex-col gap-3 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex-shrink-0 p-1 rounded hover:bg-white/[0.06] transition-colors"
+              style={{ color: "var(--nc-text-muted)" }}
+              title="Back"
+              aria-label="Back"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <div className="locked-bc min-w-0">
+              <div className="locked-bc-content">
+                {projectName && (
+                  <>
+                    <span className="locked-bc-seg" onClick={() => {}}>{projectName}</span>
+                    <span className="locked-bc-sep">·</span>
+                  </>
+                )}
+                <span className="locked-bc-seg">…</span>
               </div>
-              <span className="text-xs flex-shrink-0" style={{ color: NC.stone }}>{done}/{modTasks.length}</span>
             </div>
-          )}
-
-          {/* Folder path badge */}
-          {form.folder_path && (
-            <p className="flex items-center gap-1.5 mt-2 text-xs font-mono" style={{ color: "rgba(138,133,128,0.7)" }}>
-              <Folder size={10} />{form.folder_path}
-            </p>
-          )}
+            <button
+              type="button"
+              onClick={() => { console.log('[caelos] Unit F: move-to-project picker for module', mod.id); }}
+              className="flex-shrink-0 p-1 rounded hover:bg-white/[0.06] transition-colors"
+              style={{ color: "var(--nc-text-muted)" }}
+              title="Move to different project"
+              aria-label="Move to different project"
+            >
+              <FolderInput size={13} />
+            </button>
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <span
+              className="text-xs font-semibold tracking-widest uppercase"
+              style={{ color: "#7A9E93", fontFamily: "'IBM Plex Sans', sans-serif" }}
+            >
+              Module
+            </span>
+          </div>
+          <div className="flex items-center gap-3 min-w-0 -mt-0.5">
+            <EditableTitleInline
+              value={mod.name}
+              onSave={v => {
+                setForm(p => ({ ...p, name: v }));
+                void onSave(mod.id, { name: v });
+              }}
+              className="text-xl font-semibold text-[color:var(--nc-text-cream)] tracking-tight"
+            />
+            <NcSelect
+              value={mod.state}
+              onValueChange={v => { void onSave(mod.id, { state: v as WorkItemState }); }}
+              onTriggerClick={e => e.stopPropagation()}
+              triggerClassName="text-xs rounded px-2 py-1 flex-shrink-0"
+              triggerStyle={{ color: STATE_CFG[mod.state].color, fontFamily: "'IBM Plex Sans', sans-serif" }}
+              items={Object.entries(STATE_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color }))}
+            />
+            <ActivityButton
+              entityType="module"
+              entityId={mod.id}
+              projectId={mod.project_id}
+              onAddNote={async () => {}}
+            />
+          </div>
         </div>
-
-        <div className="border-t mb-5" style={{ borderColor: NC.borderFaint }} />
-
+      }
+    >
+      <div className="space-y-6 pb-6">
         {/* Description */}
-        <div className="mb-5">
+        <div>
           <label className="block text-xs font-semibold tracking-widest uppercase mb-2" style={{ color: NC.stone }}>Description</label>
           <NcTextarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Describe this module…" rows={3} />
         </div>
 
-        {/* Folder path field */}
-        <div className="mb-5">
+        {/* Folder path field — the single canonical folder-path surface for this module.
+            (Prior standalone chip in the drawer body was removed 2026-07-29 — redundant
+            with this field. Progress bar moved to the Tasks section header.) */}
+        <div>
           <label className="block text-xs font-semibold tracking-widest uppercase mb-2" style={{ color: NC.stone }}>Folder Path</label>
           <div className="flex items-center gap-2">
             <Folder size={13} style={{ color: NC.stone, flexShrink: 0 }} />
@@ -1601,18 +1833,28 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, onClose, onSave, onAddTa
           </div>
         </div>
 
-        <div className="flex items-center gap-2 mb-5">
+        <div className="flex items-center gap-2">
           <PrimaryBtn loading={saving} onClick={handleSave}>Save changes</PrimaryBtn>
-          <GhostBtn onClick={() => setCycleOpen(true)}><Calendar size={13} /> Add to cycle</GhostBtn>
-          <GhostBtn onClick={() => { onClose(); onDeleteMod(mod); }} className="ml-auto"><Archive size={13} /> Archive</GhostBtn>
+          <TonalBtn onClick={() => setCycleOpen(true)}><Calendar size={13} /> Add to cycle</TonalBtn>
+          <TonalBtn danger onClick={() => { onClose(); onDeleteMod(mod); }} className="ml-auto"><Archive size={13} /> Archive</TonalBtn>
         </div>
 
-        <div className="border-t mb-5" style={{ borderColor: NC.borderFaint }} />
+        {divider}
 
         {/* Tasks in module */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: NC.stone }}>Tasks ({modTasks.length})</p>
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="text-xs font-semibold tracking-widest uppercase flex-shrink-0" style={{ color: NC.stone }}>Tasks ({modTasks.length})</p>
+              {modTasks.length > 0 && (
+                <>
+                  <div className="flex-1 max-w-[140px] h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                    <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: NC.green }} />
+                  </div>
+                  <span className="text-[10px] font-mono flex-shrink-0" style={{ color: NC.stone }}>{done}/{modTasks.length}</span>
+                </>
+              )}
+            </div>
             <button className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors hover:bg-white/[0.05]" style={{ color: NC.stone, border: `1px solid ${NC.border}` }}
               onClick={() => { onAddTask(mod.id); onClose(); }}>
               <Plus size={11} /> Add task
@@ -1669,14 +1911,14 @@ function TaskRow({ task, allItems, depth, gripRef, onSelect, onDelete, onDuplica
         <ContextMenuTrigger asChild>
           <div
             className="flex items-center gap-1.5 py-2.5 cursor-pointer group transition-colors hover:bg-white/[0.06]"
-            style={{ paddingLeft: `${depth * 20 + 8}px`, paddingRight: 8, borderBottom: `1px solid ${NC.borderFaint}` }}
+            style={{ paddingLeft: `${depth * 20 + 16}px`, paddingRight: 8 }}
             onClick={() => onSelect(task)}
           >
             <button className="flex-shrink-0 w-4 flex items-center justify-center" style={{ color: NC.stone }} onClick={e => { e.stopPropagation(); setExpanded(p => !p); }}>
               {subtasks.length > 0 ? (expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />) : <span className="w-3" />}
             </button>
             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: STATE_CFG[task.state].color }} />
-            <span className="flex-1 text-sm font-medium truncate pr-2" style={{ color: NC.cream }}>{task.title}</span>
+            <span className="flex-1 text-sm font-medium truncate pr-2" style={{ color: task.state === "done" || task.state === "deferred" ? NC.textMuted : NC.cream, textDecoration: task.state === "done" ? "line-through" : undefined }}>{task.title}</span>
             {isBlocked && <AlertTriangle size={12} style={{ color: "#C25B62", flexShrink: 0 }} />}
             <div className="flex items-center gap-3 flex-shrink-0">
               {onSaveState ? (
@@ -1691,7 +1933,6 @@ function TaskRow({ task, allItems, depth, gripRef, onSelect, onDelete, onDuplica
               ) : (
                 <StateBadge state={task.state} />
               )}
-              <PriBadge priority={task.priority} />
               {task.assignee && <span className="text-xs max-w-[72px] truncate hidden sm:block" style={{ color: NC.stone }}>{task.assignee}</span>}
               {subtasks.length > 0 && <span className="text-xs" style={{ color: NC.stone }}>{subtasks.length} sub</span>}
             </div>
@@ -1750,18 +1991,15 @@ function ModuleSection({ mod, modTasks, allItems, gripRef, onOpenMod, onDeleteMo
         <ContextMenuTrigger asChild>
           <div
             className="flex items-center gap-1.5 pr-4 cursor-pointer group transition-colors hover:bg-white/[0.04]"
-            style={{ paddingLeft: 8, borderBottom: `1px solid ${NC.borderFaint}`, background: "rgba(255,255,255,0.02)", paddingTop: 8, paddingBottom: 8 }}
+            style={{ paddingLeft: 16, background: "rgba(255,255,255,0.02)", paddingTop: 8, paddingBottom: 8 }}
             onClick={() => onOpenMod(mod)}
           >
-            <span ref={gripRef} className="flex-shrink-0 w-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" style={{ color: NC.stone }} onClick={e => e.stopPropagation()}>
-              <GripVertical size={12} />
-            </span>
+            <Layers size={13} className="flex-shrink-0" style={{ color: STATE_CFG[mod.state].color }} />
             <button className="flex-shrink-0 w-5 flex items-center justify-center" style={{ color: NC.stone }} onClick={e => { e.stopPropagation(); setExpanded(p => !p); }}>
               {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
             </button>
-            <Layers size={13} className="flex-shrink-0" style={{ color: NC.green }} />
             <div className="flex-1 min-w-0">
-              <span className="font-semibold" style={{ color: NC.cream, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 15, fontWeight: 600 }}>{mod.name}</span>
+              <span className="font-semibold" style={{ color: mod.state === "done" || mod.state === "deferred" ? NC.textMuted : NC.cream, textDecoration: mod.state === "done" ? "line-through" : undefined, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 15, fontWeight: 600 }}>{mod.name}</span>
               {modTasks.length > 0 && (
                 <div className="flex items-center gap-2 mt-0.5">
                   <div className="w-20 h-0.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
@@ -1771,10 +2009,13 @@ function ModuleSection({ mod, modTasks, allItems, gripRef, onOpenMod, onDeleteMo
                 </div>
               )}
             </div>
-            {mod.folder_path && <span className="text-xs font-mono truncate max-w-[100px] hidden lg:block" style={{ color: "rgba(138,133,128,0.45)" }}>{mod.folder_path}</span>}
             <button className="opacity-0 group-hover:opacity-100 flex items-center gap-1 text-xs px-2 py-0.5 rounded transition-opacity hover:bg-white/5 flex-shrink-0" style={{ color: NC.stone }} onClick={e => { e.stopPropagation(); onAddTask(mod.id); }}>
               <Plus size={11} /> Task
             </button>
+            {mod.folder_path && <span className="text-xs font-mono truncate max-w-[100px] hidden lg:block" style={{ color: "rgba(138,133,128,0.45)" }}>{mod.folder_path}</span>}
+            <span ref={gripRef} className="flex-shrink-0 w-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" style={{ color: NC.stone }} onClick={e => e.stopPropagation()}>
+              <GripVertical size={12} />
+            </span>
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent className="nc-glass-menu" style={{ color: NC.cream }}>
@@ -1810,8 +2051,8 @@ const EMPTY_TASK_FORM = {
   assignee: "", module_id: null as string | null, parent_item_id: null as string | null,
 };
 
-function TasksPane({ projectId, pendingTaskId, onClearPending }: {
-  projectId: string; pendingTaskId: string | null; onClearPending: () => void;
+export function TasksPane({ projectId, projectName, pendingTaskId, onClearPending, fixtureMode = false }: {
+  projectId: string; projectName: string; pendingTaskId: string | null; onClearPending: () => void; fixtureMode?: boolean;
 }) {
   const [items, setItems]   = useState<WorkItem[]>([]);
   const [mods,  setMods]    = useState<Mod[]>([]);
@@ -1841,11 +2082,13 @@ function TasksPane({ projectId, pendingTaskId, onClearPending }: {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [itemsData, modsData, cyclesData] = await Promise.all([
-        api<WorkItem[]>(`/projects/${projectId}/work-items`),
-        api<Mod[]>(`/projects/${projectId}/modules`),
-        api<Cycle[]>(`/projects/${projectId}/cycles`),
-      ]);
+      const [itemsData, modsData, cyclesData] = fixtureMode
+        ? [FOUNDRY_DEMO_ITEMS, FOUNDRY_DEMO_MODULES, FOUNDRY_DEMO_CYCLES]
+        : await Promise.all([
+          api<WorkItem[]>(`/projects/${projectId}/work-items`),
+          api<Mod[]>(`/projects/${projectId}/modules`),
+          api<Cycle[]>(`/projects/${projectId}/cycles`),
+        ]);
       // Hide archived from the project view entirely — accessible only via Settings → Archived.
       // This keeps the state filter dropdown consistent (its "Archived" option is redundant here; kept for parity with other states).
       const activeMods  = modsData.filter(m => m.state !== "archived");
@@ -1859,7 +2102,7 @@ function TasksPane({ projectId, pendingTaskId, onClearPending }: {
       ]);
     } catch { toast.error("Failed to load project data"); }
     finally { setLoading(false); }
-  }, [projectId]);
+  }, [fixtureMode, projectId]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (pendingTaskId) { setSelectedTaskId(pendingTaskId); onClearPending(); } }, [pendingTaskId]);
@@ -2084,7 +2327,7 @@ function TasksPane({ projectId, pendingTaskId, onClearPending }: {
     <DndProvider backend={HTML5Backend}>
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Toolbar */}
-        <div className="flex items-center gap-3 px-5 py-3 border-b flex-shrink-0" style={{ borderColor: NC.borderFaint }}>
+        <div className="flex items-center gap-3 px-5 py-3 flex-shrink-0" style={{ borderColor: NC.borderFaint }}>
           <div className="relative flex-1 max-w-sm">
             <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: NC.stone }} />
             <input className="nc-search w-full pl-9 pr-3 py-2 text-sm" placeholder="Search tasks…" value={search} onChange={e => setSearch(e.target.value)} />
@@ -2098,8 +2341,23 @@ function TasksPane({ projectId, pendingTaskId, onClearPending }: {
               ...Object.entries(STATE_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color })),
             ]}
           />
-          <GhostBtn onClick={() => { setModName(""); setModDescription(""); setCreatingMod(true); }}><Layers size={13} /> Module</GhostBtn>
-          <PrimaryBtn onClick={() => openAddTask()}><Plus size={13} /> Task</PrimaryBtn>
+          <div className="ml-auto">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <PrimaryBtn aria-label="Add new" className="!px-3">
+                  <Plus size={14} />
+                </PrimaryBtn>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="bottom" align="end" sideOffset={6} className="nc-glass-menu min-w-[160px]" style={{ color: NC.cream }}>
+                <DropdownMenuItem className="gap-2 text-sm cursor-pointer" onSelect={() => openAddTask()}>
+                  <Plus size={13} /> Task
+                </DropdownMenuItem>
+                <DropdownMenuItem className="gap-2 text-sm cursor-pointer" onSelect={() => { setModName(""); setModDescription(""); setCreatingMod(true); }}>
+                  <Layers size={13} /> Module
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
         {/* Unified tree */}
@@ -2147,7 +2405,12 @@ function TasksPane({ projectId, pendingTaskId, onClearPending }: {
         {/* Task detail slide-over */}
         {selectedTask && (
           <TaskDetailSlideOver
-            task={selectedTask} allItems={items}
+            task={selectedTask} allItems={items} projectName={projectName}
+            moduleName={selectedTask.module_id ? mods.find(mod => mod.id === selectedTask.module_id)?.name : undefined}
+            onBack={() => {
+              setSelectedTaskId(null);
+              if (selectedTask.module_id) setSelectedModId(selectedTask.module_id);
+            }}
             onClose={() => setSelectedTaskId(null)}
             onSave={saveTask}
             onAddSubtask={addSubtask}
@@ -2161,7 +2424,8 @@ function TasksPane({ projectId, pendingTaskId, onClearPending }: {
         {/* Module detail slide-over */}
         {selectedMod && (
           <ModuleDetailSlideOver
-            mod={selectedMod} allItems={items} cycles={cycles}
+            mod={selectedMod} allItems={items} cycles={cycles} projectName={projectName}
+            onBack={() => setSelectedModId(null)}
             onClose={() => setSelectedModId(null)}
             onSave={saveMod}
             onAddTask={id => { openAddTask(id); setSelectedModId(null); }}
@@ -2198,14 +2462,14 @@ function TasksPane({ projectId, pendingTaskId, onClearPending }: {
             <Field label="Priority"><NcSelect value={taskForm.priority} onValueChange={v => setTaskForm(p => ({ ...p, priority: v as WorkItemPriority }))} items={Object.entries(PRI_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color }))} /></Field>
           </div>
           <Field label="Assignee"><NcInput value={taskForm.assignee} onChange={e => setTaskForm(p => ({ ...p, assignee: e.target.value }))} placeholder="Name or email" /></Field>
-          <div className="flex gap-2 justify-end pt-1"><GhostBtn onClick={() => setCreatingTask(false)}>Cancel</GhostBtn><PrimaryBtn loading={taskSaving} onClick={createTask}>Create</PrimaryBtn></div>
+          <div className="flex gap-2 justify-end pt-1"><TextBtn onClick={() => setCreatingTask(false)}>Cancel</TextBtn><PrimaryBtn loading={taskSaving} onClick={createTask}>Create</PrimaryBtn></div>
         </Modal>
 
         {/* Create module modal */}
         <Modal open={creatingMod} onClose={() => setCreatingMod(false)} title="New Module" maxWidth="max-w-sm">
           <Field label="Name"><NcInput value={modName} onChange={e => setModName(e.target.value)} placeholder="Module name" autoFocus onKeyDown={e => e.key === "Enter" && createMod()} /></Field>
           <Field label="Description"><NcTextarea value={modDescription} onChange={e => setModDescription(e.target.value)} placeholder="Optional — what is this for?" rows={3} /></Field>
-          <div className="flex gap-2 justify-end pt-1"><GhostBtn onClick={() => setCreatingMod(false)}>Cancel</GhostBtn><PrimaryBtn loading={modSaving} onClick={createMod}>Create</PrimaryBtn></div>
+          <div className="flex gap-2 justify-end pt-1"><TextBtn onClick={() => setCreatingMod(false)}>Cancel</TextBtn><PrimaryBtn loading={modSaving} onClick={createMod}>Create</PrimaryBtn></div>
         </Modal>
 
         <ConfirmDelete open={!!deleteMod} onClose={() => setDeleteMod(null)} onConfirm={() => deleteMod && deleteMod_(deleteMod)} label="module" />
@@ -2218,15 +2482,6 @@ function TasksPane({ projectId, pendingTaskId, onClearPending }: {
 // ════════════════════════════════════════════════════════════════════════════════
 //  TEAM TAB
 // ════════════════════════════════════════════════════════════════════════════════
-
-// Team role palette — brand-ui semantic assignments (2026-07-26)
-const ROLE_CFG: Record<MemberRole, { label: string; color: string; icon: React.ReactNode }> = {
-  owner:    { label: "Owner",    color: "#7A9E93", icon: <Shield size={12} />   },  // sage — founder / primary
-  lead:     { label: "Lead",     color: "#6D5AD1", icon: <Zap size={12} />      },  // accent — orchestration identity
-  engineer: { label: "Engineer", color: "#8879A0", icon: <Code2 size={12} />    },  // desaturated violet
-  pm:       { label: "PM",       color: "#4E4C82", icon: <Briefcase size={12} /> }, // slate violet
-  designer: { label: "Designer", color: "#E8B87A", icon: <Edit2 size={12} />    },  // peach-gold — creative attention
-};
 
 function memberInitials(name: string) {
   return name.split("-").map(w => w[0]?.toUpperCase() ?? "").join("").slice(0, 2);
@@ -2244,7 +2499,7 @@ function MemberAvatar({ name, size = 36 }: { name: string; size?: number }) {
   );
 }
 
-function TeamTab({ projectId }: { projectId: string }) {
+export function TeamTab({ projectId }: { projectId: string }) {
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding]   = useState(false);
@@ -2264,22 +2519,13 @@ function TeamTab({ projectId }: { projectId: string }) {
   async function addMember() {
     if (!addName) return toast.error("Select a team member");
     if (members.find(m => m.name === addName)) return toast.error("Already on team");
-    // Default role sourced from agent registry .tier (per api() member adapter at line ~275).
-    const defaultRole = (agents.find(a => a.agent_name === addName)?.tier || "engineer") as MemberRole;
     setSaving(true);
     try {
-      const m = await api<ProjectMember>(`/projects/${projectId}/members`, { method: "POST", body: JSON.stringify({ name: addName, role: defaultRole }) });
+      const m = await api<ProjectMember>(`/projects/${projectId}/members`, { method: "POST", body: JSON.stringify({ name: addName }) });
       setMembers(p => [...p, m]); setAdding(false); setAddName("");
       toast.success(`${addName} added to team`);
     } catch { toast.error("Failed to add member"); }
     finally { setSaving(false); }
-  }
-
-  async function changeRole(member: ProjectMember, role: MemberRole) {
-    try {
-      const updated = await api<ProjectMember>(`/projects/${projectId}/members/${member.id}`, { method: "PATCH", body: JSON.stringify({ role }) });
-      setMembers(p => p.map(m => m.id === member.id ? updated : m));
-    } catch { toast.error("Failed to update role"); }
   }
 
   async function removeMember(member: ProjectMember) {
@@ -2295,47 +2541,28 @@ function TeamTab({ projectId }: { projectId: string }) {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-6 py-3 border-b flex-shrink-0" style={{ borderColor: NC.borderFaint }}>
+      <div className="flex items-center justify-between px-6 py-3 flex-shrink-0" style={{ borderColor: NC.borderFaint }}>
         <span className="text-xs" style={{ color: NC.stone }}>{members.length} member{members.length !== 1 ? "s" : ""}</span>
-        <PrimaryBtn onClick={() => setAdding(true)} disabled={available.length === 0}>
+        <TonalBtn onClick={() => setAdding(true)} disabled={available.length === 0}>
           <UserPlus size={13} /> Add member
-        </PrimaryBtn>
+        </TonalBtn>
       </div>
 
       <div className="flex-1 overflow-auto p-6">
         {loading ? <EmptyState icon={<Spinner />} text="Loading team…" /> :
           members.length === 0 ? <EmptyState icon={<Users size={36} />} text="No team members yet" secondaryText="Use Add Member above to invite from the roster" /> : (
           <div className="space-y-2">
-            {members.map(member => {
-              // P0 fix (2026-07-27): agent registry has tiers outside the 5-role whitelist
-              // (analyst, cto, chief-pm, librarian, devops-lead, da-vinci, plus free-text authors).
-              // Adapter at L275 lying-casts them to MemberRole; fall back so unknown tiers
-              // render as "engineer" instead of white-screening the whole app.
-              const role = ROLE_CFG[member.role] ?? ROLE_CFG.engineer;
-              return (
-                <div key={member.id} className="flex items-center gap-4 p-4 rounded-xl border group" style={{ background: "rgba(26,24,40,0.7)", borderColor: NC.border }}>
-                  <MemberAvatar name={member.name} size={40} />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm" style={{ color: NC.cream }}>{member.name}</p>
-                    <div className="flex items-center gap-1 mt-0.5" style={{ color: role.color }}>
-                      {role.icon}
-                      <span className="text-xs">{role.label}</span>
-                    </div>
-                  </div>
-                  {member.role !== "owner" && (
-                    <NcSelect
-                      value={member.role}
-                      onValueChange={v => changeRole(member, v as MemberRole)}
-                      triggerClassName="text-xs rounded-lg border outline-none px-2 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                      items={Object.entries(ROLE_CFG).map(([v, c]) => ({ value: v, label: c.label }))}
-                    />
-                  )}
-                  <button onClick={() => removeMember(member)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-white/[0.06]" style={{ color: NC.stone }}>
-                    <X size={13} />
-                  </button>
+            {members.map(member => (
+              <div key={member.id} className="flex items-center gap-4 p-4 rounded-xl border group" style={{ background: "rgba(26,24,40,0.7)", borderColor: NC.border }}>
+                <MemberAvatar name={member.name} size={40} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm" style={{ color: NC.cream }}>{member.name}</p>
                 </div>
-              );
-            })}
+                <button onClick={() => removeMember(member)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-white/[0.06]" style={{ color: NC.stone }}>
+                  <X size={13} />
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -2350,7 +2577,7 @@ function TeamTab({ projectId }: { projectId: string }) {
           />
         </Field>
         <div className="flex gap-2 justify-end pt-1">
-          <GhostBtn onClick={() => setAdding(false)}>Cancel</GhostBtn>
+          <TextBtn onClick={() => setAdding(false)}>Cancel</TextBtn>
           <PrimaryBtn loading={saving} onClick={addMember}>Add</PrimaryBtn>
         </div>
       </Modal>
@@ -2364,7 +2591,7 @@ function TeamTab({ projectId }: { projectId: string }) {
 
 const EMPTY_CYCLE_FORM = { name: "", description: "", start_date: "", end_date: "" };
 
-function CyclesTab({ projectId }: { projectId: string }) {
+export function CyclesTab({ projectId }: { projectId: string }) {
   const [cycles, setCycles] = useState<Cycle[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -2432,9 +2659,9 @@ function CyclesTab({ projectId }: { projectId: string }) {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3 border-b flex-shrink-0" style={{ borderColor: NC.borderFaint }}>
+      <div className="flex items-center justify-between px-5 py-3 flex-shrink-0" style={{ borderColor: NC.borderFaint }}>
         <span className="text-xs" style={{ color: NC.stone }}>{cycles.length} cycle{cycles.length !== 1 ? "s" : ""}</span>
-        <PrimaryBtn onClick={() => { setForm(EMPTY_CYCLE_FORM); setCreating(true); }}><Plus size={13} /> New cycle</PrimaryBtn>
+        <TonalBtn onClick={() => { setForm(EMPTY_CYCLE_FORM); setCreating(true); }}><Plus size={13} /> New cycle</TonalBtn>
       </div>
       <div className="flex-1 overflow-auto p-5 space-y-3">
         {loading ? <EmptyState icon={<Spinner />} text="Loading cycles…" /> :
@@ -2474,7 +2701,7 @@ function CyclesTab({ projectId }: { projectId: string }) {
           <Field label="Start Date"><NcInput type="date" value={form.start_date} onChange={e => setForm(p => ({ ...p, start_date: e.target.value }))} /></Field>
           <Field label="End Date"><NcInput type="date" value={form.end_date} onChange={e => setForm(p => ({ ...p, end_date: e.target.value }))} /></Field>
         </div>
-        <div className="flex gap-2 justify-end pt-1"><GhostBtn onClick={() => setCreating(false)}>Cancel</GhostBtn><PrimaryBtn loading={saving} onClick={create}>Create</PrimaryBtn></div>
+        <div className="flex gap-2 justify-end pt-1"><TextBtn onClick={() => setCreating(false)}>Cancel</TextBtn><PrimaryBtn loading={saving} onClick={create}>Create</PrimaryBtn></div>
       </Modal>
 
       {editCycle && (
@@ -2486,7 +2713,7 @@ function CyclesTab({ projectId }: { projectId: string }) {
             <Field label="End Date"><NcInput type="date" value={editCycle.end_date} onChange={e => setEditCycle(p => p ? { ...p, end_date: e.target.value } : p)} /></Field>
           </div>
           <div className="flex gap-2 justify-end pt-1">
-            <GhostBtn onClick={() => setEditCycle(null)}>Cancel</GhostBtn>
+            <TextBtn onClick={() => setEditCycle(null)}>Cancel</TextBtn>
             <PrimaryBtn loading={saving} onClick={async () => {
               setSaving(true);
               try { await api(`/projects/${projectId}/cycles/${editCycle.id}`, { method: "PATCH", body: JSON.stringify(editCycle) }); setCycles(p => p.map(c => c.id === editCycle.id ? editCycle : c)); setEditCycle(null); toast.success("Updated"); }
@@ -2543,7 +2770,7 @@ function CyclesPanel({ open, onClose, projects, defaultProjectId }: {
 // Status pill — colored badge in project header + wraps NcSelect for status change.
 // Defensive default: rows created before status was populated fall back to 'planned'.
 // Glass treatment via .nc-glass-pill (einUI-inspired) — see theme.css.
-function StatusPill({ status, onChange, disabled }: { status: ProjectStatus | undefined; onChange: (s: ProjectStatus) => Promise<void> | void; disabled?: boolean }) {
+export function StatusPill({ status, onChange, disabled }: { status: ProjectStatus | undefined; onChange: (s: ProjectStatus) => Promise<void> | void; disabled?: boolean }) {
   const safeStatus: ProjectStatus = status && status in PROJECT_STATUS_CFG ? status : "planned";
   const cfg = PROJECT_STATUS_CFG[safeStatus];
   const items = Object.entries(PROJECT_STATUS_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color }));
@@ -2560,7 +2787,7 @@ function StatusPill({ status, onChange, disabled }: { status: ProjectStatus | un
 }
 
 // Project Info tab — full-fidelity project edit surface (replaces the old micro-modal).
-function ProjectInfoTab({ project, onSave, onSwitchTab }: {
+export function ProjectInfoTab({ project, onSave, onSwitchTab }: {
   project: Project;
   onSave: (id: string, patch: Partial<Project>) => Promise<void>;
   onSwitchTab: (tab: string) => void;
@@ -2669,10 +2896,10 @@ function ProjectInfoTab({ project, onSave, onSwitchTab }: {
       </div>
 
       {/* Team preview — read-only union of ProjectMember table + distinct task assignees */}
-      <div className="pt-4 border-t" style={{ borderColor: NC.borderFaint }}>
+      <div className="pt-4" style={{ borderColor: NC.borderFaint }}>
         <div className="flex items-center justify-between mb-3">
           <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: NC.stone }}>Team ({teamUnion.length})</p>
-          <button onClick={() => onSwitchTab("team")} className="text-xs hover:underline" style={{ color: NC.accent }}>Manage in Team tab →</button>
+          <button onClick={() => onSwitchTab("team")} className="text-xs hover:underline" style={{ color: NC.textMuted }}>Manage in Team tab →</button>
         </div>
         {teamUnion.length === 0 ? (
           <p className="text-sm" style={{ color: "rgba(138,133,128,0.4)" }}>No members yet</p>
@@ -2693,7 +2920,7 @@ function ProjectInfoTab({ project, onSave, onSwitchTab }: {
       </div>
 
       {/* Meta */}
-      <div className="pt-4 border-t space-y-1.5" style={{ borderColor: NC.borderFaint }}>
+      <div className="pt-4 space-y-1.5" style={{ borderColor: NC.borderFaint }}>
         <div className="flex items-center gap-2 text-xs" style={{ color: NC.stone }}>
           <span className="uppercase tracking-widest font-semibold w-20">Created</span>
           <span style={{ color: NC.cream, fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}>{new Date(project.created_at).toLocaleString()}</span>
@@ -2714,64 +2941,24 @@ function ProjectInfoTab({ project, onSave, onSwitchTab }: {
   );
 }
 
-function ProjectView({ project, pendingTaskId, onClearPending, pendingTab, onClearPendingTab, onSaveProject }: {
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared props contract for ProjectView and any alternate shell (labs 2/3).
+// Shell files (ProjectViewBentoShell, ProjectViewLayeredShell) import this to
+// stay drop-in-compatible with the canonical ProjectView.
+// ─────────────────────────────────────────────────────────────────────────────
+export type ProjectViewShellProps = {
   project: Project;
   pendingTaskId: string | null;
   onClearPending: () => void;
   pendingTab: string | null;
   onClearPendingTab: () => void;
   onSaveProject: (id: string, patch: Partial<Project>) => Promise<void>;
-}) {
-  const [tab, setTab] = useState<string>("tasks");
-  useEffect(() => {
-    if (pendingTab) { setTab(pendingTab); onClearPendingTab(); }
-  }, [pendingTab, onClearPendingTab]);
+  foundryMode?: boolean;
+};
 
-  return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="px-7 pt-6 pb-5 border-b flex-shrink-0" style={{ borderColor: NC.borderFaint }}>
-        <p className="text-xs font-semibold tracking-widest uppercase mb-1" style={{ color: NC.green }}>Project</p>
-        <div className="flex items-center gap-3 flex-wrap">
-          <h1 style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 30, color: NC.cream, fontWeight: 600, lineHeight: 1.12, letterSpacing: "-0.028em" }}>{project.name}</h1>
-          <StatusPill status={project.status} onChange={s => onSaveProject(project.id, { status: s })} />
-          <div className="ml-2"><ActivityButton entityType="project" entityId={project.id} /></div>
-        </div>
-        {project.description && <p className="text-sm mt-1" style={{ color: NC.stone }}>{project.description}</p>}
-        {project.folder_path && (
-          <p className="flex items-center gap-1.5 text-xs font-mono mt-1.5" style={{ color: "rgba(138,133,128,0.6)" }}>
-            <Folder size={11} />{project.folder_path}
-          </p>
-        )}
-      </div>
-      <TabsPrimitive.Root value={tab} onValueChange={setTab} className="flex-1 flex flex-col overflow-hidden">
-        <TabsPrimitive.List className="flex px-7 border-b flex-shrink-0" style={{ borderColor: NC.borderFaint }}>
-          {[
-            { value: "info", icon: <Hash size={13} />, label: "Info" },
-            { value: "tasks", icon: <Target size={13} />, label: "Tasks" },
-            { value: "cycles", icon: <Calendar size={13} />, label: "Cycles" },
-            { value: "team", icon: <Users size={13} />, label: "Team" },
-          ].map(t => (
-            <TabsPrimitive.Trigger key={t.value} value={t.value} className="flex items-center gap-1.5 px-3 py-3 text-xs font-semibold tracking-wide uppercase border-b-2 border-transparent transition-colors data-[state=active]:border-[#6D5AD1] data-[state=active]:text-[#F4EAD5]" style={{ color: NC.stone }}>
-              {t.icon}{t.label}
-            </TabsPrimitive.Trigger>
-          ))}
-        </TabsPrimitive.List>
-        <TabsPrimitive.Content value="info" className="flex-1 overflow-auto data-[state=inactive]:hidden">
-          <ProjectInfoTab project={project} onSave={onSaveProject} onSwitchTab={setTab} />
-        </TabsPrimitive.Content>
-        <TabsPrimitive.Content value="tasks" className="flex-1 flex flex-col overflow-hidden data-[state=inactive]:hidden">
-          <TasksPane projectId={project.id} pendingTaskId={pendingTaskId} onClearPending={onClearPending} />
-        </TabsPrimitive.Content>
-        <TabsPrimitive.Content value="cycles" className="flex-1 flex flex-col overflow-hidden data-[state=inactive]:hidden">
-          <CyclesTab projectId={project.id} />
-        </TabsPrimitive.Content>
-        <TabsPrimitive.Content value="team" className="flex-1 flex flex-col overflow-hidden data-[state=inactive]:hidden">
-          <TeamTab projectId={project.id} />
-        </TabsPrimitive.Content>
-      </TabsPrimitive.Root>
-    </div>
-  );
-}
+// (Old bottom-border-tab ProjectView deleted 2026-07-31 — replaced app-wide by
+//  ProjectViewLayeredShell as canonical. See src/app/ProjectViewLayeredShell.tsx.
+//  ProjectViewShellProps above is still the contract every shell honors.)
 
 // ════════════════════════════════════════════════════════════════════════════════
 //  INITIATIVE VIEW
@@ -2848,11 +3035,11 @@ function InitiativeView({ initiative, allProjects, onUpdateInit }: {
   const unlinkedMods     = allMods.filter(m => !links.module_ids.includes(m.id));
   const statusCfg = INIT_STATE_CFG[initiative.state];
 
-  const divider = <div className="border-t" style={{ borderColor: NC.borderFaint }} />;
+  const divider = <GlassSeparator className="my-4" />;
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="px-7 pt-6 pb-5 border-b flex-shrink-0" style={{ borderColor: NC.borderFaint }}>
+      <div className="px-7 pt-6 pb-5 flex-shrink-0" style={{ borderColor: NC.borderFaint }}>
         <p className="text-xs font-semibold tracking-widest uppercase mb-1" style={{ color: "#c9a84c" }}>Initiative</p>
         <div className="flex items-center gap-3 flex-wrap">
           <h1 style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 30, color: NC.cream, fontWeight: 600, lineHeight: 1.12, letterSpacing: "-0.028em" }}>{initiative.title}</h1>
@@ -2861,6 +3048,7 @@ function InitiativeView({ initiative, allProjects, onUpdateInit }: {
         {initiative.external_id && <p className="text-xs mt-1" style={{ color: NC.stone }}>ID: {initiative.external_id}</p>}
         {initiative.description && <p className="text-sm mt-2 max-w-2xl" style={{ fontFamily: "'IBM Plex Sans', sans-serif", color: NC.stone, lineHeight: 1.55 }}>{initiative.description}</p>}
       </div>
+      <GlassSeparator />
 
       <div className="flex-1 overflow-auto p-7 space-y-8">
         {loading ? <EmptyState icon={<Spinner />} text="Loading…" /> : (
@@ -2869,7 +3057,7 @@ function InitiativeView({ initiative, allProjects, onUpdateInit }: {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: NC.stone }}>Linked Projects ({links.project_ids.length})</p>
-                <GhostBtn onClick={() => setLinkingProjects(true)}><Link2 size={12} /> Add</GhostBtn>
+                <TonalBtn onClick={() => setLinkingProjects(true)}><Link2 size={12} /> Add</TonalBtn>
               </div>
               {linkedProjects.length === 0 ? <p className="text-sm" style={{ color: NC.stone }}>None linked</p> : (
                 <div className="space-y-2">
@@ -2889,7 +3077,7 @@ function InitiativeView({ initiative, allProjects, onUpdateInit }: {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: NC.stone }}>Linked Modules ({links.module_ids.length})</p>
-                <GhostBtn onClick={() => setPickMods(true)} disabled={allMods.length === 0}><Link2 size={12} /> Add</GhostBtn>
+                <TonalBtn onClick={() => setPickMods(true)} disabled={allMods.length === 0}><Link2 size={12} /> Add</TonalBtn>
               </div>
               {linkedMods.length === 0 ? <p className="text-sm" style={{ color: NC.stone }}>{allMods.length === 0 ? "Link a project first" : "None linked"}</p> : (
                 <div className="space-y-2">
@@ -2909,7 +3097,7 @@ function InitiativeView({ initiative, allProjects, onUpdateInit }: {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: NC.stone }}>Linked Work Items ({links.work_item_ids.length})</p>
-                <GhostBtn onClick={() => setPickItems(true)} disabled={allItems.length === 0}><Link2 size={12} /> Add</GhostBtn>
+                <TonalBtn onClick={() => setPickItems(true)} disabled={allItems.length === 0}><Link2 size={12} /> Add</TonalBtn>
               </div>
               {linkedItems.length === 0 ? <p className="text-sm" style={{ color: NC.stone }}>{allItems.length === 0 ? "Link a project first" : "None linked"}</p> : (
                 <div className="space-y-2">
@@ -2941,7 +3129,7 @@ function InitiativeView({ initiative, allProjects, onUpdateInit }: {
               )}
               <div className="flex gap-2">
                 <NcInput value={newDocPath} onChange={e => setNewDocPath(e.target.value)} placeholder="/path/to/relevant/file.md" onKeyDown={e => e.key === "Enter" && addDocPath()} style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 12 }} />
-                <PrimaryBtn onClick={addDocPath} className="flex-shrink-0"><Plus size={13} /></PrimaryBtn>
+                <TonalBtn onClick={addDocPath} className="flex-shrink-0"><Plus size={13} /></TonalBtn>
               </div>
             </div>
           </>
@@ -3063,7 +3251,7 @@ function ArchivedModal({ open, onClose, projects, initiatives, onUnarchiveProjec
                 <div key={p.id} className="flex items-center gap-2 py-2 px-3 rounded-lg" style={{ background: NC.card, border: `1px solid ${NC.border}` }}>
                   <FolderOpen size={13} style={{ color: NC.stone, flexShrink: 0 }} />
                   <span className="flex-1 text-sm truncate" style={{ color: NC.cream }}>{p.name}</span>
-                  <button onClick={() => onUnarchiveProject(p)} className="flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors hover:bg-white/[0.06]" style={{ color: NC.accent, border: `1px solid ${NC.border}` }}>
+                  <button onClick={() => onUnarchiveProject(p)} className="flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors hover:bg-white/[0.06]" style={{ color: NC.textMuted, border: `1px solid ${NC.border}` }}>
                     <ArchiveRestore size={11} /> Unarchive
                   </button>
                 </div>
@@ -3082,7 +3270,7 @@ function ArchivedModal({ open, onClose, projects, initiatives, onUnarchiveProjec
                 <div key={i.id} className="flex items-center gap-2 py-2 px-3 rounded-lg" style={{ background: NC.card, border: `1px solid ${NC.border}` }}>
                   <Target size={13} style={{ color: NC.stone, flexShrink: 0 }} />
                   <span className="flex-1 text-sm truncate" style={{ color: NC.cream }}>{i.title}</span>
-                  <button onClick={() => onUnarchiveInitiative(i)} className="flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors hover:bg-white/[0.06]" style={{ color: NC.accent, border: `1px solid ${NC.border}` }}>
+                  <button onClick={() => onUnarchiveInitiative(i)} className="flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors hover:bg-white/[0.06]" style={{ color: NC.textMuted, border: `1px solid ${NC.border}` }}>
                     <ArchiveRestore size={11} /> Unarchive
                   </button>
                 </div>
@@ -3091,7 +3279,7 @@ function ArchivedModal({ open, onClose, projects, initiatives, onUnarchiveProjec
           )}
         </section>
 
-        <p className="text-xs pt-3 border-t leading-relaxed" style={{ color: NC.stone, borderColor: NC.borderFaint }}>
+        <p className="text-xs pt-3 leading-relaxed" style={{ color: NC.stone, borderColor: NC.borderFaint }}>
           Archived cycles, modules, and tasks stay scoped to their project — reopen the project and use the state filter to access them.
         </p>
       </div>
@@ -3120,6 +3308,10 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
   const [iForm, setIForm] = useState({ title: "", description: "", external_id: "", state: "open" as Initiative["state"] });
   const [saving, setSaving] = useState(false);
   const [sidebarSearch, setSidebarSearch] = useState("");
+  const clampSidebarWidth = (width: number) => Math.min(480, Math.max(200, width));
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    try { return clampSidebarWidth(Number(localStorage.getItem("caelos.sidebar.width")) || 224); } catch { return 224; }
+  });
   const [projectsCollapsed, setProjectsCollapsed] = useState<boolean>(() => {
     try { return localStorage.getItem("nc-sidebar-collapse-projects") === "true"; } catch { return false; }
   });
@@ -3132,7 +3324,30 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
   useEffect(() => {
     try { localStorage.setItem("nc-sidebar-collapse-initiatives", String(initiativesCollapsed)); } catch {}
   }, [initiativesCollapsed]);
+  useEffect(() => {
+    try { localStorage.setItem("caelos.sidebar.width", String(sidebarWidth)); } catch {}
+  }, [sidebarWidth]);
 
+
+  function startSidebarResize(e: React.MouseEvent<HTMLDivElement>) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = sidebarWidth;
+    const previousUserSelect = document.body.style.userSelect;
+    const previousCursor = document.body.style.cursor;
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+    const updateWidth = (moveEvent: MouseEvent) => setSidebarWidth(clampSidebarWidth(startWidth + moveEvent.clientX - startX));
+    const stopResize = () => {
+      document.body.style.userSelect = previousUserSelect;
+      document.body.style.cursor = previousCursor;
+      document.removeEventListener("mousemove", updateWidth);
+      document.removeEventListener("mouseup", stopResize);
+    };
+    document.addEventListener("mousemove", updateWidth);
+    document.addEventListener("mouseup", stopResize);
+  }
 
   function toggleProject(id: string) {
     setExpandedProjects(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -3208,8 +3423,8 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
   }
 
   return (
-    <aside className="w-56 flex-shrink-0 flex flex-col border-r overflow-hidden" style={{ background: NC.chrome, borderColor: NC.borderFaint }}>
-      <div className="px-4 pt-2 pb-1 border-b flex-shrink-0 flex items-center justify-center" style={{ borderColor: NC.borderFaint }}>
+    <aside data-surface="chrome" className="relative flex-shrink-0 flex flex-col border-r overflow-hidden" style={{ width: sidebarWidth, background: NC.chrome, borderColor: NC.borderFaint }}>
+      <div className="px-4 pt-2 pb-1 flex-shrink-0 flex items-center justify-center" style={{ borderColor: NC.borderFaint }}>
         <img
           src={wordmarkUrl}
           alt="Nova Caelum"
@@ -3258,11 +3473,11 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
               <div key={p.id}>
                 <ContextMenu>
                   <ContextMenuTrigger asChild>
-                    <div className="flex items-center">
-                      <button className="flex-shrink-0 flex items-center justify-center w-6 h-8 hover:bg-white/[0.04] transition-colors" style={{ color: NC.stone }} onClick={() => toggleProject(p.id)}>
+                    <div className="flex items-center h-9">
+                      <button className="flex-shrink-0 h-9 flex items-center justify-center w-6 hover:bg-white/[0.04] transition-colors" style={{ color: NC.stone }} onClick={() => toggleProject(p.id)}>
                         {isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
                       </button>
-                      <button className={`flex-1 flex items-center gap-2 pr-3 py-2 text-sm text-left transition-colors hover:bg-white/[0.04] min-w-0 ${isActive ? "nc-nav-active" : ""}`} style={{ color: isActive ? NC.cream : NC.stone, fontWeight: isActive ? 500 : 400 }} onClick={() => onSelect({ type: "project", item: p })}>
+                      <button className={`flex-1 h-9 flex items-center gap-2 pl-3 pr-3 text-sm text-left transition-colors hover:bg-white/[0.04] min-w-0 ${isActive ? "nc-nav-active" : ""}`} style={{ color: isActive ? NC.cream : NC.stone, fontWeight: isActive ? 500 : 400 }} onClick={() => onSelect({ type: "project", item: p })} title={p.name}>
                         <FolderOpen size={13} style={{ color: isActive ? NC.accent : NC.stone, flexShrink: 0 }} />
                         <span className="truncate">{p.name}</span>
                       </button>
@@ -3310,7 +3525,7 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
             return (
               <ContextMenu key={init.id}>
                 <ContextMenuTrigger asChild>
-                  <button className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors hover:bg-white/[0.04] ${isActive ? "nc-nav-active" : ""}`} style={{ color: isActive ? NC.cream : NC.stone, fontWeight: isActive ? 500 : 400 }} onClick={() => onSelect({ type: "initiative", item: init })}>
+                  <button className={`w-full h-9 flex items-center gap-2 px-3 text-sm text-left transition-colors hover:bg-white/[0.04] ${isActive ? "nc-nav-active" : ""}`} style={{ color: isActive ? NC.cream : NC.stone, fontWeight: isActive ? 500 : 400 }} onClick={() => onSelect({ type: "initiative", item: init })} title={init.title}>
                     <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: cfg.color }} />
                     <span className="truncate">{init.title}</span>
                   </button>
@@ -3330,7 +3545,8 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
       </div>
 
       {/* Bottom-left settings footer */}
-      <div className="flex-shrink-0 border-t px-2 py-2" style={{ borderColor: NC.borderFaint }}>
+      <GlassSeparator />
+      <div className="flex-shrink-0 px-2 py-2" style={{ borderColor: NC.borderFaint }}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-left transition-colors hover:bg-white/[0.04]" style={{ color: NC.stone }}>
@@ -3345,6 +3561,12 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <div
+        className="hover:bg-[color:var(--nc-accent-line)]"
+        onMouseDown={startSidebarResize}
+        style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: 4, cursor: "col-resize", zIndex: 10, userSelect: "none" }}
+      />
 
       <ArchivedModal
         open={showArchived}
@@ -3363,7 +3585,7 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
           <div className="flex items-center gap-2"><Folder size={13} style={{ color: NC.stone, flexShrink: 0 }} />
             <NcInput value={pForm.folder_path} onChange={e => setPForm(p => ({ ...p, folder_path: e.target.value }))} placeholder="/path/to/project" style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 12 }} /></div>
         </Field>
-        <div className="flex gap-2 justify-end pt-1"><GhostBtn onClick={() => setCreatingProject(false)}>Cancel</GhostBtn><PrimaryBtn loading={saving} onClick={createProject}>Create</PrimaryBtn></div>
+        <div className="flex gap-2 justify-end pt-1"><TextBtn onClick={() => setCreatingProject(false)}>Cancel</TextBtn><PrimaryBtn loading={saving} onClick={createProject}>Create</PrimaryBtn></div>
       </Modal>
 
       <Modal open={creatingInit} onClose={() => setCreatingInit(false)} title="New Initiative" maxWidth="max-w-sm">
@@ -3371,7 +3593,7 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
         <Field label="Description"><NcTextarea value={iForm.description} onChange={e => setIForm(p => ({ ...p, description: e.target.value }))} placeholder="Optional — what is this for?" rows={3} /></Field>
         <Field label="External ID"><NcInput value={iForm.external_id} onChange={e => setIForm(p => ({ ...p, external_id: e.target.value }))} placeholder="e.g. INIT-001" /></Field>
         <Field label="State"><NcSelect value={iForm.state} onValueChange={v => setIForm(p => ({ ...p, state: v as Initiative["state"] }))} items={Object.entries(INIT_STATE_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color }))} /></Field>
-        <div className="flex gap-2 justify-end pt-1"><GhostBtn onClick={() => setCreatingInit(false)}>Cancel</GhostBtn><PrimaryBtn loading={saving} onClick={createInit}>Create</PrimaryBtn></div>
+        <div className="flex gap-2 justify-end pt-1"><TextBtn onClick={() => setCreatingInit(false)}>Cancel</TextBtn><PrimaryBtn loading={saving} onClick={createInit}>Create</PrimaryBtn></div>
       </Modal>
 
       {editInit && (
@@ -3380,7 +3602,7 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
           <Field label="Description"><NcTextarea value={editInit.description ?? ""} onChange={e => setEditInit(p => p ? { ...p, description: e.target.value } : p)} placeholder="Optional — what is this for?" rows={3} /></Field>
           <Field label="External ID"><NcInput value={editInit.external_id} onChange={e => setEditInit(p => p ? { ...p, external_id: e.target.value } : p)} /></Field>
           <Field label="State"><NcSelect value={editInit.state} onValueChange={v => setEditInit(p => p ? { ...p, state: v as Initiative["state"] } : p)} items={Object.entries(INIT_STATE_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color }))} /></Field>
-          <div className="flex gap-2 justify-end pt-1"><GhostBtn onClick={() => setEditInit(null)}>Cancel</GhostBtn><PrimaryBtn loading={saving} onClick={() => saveInit(editInit.id, editInit)}>Save</PrimaryBtn></div>
+          <div className="flex gap-2 justify-end pt-1"><TextBtn onClick={() => setEditInit(null)}>Cancel</TextBtn><PrimaryBtn loading={saving} onClick={() => saveInit(editInit.id, editInit)}>Save</PrimaryBtn></div>
         </Modal>
       )}
 
@@ -3410,7 +3632,17 @@ function Welcome() {
   );
 }
 
-export default function App() {
+export default function App({
+  foundryMode = false,
+  renderProjectView,
+  initialProjectName,
+}: {
+  foundryMode?: boolean;
+  /** Optional override — when set, replaces the canonical <ProjectView /> with a custom shell (used by design labs 2/3). */
+  renderProjectView?: (props: ProjectViewShellProps) => React.ReactNode;
+  /** Optional case-insensitive substring match — on data load, auto-selects the first project whose name matches (used by design labs). */
+  initialProjectName?: string;
+}) {
   const [projects, setProjects]       = useState<Project[]>([]);
   const [initiatives, setInitiatives] = useState<Initiative[]>([]);
   const [selection, setSelection]     = useState<Selection>(null);
@@ -3422,8 +3654,60 @@ export default function App() {
     Promise.all([
       api<Project[]>("/projects").catch(() => [] as Project[]),
       api<Initiative[]>("/initiatives").catch(() => [] as Initiative[]),
-    ]).then(([ps, is]) => { setProjects(ps); setInitiatives(is); }).finally(() => setBooting(false));
-  }, []);
+    ]).then(([ps, is]) => {
+      const nextProjects = ps.length || !foundryMode ? ps : [FOUNDRY_DEMO_PROJECT];
+      const nextInitiatives = is.length || !foundryMode ? is : [FOUNDRY_DEMO_INITIATIVE];
+      setProjects(nextProjects);
+      setInitiatives(nextInitiatives);
+      // Lab-mode: initialProjectName wins over last-selection restore (design labs
+      // need deterministic project targeting; VulcanDDI must load every time).
+      if (initialProjectName) {
+        const needle = initialProjectName.toLowerCase();
+        const target = nextProjects.find((p) => p.name.toLowerCase().includes(needle));
+        if (target) {
+          setSelection({ type: "project", item: target });
+          return;
+        }
+      }
+      const foundryTarget = foundryMode ? window.localStorage.getItem("caelos.foundryTarget") : null;
+      let remembered: { type?: string; id?: string } | null = null;
+      try { remembered = JSON.parse(window.localStorage.getItem("caelos.lastSelection") ?? "null") as { type?: string; id?: string } | null; } catch { remembered = null; }
+      const targetId = foundryTarget ?? remembered?.id;
+      const project = nextProjects.find((item) => item.id === targetId);
+      const initiative = nextInitiatives.find((item) => item.id === targetId);
+      if (project) setSelection({ type: "project", item: project });
+      else if (initiative) setSelection({ type: "initiative", item: initiative });
+      else if (nextProjects[0]) setSelection({ type: "project", item: nextProjects[0] });
+      else if (nextInitiatives[0]) setSelection({ type: "initiative", item: nextInitiatives[0] });
+    }).finally(() => setBooting(false));
+  }, [foundryMode, initialProjectName]);
+
+  useEffect(() => {
+    if (!selection) return;
+    window.localStorage.setItem("caelos.lastSelection", JSON.stringify({ type: selection.type, id: selection.item.id }));
+  }, [selection]);
+
+  useEffect(() => {
+    if (!foundryMode) return;
+    const targets = [
+      ...projects.map((item) => ({ id: item.id, type: "project" as const, label: item.name })),
+      ...initiatives.map((item) => ({ id: item.id, type: "initiative" as const, label: item.title })),
+    ];
+    const publish = () => window.dispatchEvent(new CustomEvent("caelos:foundry-options", { detail: { targets, selectedId: selection?.item.id ?? "" } }));
+    const select = (event: Event) => {
+      const id = (event as CustomEvent<{ id: string | null }>).detail.id;
+      const project = projects.find((item) => item.id === id);
+      const initiative = initiatives.find((item) => item.id === id);
+      setSelection(project ? { type: "project", item: project } : initiative ? { type: "initiative", item: initiative } : null);
+    };
+    window.addEventListener("caelos:foundry-request-options", publish);
+    window.addEventListener("caelos:foundry-select", select);
+    publish();
+    return () => {
+      window.removeEventListener("caelos:foundry-request-options", publish);
+      window.removeEventListener("caelos:foundry-select", select);
+    };
+  }, [foundryMode, initiatives, projects, selection]);
 
   async function saveProject(id: string, patch: Partial<Project>) {
     try {
@@ -3458,7 +3742,7 @@ export default function App() {
   }, [projects, initiatives]);
 
   return (
-    <div className="dark h-screen flex overflow-hidden" style={{ background: NC.ground, fontFamily: "'IBM Plex Sans', system-ui, sans-serif" }}>
+    <div data-surface="ground" className="dark h-screen flex overflow-hidden" style={{ background: NC.ground, fontFamily: "'IBM Plex Sans', system-ui, sans-serif" }}>
       <Sidebar
         projects={projects} initiatives={initiatives} selection={selection}
         onSelect={setSelection}
@@ -3469,16 +3753,29 @@ export default function App() {
         onSaveProject={saveProject}
         onUpdateInitiative={updateInitiative}
       />
-      <main className="flex-1 flex flex-col overflow-hidden" style={{ background: NC.card }}>
+      <main data-surface="elevated" className="flex-1 flex flex-col overflow-hidden" style={{ background: NC.card }}>
         {booting ? (
           <div className="flex-1 flex items-center justify-center"><Spinner /></div>
         ) : selection?.type === "project" ? (
-          <ProjectView
-            project={selection.item}
-            pendingTaskId={pendingTaskId} onClearPending={() => setPendingTaskId(null)}
-            pendingTab={pendingProjectTab} onClearPendingTab={() => setPendingProjectTab(null)}
-            onSaveProject={saveProject}
-          />
+          renderProjectView ? (
+            renderProjectView({
+              project: selection.item,
+              pendingTaskId,
+              onClearPending: () => setPendingTaskId(null),
+              pendingTab: pendingProjectTab,
+              onClearPendingTab: () => setPendingProjectTab(null),
+              onSaveProject: saveProject,
+              foundryMode,
+            })
+          ) : (
+            <ProjectViewLayeredShell
+              project={selection.item}
+              pendingTaskId={pendingTaskId} onClearPending={() => setPendingTaskId(null)}
+              pendingTab={pendingProjectTab} onClearPendingTab={() => setPendingProjectTab(null)}
+              onSaveProject={saveProject}
+              foundryMode={foundryMode}
+            />
+          )
         ) : selection?.type === "initiative" ? (
           <InitiativeView initiative={selection.item} allProjects={projects} onUpdateInit={updateInitiative} />
         ) : (
