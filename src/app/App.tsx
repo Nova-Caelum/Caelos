@@ -1,5 +1,5 @@
 // Nova Caelum — Task Management Dashboard
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, forwardRef } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Toaster } from "sonner";
@@ -27,17 +27,18 @@ import {
 import { GlassSeparator } from "./components/ui/glass-separator";
 import wordmarkUrl from "@/imports/nova-caelum-wordmark-transparent.png";
 import { NC } from "../design/tokens";
+import { ProjectViewLayeredShell } from "./ProjectViewLayeredShell";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 // Set A — task_workflow_state (work_items, modules)
 type WorkItemState = "pending-review" | "ready" | "in-progress" | "blocked" | "done" | "deferred" | "archived";
 // Set B — project_lifecycle_state (projects, initiatives, cycles)
-type ProjectStatus    = "planned" | "in-progress" | "paused" | "completed" | "closed" | "archived";
+export type ProjectStatus    = "planned" | "in-progress" | "paused" | "completed" | "closed" | "archived";
 type InitiativeStatus = ProjectStatus;
 type CycleStatus       = ProjectStatus;
 
-type Project  = { id: string; name: string; description: string; folder_path: string; created_at: string; status: ProjectStatus; team: string[]; owner: string; client: string };
+export type Project  = { id: string; name: string; description: string; folder_path: string; created_at: string; status: ProjectStatus; team: string[]; owner: string; client: string };
 type Mod      = { id: string; project_id: string; name: string; folder_path: string; description: string; state: WorkItemState; team: string[]; parent_module_id?: string | null };
 type Cycle    = { id: string; project_id: string; name: string; start_date: string; end_date: string; state: CycleStatus; description: string };
 
@@ -69,7 +70,7 @@ type Selection =
   | { type: "initiative"; item: Initiative }
   | null;
 
-const FOUNDRY_DEMO_PROJECT: Project = {
+export const FOUNDRY_DEMO_PROJECT: Project = {
   id: "foundry-project",
   name: "Foundry calibration",
   description: "A populated workspace for evaluating every surface, state, and primitive in context.",
@@ -902,18 +903,21 @@ function NcSelect({
 //  T3 · TextBtn    — escape hatches (Cancel, Close, Dismiss)
 //  All three take an optional `danger` prop (family-swap: cool → warm hue).
 
-function PrimaryBtn({ children, loading, danger, className = "", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean; danger?: boolean }) {
-  return (
-    <button
-      className={`locked-btn-primary${danger ? " locked-btn-primary--danger" : ""}${className ? ` ${className}` : ""}`}
-      disabled={loading || props.disabled}
-      {...props}
-    >
-      {loading && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
-      {children}
-    </button>
-  );
-}
+const PrimaryBtn = forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean; danger?: boolean }>(
+  function PrimaryBtn({ children, loading, danger, className = "", ...props }, ref) {
+    return (
+      <button
+        ref={ref}
+        className={`locked-btn-primary${danger ? " locked-btn-primary--danger" : ""}${className ? ` ${className}` : ""}`}
+        disabled={loading || props.disabled}
+        {...props}
+      >
+        {loading && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+        {children}
+      </button>
+    );
+  }
+);
 
 function TonalBtn({ children, loading, danger, className = "", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean; danger?: boolean }) {
   return (
@@ -1082,7 +1086,7 @@ function ConfirmDelete({ open, onClose, onConfirm, label }: { open: boolean; onC
 // UUID FK. For project/module/cycle, entityId is the project code — get_activity_for_entity
 // isn't built yet (target-state §5.5 capability #6), so rollup approximates via project-code
 // match on get_recent_activity rather than a precise module/cycle-scoped JOIN. TODO(bi-dir-mvp).
-function ActivityButton({ entityType, entityId, projectId, onAddNote }: {
+export function ActivityButton({ entityType, entityId, projectId, onAddNote }: {
   entityType: "project" | "task" | "module" | "cycle";
   entityId: string;
   projectId?: string;
@@ -2047,7 +2051,7 @@ const EMPTY_TASK_FORM = {
   assignee: "", module_id: null as string | null, parent_item_id: null as string | null,
 };
 
-function TasksPane({ projectId, projectName, pendingTaskId, onClearPending, fixtureMode = false }: {
+export function TasksPane({ projectId, projectName, pendingTaskId, onClearPending, fixtureMode = false }: {
   projectId: string; projectName: string; pendingTaskId: string | null; onClearPending: () => void; fixtureMode?: boolean;
 }) {
   const [items, setItems]   = useState<WorkItem[]>([]);
@@ -2337,8 +2341,23 @@ function TasksPane({ projectId, projectName, pendingTaskId, onClearPending, fixt
               ...Object.entries(STATE_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color })),
             ]}
           />
-          <TonalBtn onClick={() => { setModName(""); setModDescription(""); setCreatingMod(true); }}><Layers size={13} /> Module</TonalBtn>
-          <TonalBtn onClick={() => openAddTask()}><Plus size={13} /> Task</TonalBtn>
+          <div className="ml-auto">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <PrimaryBtn aria-label="Add new" className="!px-3">
+                  <Plus size={14} />
+                </PrimaryBtn>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="bottom" align="end" sideOffset={6} className="nc-glass-menu min-w-[160px]" style={{ color: NC.cream }}>
+                <DropdownMenuItem className="gap-2 text-sm cursor-pointer" onSelect={() => openAddTask()}>
+                  <Plus size={13} /> Task
+                </DropdownMenuItem>
+                <DropdownMenuItem className="gap-2 text-sm cursor-pointer" onSelect={() => { setModName(""); setModDescription(""); setCreatingMod(true); }}>
+                  <Layers size={13} /> Module
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
         {/* Unified tree */}
@@ -2480,7 +2499,7 @@ function MemberAvatar({ name, size = 36 }: { name: string; size?: number }) {
   );
 }
 
-function TeamTab({ projectId }: { projectId: string }) {
+export function TeamTab({ projectId }: { projectId: string }) {
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding]   = useState(false);
@@ -2572,7 +2591,7 @@ function TeamTab({ projectId }: { projectId: string }) {
 
 const EMPTY_CYCLE_FORM = { name: "", description: "", start_date: "", end_date: "" };
 
-function CyclesTab({ projectId }: { projectId: string }) {
+export function CyclesTab({ projectId }: { projectId: string }) {
   const [cycles, setCycles] = useState<Cycle[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -2751,7 +2770,7 @@ function CyclesPanel({ open, onClose, projects, defaultProjectId }: {
 // Status pill — colored badge in project header + wraps NcSelect for status change.
 // Defensive default: rows created before status was populated fall back to 'planned'.
 // Glass treatment via .nc-glass-pill (einUI-inspired) — see theme.css.
-function StatusPill({ status, onChange, disabled }: { status: ProjectStatus | undefined; onChange: (s: ProjectStatus) => Promise<void> | void; disabled?: boolean }) {
+export function StatusPill({ status, onChange, disabled }: { status: ProjectStatus | undefined; onChange: (s: ProjectStatus) => Promise<void> | void; disabled?: boolean }) {
   const safeStatus: ProjectStatus = status && status in PROJECT_STATUS_CFG ? status : "planned";
   const cfg = PROJECT_STATUS_CFG[safeStatus];
   const items = Object.entries(PROJECT_STATUS_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color }));
@@ -2768,7 +2787,7 @@ function StatusPill({ status, onChange, disabled }: { status: ProjectStatus | un
 }
 
 // Project Info tab — full-fidelity project edit surface (replaces the old micro-modal).
-function ProjectInfoTab({ project, onSave, onSwitchTab }: {
+export function ProjectInfoTab({ project, onSave, onSwitchTab }: {
   project: Project;
   onSave: (id: string, patch: Partial<Project>) => Promise<void>;
   onSwitchTab: (tab: string) => void;
@@ -2922,7 +2941,12 @@ function ProjectInfoTab({ project, onSave, onSwitchTab }: {
   );
 }
 
-function ProjectView({ project, pendingTaskId, onClearPending, pendingTab, onClearPendingTab, onSaveProject, foundryMode = false }: {
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared props contract for ProjectView and any alternate shell (labs 2/3).
+// Shell files (ProjectViewBentoShell, ProjectViewLayeredShell) import this to
+// stay drop-in-compatible with the canonical ProjectView.
+// ─────────────────────────────────────────────────────────────────────────────
+export type ProjectViewShellProps = {
   project: Project;
   pendingTaskId: string | null;
   onClearPending: () => void;
@@ -2930,58 +2954,11 @@ function ProjectView({ project, pendingTaskId, onClearPending, pendingTab, onCle
   onClearPendingTab: () => void;
   onSaveProject: (id: string, patch: Partial<Project>) => Promise<void>;
   foundryMode?: boolean;
-}) {
-  const [tab, setTab] = useState<string>("tasks");
-  useEffect(() => {
-    if (pendingTab) { setTab(pendingTab); onClearPendingTab(); }
-  }, [pendingTab, onClearPendingTab]);
+};
 
-  return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="px-7 pt-8 pb-8 flex-shrink-0" style={{ borderColor: NC.borderFaint }}>
-        <p className="text-xs font-semibold tracking-widest uppercase mb-2.5" style={{ color: NC.accent }}>Project</p>
-        <div className="flex items-center gap-3 flex-wrap">
-          <h1 style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 30, color: NC.cream, fontWeight: 600, lineHeight: 1.12, letterSpacing: "-0.028em" }}>{project.name}</h1>
-          <StatusPill status={project.status} onChange={s => onSaveProject(project.id, { status: s })} />
-          <div className="ml-2"><ActivityButton entityType="project" entityId={project.id} /></div>
-        </div>
-        {project.description && <p className="text-sm mt-4" style={{ color: NC.stone }}>{project.description}</p>}
-        {project.folder_path && (
-          <p className="flex items-center gap-1.5 text-xs font-mono mt-4" style={{ color: "rgba(138,133,128,0.6)" }}>
-            <Folder size={11} />{project.folder_path}
-          </p>
-        )}
-      </div>
-      <GlassSeparator />
-      <TabsPrimitive.Root value={tab} onValueChange={setTab} className="flex-1 flex flex-col overflow-hidden">
-        <TabsPrimitive.List className="flex px-7 flex-shrink-0" style={{ borderColor: NC.borderFaint }}>
-          {[
-            { value: "info", icon: <Hash size={13} />, label: "Info" },
-            { value: "tasks", icon: <Target size={13} />, label: "Tasks" },
-            { value: "cycles", icon: <Calendar size={13} />, label: "Cycles" },
-            { value: "team", icon: <Users size={13} />, label: "Team" },
-          ].map(t => (
-            <TabsPrimitive.Trigger key={t.value} value={t.value} className="flex items-center gap-1.5 px-3 py-3 text-xs font-semibold tracking-wide uppercase border-b-2 border-transparent transition-colors data-[state=active]:border-[#6D5AD1] data-[state=active]:text-[#F4EAD5]" style={{ color: NC.stone }}>
-              {t.icon}{t.label}
-            </TabsPrimitive.Trigger>
-          ))}
-        </TabsPrimitive.List>
-        <TabsPrimitive.Content value="info" className="flex-1 overflow-auto data-[state=inactive]:hidden">
-          <ProjectInfoTab project={project} onSave={onSaveProject} onSwitchTab={setTab} />
-        </TabsPrimitive.Content>
-        <TabsPrimitive.Content value="tasks" className="flex-1 flex flex-col overflow-hidden data-[state=inactive]:hidden">
-          <TasksPane projectId={project.id} projectName={project.name} pendingTaskId={pendingTaskId} onClearPending={onClearPending} fixtureMode={foundryMode && project.id === FOUNDRY_DEMO_PROJECT.id} />
-        </TabsPrimitive.Content>
-        <TabsPrimitive.Content value="cycles" className="flex-1 flex flex-col overflow-hidden data-[state=inactive]:hidden">
-          <CyclesTab projectId={project.id} />
-        </TabsPrimitive.Content>
-        <TabsPrimitive.Content value="team" className="flex-1 flex flex-col overflow-hidden data-[state=inactive]:hidden">
-          <TeamTab projectId={project.id} />
-        </TabsPrimitive.Content>
-      </TabsPrimitive.Root>
-    </div>
-  );
-}
+// (Old bottom-border-tab ProjectView deleted 2026-07-31 — replaced app-wide by
+//  ProjectViewLayeredShell as canonical. See src/app/ProjectViewLayeredShell.tsx.
+//  ProjectViewShellProps above is still the contract every shell honors.)
 
 // ════════════════════════════════════════════════════════════════════════════════
 //  INITIATIVE VIEW
@@ -3655,7 +3632,17 @@ function Welcome() {
   );
 }
 
-export default function App({ foundryMode = false }: { foundryMode?: boolean }) {
+export default function App({
+  foundryMode = false,
+  renderProjectView,
+  initialProjectName,
+}: {
+  foundryMode?: boolean;
+  /** Optional override — when set, replaces the canonical <ProjectView /> with a custom shell (used by design labs 2/3). */
+  renderProjectView?: (props: ProjectViewShellProps) => React.ReactNode;
+  /** Optional case-insensitive substring match — on data load, auto-selects the first project whose name matches (used by design labs). */
+  initialProjectName?: string;
+}) {
   const [projects, setProjects]       = useState<Project[]>([]);
   const [initiatives, setInitiatives] = useState<Initiative[]>([]);
   const [selection, setSelection]     = useState<Selection>(null);
@@ -3672,6 +3659,16 @@ export default function App({ foundryMode = false }: { foundryMode?: boolean }) 
       const nextInitiatives = is.length || !foundryMode ? is : [FOUNDRY_DEMO_INITIATIVE];
       setProjects(nextProjects);
       setInitiatives(nextInitiatives);
+      // Lab-mode: initialProjectName wins over last-selection restore (design labs
+      // need deterministic project targeting; VulcanDDI must load every time).
+      if (initialProjectName) {
+        const needle = initialProjectName.toLowerCase();
+        const target = nextProjects.find((p) => p.name.toLowerCase().includes(needle));
+        if (target) {
+          setSelection({ type: "project", item: target });
+          return;
+        }
+      }
       const foundryTarget = foundryMode ? window.localStorage.getItem("caelos.foundryTarget") : null;
       let remembered: { type?: string; id?: string } | null = null;
       try { remembered = JSON.parse(window.localStorage.getItem("caelos.lastSelection") ?? "null") as { type?: string; id?: string } | null; } catch { remembered = null; }
@@ -3683,7 +3680,7 @@ export default function App({ foundryMode = false }: { foundryMode?: boolean }) 
       else if (nextProjects[0]) setSelection({ type: "project", item: nextProjects[0] });
       else if (nextInitiatives[0]) setSelection({ type: "initiative", item: nextInitiatives[0] });
     }).finally(() => setBooting(false));
-  }, [foundryMode]);
+  }, [foundryMode, initialProjectName]);
 
   useEffect(() => {
     if (!selection) return;
@@ -3760,13 +3757,25 @@ export default function App({ foundryMode = false }: { foundryMode?: boolean }) 
         {booting ? (
           <div className="flex-1 flex items-center justify-center"><Spinner /></div>
         ) : selection?.type === "project" ? (
-          <ProjectView
-            project={selection.item}
-            pendingTaskId={pendingTaskId} onClearPending={() => setPendingTaskId(null)}
-            pendingTab={pendingProjectTab} onClearPendingTab={() => setPendingProjectTab(null)}
-            onSaveProject={saveProject}
-            foundryMode={foundryMode}
-          />
+          renderProjectView ? (
+            renderProjectView({
+              project: selection.item,
+              pendingTaskId,
+              onClearPending: () => setPendingTaskId(null),
+              pendingTab: pendingProjectTab,
+              onClearPendingTab: () => setPendingProjectTab(null),
+              onSaveProject: saveProject,
+              foundryMode,
+            })
+          ) : (
+            <ProjectViewLayeredShell
+              project={selection.item}
+              pendingTaskId={pendingTaskId} onClearPending={() => setPendingTaskId(null)}
+              pendingTab={pendingProjectTab} onClearPendingTab={() => setPendingProjectTab(null)}
+              onSaveProject={saveProject}
+              foundryMode={foundryMode}
+            />
+          )
         ) : selection?.type === "initiative" ? (
           <InitiativeView initiative={selection.item} allProjects={projects} onUpdateInit={updateInitiative} />
         ) : (
