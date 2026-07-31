@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { AlertTriangle, Check, Clipboard, ExternalLink, GitPullRequest, RefreshCw, RotateCcw, Save, SlidersHorizontal, Sparkles, Trash2, X } from "lucide-react";
+import { AlertTriangle, Check, ChevronsLeft, ChevronsRight, Clipboard, ExternalLink, GitPullRequest, RefreshCw, RotateCcw, Save, SlidersHorizontal, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { cloneCharacterSeed, DEFAULT_CHARACTER, SURFACE_NAMES, type CharacterSeed, type SurfaceMode, type SurfaceName } from "../design/characterSeed";
 import { diffFoundrySeeds, seedLiteral } from "../design/codegen";
@@ -100,6 +100,7 @@ interface FoundryTarget {
 }
 
 const PROMOTION_RECEIPT_KEY = "caelos-foundry-promotion";
+const FOUNDRY_COLLAPSED_KEY = "caelos.foundryCollapsed";
 
 function readPromotionReceipt(): PromotionResult | null {
   try {
@@ -202,6 +203,13 @@ function MiniButton({
 }
 
 export default function Foundry() {
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return window.localStorage.getItem(FOUNDRY_COLLAPSED_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
   const [seeds, setSeeds] = useState<FoundrySeeds>(() => ({
     color: cloneSeed(IMPORTED_STAGED_SEEDS.color),
     shape: cloneShapeSeed(IMPORTED_STAGED_SEEDS.shape),
@@ -264,6 +272,14 @@ export default function Foundry() {
     document.documentElement.style.setProperty("--foundry-panel-offset", "600px");
     return () => document.documentElement.style.removeProperty("--foundry-panel-offset");
   }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(FOUNDRY_COLLAPSED_KEY, String(collapsed));
+    } catch {
+      // Storage can be unavailable in privacy-restricted browser contexts.
+    }
+  }, [collapsed]);
 
   useEffect(() => {
     if (!groundHexEditing) setGroundHex(effectiveGroundHex);
@@ -470,6 +486,7 @@ export default function Foundry() {
   const stagedKeyCount = countOverrideKeys(stagedOverride);
 
   return (
+    <>
     <aside
       data-surface="top"
       data-testid="foundry-panel"
@@ -481,7 +498,11 @@ export default function Foundry() {
       data-space-unit={seeds.shape.spaceUnit}
       data-radius-floor={seeds.shape.radius.floor}
       data-foundry-view={view}
-      style={panel}
+      style={{
+        ...panel,
+        transform: collapsed ? "translateX(calc(100% + 40px))" : "translateX(0)",
+        transition: "transform 0.28s ease",
+      }}
       aria-label="Caelos Foundry"
     >
       <style>{`
@@ -522,7 +543,29 @@ export default function Foundry() {
             </span>
           </div>
           <div style={{ display: "grid", justifyItems: "end", gap: 8 }}>
-            <div
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--sys-space-2)" }}>
+              <button
+                type="button"
+                aria-label="Collapse Foundry"
+                title="Collapse Foundry"
+                onClick={() => setCollapsed(true)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "calc(var(--sys-space-1) * 8)",
+                  height: "calc(var(--sys-space-1) * 8)",
+                  padding: 0,
+                  border: "1px solid var(--sys-hair-2)",
+                  borderRadius: "var(--sys-radius-md)",
+                  color: "var(--sys-text-secondary)",
+                  background: "var(--sys-elevated)",
+                  cursor: "pointer",
+                }}
+              >
+                <ChevronsRight size={15} />
+              </button>
+              <div
               title={mathPassed ? "Color math and APCA targets verified" : "Math verification needs attention"}
               style={{
                 display: "flex",
@@ -540,6 +583,7 @@ export default function Foundry() {
             >
               {mathPassed ? <Check size={12} /> : <SlidersHorizontal size={12} />}
               {mathPassed ? "Math verified" : "Check math"}
+              </div>
             </div>
             <MiniButton
               primary
@@ -905,5 +949,37 @@ export default function Foundry() {
         </div>
       </footer>
     </aside>
+    {collapsed && (
+      <button
+        type="button"
+        data-surface="chrome"
+        data-testid="foundry-reveal"
+        aria-label="Reveal Foundry"
+        title="Reveal Foundry"
+        onClick={() => setCollapsed(false)}
+        style={{
+          position: "fixed",
+          zIndex: 40,
+          top: "calc(50% - (var(--sys-space-1) * 8))",
+          right: 0,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: "calc(var(--sys-space-1) * 8)",
+          height: "calc(var(--sys-space-1) * 16)",
+          padding: 0,
+          border: "1px solid var(--sys-hair-2)",
+          borderRight: 0,
+          borderRadius: "var(--sys-radius-lg) 0 0 var(--sys-radius-lg)",
+          color: "var(--sys-accent-on-tint)",
+          background: "var(--sys-chrome)",
+          boxShadow: "var(--sys-elev-2)",
+          cursor: "pointer",
+        }}
+      >
+        <ChevronsLeft size={16} />
+      </button>
+    )}
+    </>
   );
 }
