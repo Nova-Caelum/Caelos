@@ -10,6 +10,8 @@ Caelos is a console for commanding a fleet of AI agents, from Nova Caelum & Co.
 
 Caelos does not replace individual agent runtimes — Claude Code, Codex, or custom Anthropic Agent SDK harnesses. It sits above them, as the shared operator surface that a fleet composed of any of those runtimes reports into. It is also not a chatbot, a no-code builder, or a consumer AI wrapper — the fleet is the product; the console is where you command it.
 
+Creator Note: This is an actively developing project, and it is built specifically for a personal system and has not been tailored for wider system use. We encourage branching and contribution and feedback.
+
 ---
 
 ## See it in action
