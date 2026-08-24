@@ -1872,13 +1872,24 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onBack, onC
               )}
               <BreadcrumbItem current>…</BreadcrumbItem>
             </Breadcrumb>
+            {/* Cross-project module move is NOT implementable from the client
+                (2026-08-24). The modules surface exposes only GET-list + POST-create
+                over REST and `upsert_module` over MCP, and that tool keys on
+                (project_code, external_id) and never writes project_code on update —
+                so calling it with a different project CREATES a second, empty module
+                in the target and leaves the original (and all its work items) behind.
+                Faking the move client-side (create + repoint children + archive source)
+                would be non-atomic, would mint a new module UUID, and would orphan the
+                module-scoped activity rollup that keys off it. Until ops-server grows an
+                atomic move, the control states that plainly instead of silently no-oping
+                (it was a bare console.log placeholder — see UI_ErrorCorrection_Notes #15). */}
             <button
               type="button"
-              onClick={() => { console.log('[caelos] Unit F: move-to-project picker for module', mod.id); }}
-              className="flex-shrink-0 p-1 rounded hover:bg-white/[0.06] transition-colors"
+              disabled
+              className="flex-shrink-0 p-1 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ color: "var(--nc-text-muted)" }}
-              title="Move to different project"
-              aria-label="Move to different project"
+              title="Moving a module between projects needs backend support — not available yet"
+              aria-label="Move to different project (unavailable — requires backend support)"
             >
               <FolderInput size={13} />
             </button>
