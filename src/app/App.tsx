@@ -479,6 +479,16 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
         await primeModuleIds(code);
         const data = (await restFetch(`/api${path}`)) as any[];
         data.forEach(rememberExternalId);
+        // A module created AFTER this project was primed (an agent writing while the
+        // console sits open — the normal case here) is absent from the index, and the
+        // caller's parallel modules fetch may not have landed yet. Those work items
+        // would keep a raw UUID module_id and go invisible again, intermittently.
+        // Re-prime once when an unknown module ref appears; bounded to a single retry,
+        // and a ref that still will not resolve is left raw per the no-null-promotion rule.
+        if (data.some(row => typeof row?.module_id === "string" && !externalIdByUuid.has(row.module_id))) {
+          modulesPrimedFor.delete(code);
+          await primeModuleIds(code);
+        }
         return data.map(adaptWorkItemRead) as T;
       }
       const data = (await restFetch(`/api${path}`)) as any[];
