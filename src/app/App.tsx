@@ -3507,7 +3507,11 @@ function CyclesNavButton({ projectId, onClick, onNew }: { projectId: string | nu
 }
 
 // Archived items view — opened from Settings menu at bottom of sidebar.
-// Shows archived Projects + Initiatives with Unarchive action (resets status/state to 'planned').
+// Shows closed Projects (completed | closed | archived) + archived Initiatives.
+// Sidebar hides CLOSED_PROJECT_STATUSES, so this view is where they stay reachable.
+// Unarchive (resets status to 'planned') is rendered ONLY on status='archived' rows:
+// resetting a 'completed' project to 'planned' would destroy the fact it ever completed.
+// Open question for CTO: what affordance, if any, completed/closed rows should carry.
 // Note: archived cycles/modules/tasks stay scoped to their project — accessible via
 // each project's state filter set to "Archived" (once we widen the load-time filter to opt-in).
 function ArchivedModal({ open, onClose, projects, initiatives, onUnarchiveProject, onUnarchiveInitiative }: {
@@ -3518,25 +3522,28 @@ function ArchivedModal({ open, onClose, projects, initiatives, onUnarchiveProjec
   onUnarchiveProject: (p: Project) => Promise<void> | void;
   onUnarchiveInitiative: (i: Initiative) => Promise<void> | void;
 }) {
-  const archivedProjects = projects.filter(p => p.status === "archived");
+  const closedProjects = projects.filter(p => CLOSED_PROJECT_STATUSES.includes(p.status));
   const archivedInits = initiatives.filter(i => i.state === "archived");
 
   return (
     <Modal open={open} onClose={onClose} title="Archived" maxWidth="max-w-lg">
       <div className="space-y-6">
         <section>
-          <p className="text-xs font-semibold tracking-widest uppercase mb-2" style={{ color: NC.stone }}>Projects ({archivedProjects.length})</p>
-          {archivedProjects.length === 0 ? (
-            <p className="text-sm" style={{ color: "rgba(138,133,128,0.4)" }}>No archived projects</p>
+          <p className="text-xs font-semibold tracking-widest uppercase mb-2" style={{ color: NC.stone }}>Projects ({closedProjects.length})</p>
+          {closedProjects.length === 0 ? (
+            <p className="text-sm" style={{ color: "rgba(138,133,128,0.4)" }}>No closed projects</p>
           ) : (
             <div className="space-y-1.5">
-              {archivedProjects.map(p => (
+              {closedProjects.map(p => (
                 <div key={p.id} className="flex items-center gap-2 py-2 px-3 rounded-lg" style={{ background: NC.card, border: `1px solid ${NC.border}` }}>
                   <FolderOpen size={13} style={{ color: NC.stone, flexShrink: 0 }} />
                   <span className="flex-1 text-sm truncate" style={{ color: NC.cream }}>{p.name}</span>
-                  <button onClick={() => onUnarchiveProject(p)} className="flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors hover:bg-white/[0.06]" style={{ color: NC.textMuted, border: `1px solid ${NC.border}` }}>
-                    <ArchiveRestore size={11} /> Unarchive
-                  </button>
+                  <span className="flex-shrink-0 text-[10px] font-semibold tracking-widest uppercase" style={{ color: PROJECT_STATUS_CFG[p.status].color }}>{PROJECT_STATUS_CFG[p.status].label}</span>
+                  {p.status === "archived" && (
+                    <button onClick={() => onUnarchiveProject(p)} className="flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors hover:bg-white/[0.06]" style={{ color: NC.textMuted, border: `1px solid ${NC.border}` }}>
+                      <ArchiveRestore size={11} /> Unarchive
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -3749,7 +3756,7 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
           </div>
           {!projectsCollapsed && (
             <>
-          {projects.filter(p => p.status !== "archived" && (!sidebarSearch || p.name.toLowerCase().includes(sidebarSearch.toLowerCase()))).map(p => {
+          {projects.filter(p => !CLOSED_PROJECT_STATUSES.includes(p.status) && (!sidebarSearch || p.name.toLowerCase().includes(sidebarSearch.toLowerCase()))).map(p => {
             const isActive   = selection?.type === "project" && selection.item.id === p.id;
             const isExpanded = expandedProjects.has(p.id);
             return (
