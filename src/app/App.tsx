@@ -209,6 +209,52 @@ function slugify(s: string): string {
   return slug || uid();
 }
 
+// ── FK id-space normalization (2026-08-24) ────────────────────────────────────
+// Backend rows carry relational FKs as row UUIDs — `work_items.parent_work_item_id`
+// and `work_items.module_id` both reference `work_items.id` / `modules.id`, as does
+// `modules.parent_module_id` — while every client-side relation is keyed on
+// `external_id` (WorkItem.id / Mod.id). Comparing the two id spaces never matches,
+// and the failure is silent AND total: an item carrying a parent or a module is
+// dropped from the root list (its FK is truthy, so `!w.module_id && !w.parent_item_id`
+// excludes it) AND from its module/parent group (the id comparison fails), so it
+// renders nowhere at all. Translating UUID → external_id once here, at the single
+// read boundary, keeps all ~15 downstream comparison sites speaking external_id.
+const externalIdByUuid = new Map<string, string>();
+
+function rememberExternalId(row: any): void {
+  if (typeof row?.id === "string" && typeof row?.external_id === "string") {
+    externalIdByUuid.set(row.id, row.external_id);
+  }
+}
+
+// An unresolved ref is returned unchanged rather than nulled: a cold index must not
+// silently promote a child to root, which would misreport the graph's actual shape.
+function toExternalId(ref: unknown): string | null {
+  if (typeof ref !== "string" || !ref) return null;
+  return externalIdByUuid.get(ref) ?? ref;
+}
+
+// Module rows own the uuid → external_id mapping that work-item `module_id` refs
+// resolve through, but not every caller fetches modules — the initiative and cycle
+// views read work-items on their own. Priming here makes a work-items response
+// correct independently of what else the caller happens to fetch, and independently
+// of Promise.all ordering when it does fetch both.
+const modulesPrimedFor = new Set<string>();
+
+async function primeModuleIds(code: string): Promise<void> {
+  if (!API_BASE || modulesPrimedFor.has(code)) return;
+  modulesPrimedFor.add(code);
+  try {
+    const headers: Record<string, string> = {};
+    if (BEARER) headers.Authorization = `Bearer ${BEARER}`;
+    const response = await fetch(`${API_BASE}/api/projects/${code}/modules`, { headers });
+    if (!response.ok) throw new Error(`prime modules → ${response.status}`);
+    ((await response.json()) as any[]).forEach(rememberExternalId);
+  } catch {
+    modulesPrimedFor.delete(code); // transient failure — allow a retry on the next read
+  }
+}
+
 function adaptProjectRead(x: any): Project {
   return {
     id: x.code ?? x.id ?? "",
@@ -223,12 +269,13 @@ function adaptProjectRead(x: any): Project {
   };
 }
 function adaptWorkItemRead(x: any): WorkItem {
+  rememberExternalId(x);
   return {
     id: x.external_id ?? x.id ?? "",
     uuid: x.id ?? undefined,
     project_id: x.project_code ?? x.project_id ?? "",
-    module_id: x.module_id ?? null,
-    parent_item_id: x.parent_work_item_id ?? x.parent_item_id ?? null,
+    module_id: toExternalId(x.module_id),
+    parent_item_id: toExternalId(x.parent_work_item_id ?? x.parent_item_id),
     cycle_id: null,
     title: x.name ?? x.title ?? "",
     description: x.description ?? "",
@@ -242,6 +289,7 @@ function adaptWorkItemRead(x: any): WorkItem {
   };
 }
 function adaptModuleRead(x: any): Mod {
+  rememberExternalId(x);
   return {
     id: x.external_id ?? x.id ?? "",
     project_id: x.project_code ?? x.project_id ?? "",
@@ -250,7 +298,7 @@ function adaptModuleRead(x: any): Mod {
     description: x.description ?? "",
     state: (x.state as WorkItemState) ?? "pending-review",
     team: Array.isArray(x.team) ? x.team : [],
-    parent_module_id: x.parent_module_id ?? null,
+    parent_module_id: toExternalId(x.parent_module_id),
   };
 }
 function adaptCycleRead(x: any): Cycle {
@@ -423,9 +471,31 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
   if (/^\/projects\/[^/]+\/(work-items|modules|cycles)$/.test(path)) {
     const kind = path.match(/(work-items|modules|cycles)$/)![1] as "work-items" | "modules" | "cycles";
     if (method === "GET") {
+      if (kind === "work-items") {
+        // Order matters: the module index must be warm, and every row in THIS list
+        // must be registered, before any row's parent/module FK is resolved — a
+        // subtask can appear ahead of its parent in the response.
+        const code = path.match(/^\/projects\/([^/]+)\//)![1];
+        await primeModuleIds(code);
+        const data = (await restFetch(`/api${path}`)) as any[];
+        data.forEach(rememberExternalId);
+        // A module created AFTER this project was primed (an agent writing while the
+        // console sits open — the normal case here) is absent from the index, and the
+        // caller's parallel modules fetch may not have landed yet. Those work items
+        // would keep a raw UUID module_id and go invisible again, intermittently.
+        // Re-prime once when an unknown module ref appears; bounded to a single retry,
+        // and a ref that still will not resolve is left raw per the no-null-promotion rule.
+        if (data.some(row => typeof row?.module_id === "string" && !externalIdByUuid.has(row.module_id))) {
+          modulesPrimedFor.delete(code);
+          await primeModuleIds(code);
+        }
+        return data.map(adaptWorkItemRead) as T;
+      }
       const data = (await restFetch(`/api${path}`)) as any[];
-      if (kind === "work-items") return data.map(adaptWorkItemRead) as T;
-      if (kind === "modules") return data.map(adaptModuleRead) as T;
+      if (kind === "modules") {
+        data.forEach(rememberExternalId); // register all before resolving parent_module_id
+        return data.map(adaptModuleRead) as T;
+      }
       return data.map(adaptCycleRead) as T;
     }
     if (method === "POST") {
@@ -441,6 +511,14 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
           team: body.team ?? [],
           idempotency_key: idempKey("idem"),
         };
+        // Placement (2026-08-24): this whitelist previously omitted both refs, so
+        // "Add Subtask" and "Add task to <module>" silently persisted a detached
+        // root task — the parent/module the user picked was dropped client-side and
+        // never reached the server. WorkItemUpsertArgs is `extra="forbid"`, so the
+        // field names must be exactly `module` / `parent_work_item`, and each key is
+        // omitted (not sent as null) when absent so it can't clear an existing value.
+        if (body.module_id) backendBody.module = body.module_id;
+        if (body.parent_item_id) backendBody.parent_work_item = body.parent_item_id;
       } else if (kind === "modules") {
         backendBody = {
           external_id: body.external_id ?? idempKey("mod"),
@@ -560,14 +638,12 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
   // same class of bug as cycles above (ModuleUpsertArgs has no "keep existing" concept
   // for omitted fields — team defaults to [], folder_path to null, state to
   // "pending-review"). Read-merge-write, same pattern and same single-user-MVP caveat
-  // as the cycles block. NOTE: `parent_module_id` preservation is intentionally left
-  // untouched below — the existing call-site convention already passes the child's
-  // *external_id* through `body.parent_module_id` into `args.parent_module` (which the
-  // server expects to be a external_id), while a freshly-fetched `current` row only
-  // exposes the parent's internal UUID via `parent_module_id`. Merging that would need
-  // a second lookup to resolve the parent's external_id and is a separate, pre-existing
-  // gap outside this fix's scope — flagged for a follow-up, not fixed here. Caller must
-  // still include project code in body since /modules/{id} carries no project scope.) ===
+  // as the cycles block. NOTE: `parent_module_id` is now a external_id on both sides —
+  // adaptModuleRead resolves the backend's UUID through `toExternalId` (2026-08-24), so
+  // `body.parent_module_id` → `args.parent_module` needs no extra lookup. It is still
+  // only forwarded when the caller supplies it; a `current`-row merge is not attempted
+  // here because get_module does not return the field. Caller must still include project
+  // code in body since /modules/{id} carries no project scope.) ===
   const modMatch = path.match(/^\/modules\/([^/]+)$/);
   if (modMatch && (method === "PATCH" || method === "DELETE")) {
     const external_id = modMatch[1];
@@ -1806,13 +1882,24 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onBack, onC
               )}
               <BreadcrumbItem current>…</BreadcrumbItem>
             </Breadcrumb>
+            {/* Cross-project module move is NOT implementable from the client
+                (2026-08-24). The modules surface exposes only GET-list + POST-create
+                over REST and `upsert_module` over MCP, and that tool keys on
+                (project_code, external_id) and never writes project_code on update —
+                so calling it with a different project CREATES a second, empty module
+                in the target and leaves the original (and all its work items) behind.
+                Faking the move client-side (create + repoint children + archive source)
+                would be non-atomic, would mint a new module UUID, and would orphan the
+                module-scoped activity rollup that keys off it. Until ops-server grows an
+                atomic move, the control states that plainly instead of silently no-oping
+                (it was a bare console.log placeholder — see UI_ErrorCorrection_Notes #15). */}
             <button
               type="button"
-              onClick={() => { console.log('[caelos] Unit F: move-to-project picker for module', mod.id); }}
-              className="flex-shrink-0 p-1 rounded hover:bg-white/[0.06] transition-colors"
+              disabled
+              className="flex-shrink-0 p-1 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ color: "var(--nc-text-muted)" }}
-              title="Move to different project"
-              aria-label="Move to different project"
+              title="Moving a module between projects needs backend support — not available yet"
+              aria-label="Move to different project (unavailable — requires backend support)"
             >
               <FolderInput size={13} />
             </button>
