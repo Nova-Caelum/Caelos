@@ -40,7 +40,13 @@ type InitiativeStatus = ProjectStatus;
 type CycleStatus       = ProjectStatus;
 
 export type Project  = { id: string; name: string; description: string; folder_path: string; created_at: string; status: ProjectStatus; team: string[]; owner: string; client: string };
-type Mod      = { id: string; project_id: string; name: string; folder_path: string; description: string; state: WorkItemState; team: string[]; parent_module_id?: string | null };
+// `acceptance_criteria` / `acceptance_criteria_ref` (2026-08-24, slice S3): the row's
+// done-definition, plus an optional path to a fuller criteria doc. OPTIONAL on the client
+// type deliberately — FOUNDRY_DEMO_* and mockApi build these objects as literals, and a
+// required field would break every one of them. Accepted-but-not-required server-side too
+// (required-on-create is S4). Not rendered on TaskRow/ModuleSection: drawer-only, same
+// convention `description` already follows.
+type Mod      = { id: string; project_id: string; name: string; folder_path: string; description: string; state: WorkItemState; team: string[]; parent_module_id?: string | null; acceptance_criteria?: string | null; acceptance_criteria_ref?: string | null };
 type Cycle    = { id: string; project_id: string; name: string; start_date: string; end_date: string; state: CycleStatus; description: string };
 
 type WorkItemPriority = "none" | "low" | "medium" | "high" | "urgent";
@@ -48,6 +54,7 @@ type WorkItemPriority = "none" | "low" | "medium" | "high" | "urgent";
 type WorkItem = {
   id: string; uuid?: string; project_id: string; module_id?: string | null; parent_item_id?: string | null;
   cycle_id?: string | null; title: string; description: string;
+  acceptance_criteria?: string | null; acceptance_criteria_ref?: string | null;
   state: WorkItemState; priority: WorkItemPriority; assignee: string; team: string[];
   blocked_by: string[]; doc_paths: string[]; source_references: unknown;
 };
@@ -279,6 +286,11 @@ function adaptWorkItemRead(x: any): WorkItem {
     cycle_id: null,
     title: x.name ?? x.title ?? "",
     description: x.description ?? "",
+    // Preserve null vs "" here rather than collapsing to "" like `description` does.
+    // LIST responses carry these keys as null; the drawer needs to tell "absent" from
+    // "explicitly blank" so it does not resend an empty string over stored content.
+    acceptance_criteria: x.acceptance_criteria ?? null,
+    acceptance_criteria_ref: x.acceptance_criteria_ref ?? null,
     state: (x.state as WorkItemState) ?? "pending-review",
     priority: (x.priority as WorkItemPriority) ?? "none",
     assignee: x.assignee_agent ?? x.assignee ?? "",
@@ -296,6 +308,8 @@ function adaptModuleRead(x: any): Mod {
     name: x.name ?? "",
     folder_path: x.folder_path ?? "",
     description: x.description ?? "",
+    acceptance_criteria: x.acceptance_criteria ?? null,
+    acceptance_criteria_ref: x.acceptance_criteria_ref ?? null,
     state: (x.state as WorkItemState) ?? "pending-review",
     team: Array.isArray(x.team) ? x.team : [],
     parent_module_id: toExternalId(x.parent_module_id),
@@ -507,6 +521,11 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
           type: body.type ?? "task",
           state: body.state ?? "pending-review",
           description: body.description || null,
+          // `|| null` not `?? null`: WorkItemUpsertArgs puts min_length=20 on
+          // acceptance_criteria, so an empty string from an untouched input would 422.
+          // Null is the "not stated" value until S4 makes it required on create.
+          acceptance_criteria: body.acceptance_criteria || null,
+          acceptance_criteria_ref: body.acceptance_criteria_ref || null,
           assignee_agent: body.assignee || body.assignee_agent || null,
           team: body.team ?? [],
           idempotency_key: idempKey("idem"),
@@ -524,6 +543,8 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
           external_id: body.external_id ?? idempKey("mod"),
           name: body.name ?? "Untitled",
           description: body.description || null,
+          acceptance_criteria: body.acceptance_criteria || null,
+          acceptance_criteria_ref: body.acceptance_criteria_ref || null,
           state: body.state ?? "pending-review",
           team: body.team ?? [],
           folder_path: body.folder_path || null,
@@ -548,6 +569,29 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
     }
   }
 
+  // === Single-item detail reads (D14, 2026-08-24) ===
+  // The drawers used to render straight off the LIST payload, which never carries
+  // `description` (a _HEAVY_FIELDS entry, stripped by summary_payload). The drawer
+  // therefore showed an empty textarea and saved that emptiness back over stored
+  // content. These two routes are the reason ops-server 0.7.7 added
+  // GET /api/work-items/{id} and GET /api/modules/{id} with `include_heavy`.
+  // Console-side paths stay query-string-free so the existing
+  // /^\/work-items\/([^/]+)$/ matchers below cannot swallow a `?...` into the id.
+  const wiDetail = path.match(/^\/work-items\/([^/]+)\/detail$/);
+  if (wiDetail && method === "GET") {
+    // work_items.external_id is globally UNIQUE (20260726120000_work_graph_tables.sql:95),
+    // so no project_code disambiguator is needed here.
+    const row = await restFetch(`/api/work-items/${encodeURIComponent(wiDetail[1])}?include_heavy=true`);
+    return adaptWorkItemRead(unwrapRow(row)) as T;
+  }
+  const modDetail = path.match(/^\/projects\/([^/]+)\/modules\/([^/]+)\/detail$/);
+  if (modDetail && method === "GET") {
+    // modules use UNIQUE(project_code, external_id) — composite, not global — so the
+    // project code is required or an ambiguous match returns 400 server-side.
+    const row = await restFetch(`/api/modules/${encodeURIComponent(modDetail[2])}?project_code=${encodeURIComponent(modDetail[1])}&include_heavy=true`);
+    return adaptModuleRead(unwrapRow(row)) as T;
+  }
+
   // === Work items — patch/archive (REST partial-patch; /api/work-items/{id} is a true PATCH) ===
   const wiMatch = path.match(/^\/work-items\/([^/]+)$/);
   if (wiMatch && (method === "PATCH" || method === "DELETE")) {
@@ -570,6 +614,13 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
       if (body.title !== undefined) patchBody.name = body.title;
       if (body.name !== undefined) patchBody.name = body.name;
       if (body.description !== undefined) patchBody.description = body.description;
+      // Acceptance criteria (2026-08-24, slice S3). This whitelist is load-bearing:
+      // a field omitted here is dropped client-side, and if that leaves patchBody
+      // empty the function returns {} below WITHOUT a network call — a save that
+      // looks successful and never happened. `|| null` normalises a cleared textarea
+      // to null rather than "" (min_length=20 server-side would reject "").
+      if (body.acceptance_criteria !== undefined) patchBody.acceptance_criteria = body.acceptance_criteria || null;
+      if (body.acceptance_criteria_ref !== undefined) patchBody.acceptance_criteria_ref = body.acceptance_criteria_ref || null;
       if (body.state !== undefined) patchBody.state = body.state;
       if (body.assignee !== undefined) patchBody.assignee_agent = body.assignee || null;
       if (body.assignee_agent !== undefined) patchBody.assignee_agent = body.assignee_agent;
@@ -660,6 +711,12 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
       state: method === "DELETE" ? "archived" : (body?.state !== undefined ? body.state : current.state),
       team: body?.team !== undefined ? body.team : (current.team ?? []),
       folder_path: body?.folder_path !== undefined ? body.folder_path : (current.folder_path ?? null),
+      // Acceptance criteria (2026-08-24, slice S3). Merged like every other field so a
+      // delta-shaped drawer save cannot reset them. Unlike `description` these ARE
+      // returned by get_module (not a _HEAVY_FIELDS entry), so `current` genuinely
+      // carries the stored value and the merge round-trips correctly.
+      acceptance_criteria: body?.acceptance_criteria !== undefined ? (body.acceptance_criteria || null) : (current.acceptance_criteria ?? null),
+      acceptance_criteria_ref: body?.acceptance_criteria_ref !== undefined ? (body.acceptance_criteria_ref || null) : (current.acceptance_criteria_ref ?? null),
       idempotency_key: idempKey("mod"),
     };
     if (body?.parent_module_id) args.parent_module = body.parent_module_id;
@@ -743,6 +800,21 @@ async function mockApi<T>(path: string, opts?: RequestInit): Promise<T> {
     const pid = path.split("/")[2];
     const w: WorkItem = { id: uid(), project_id: pid, blocked_by: [], doc_paths: [], source_references: null, ...body };
     store.workItems.push(w); return { ...w } as T;
+  }
+  // Detail reads (D14 twins). The mock store keeps whole objects, so "heavy" fields
+  // are already present — these exist so the no-backend dev path answers the drawer's
+  // fetch-on-open instead of falling through to `Backend route not built`.
+  if (/^\/work-items\/[^/]+\/detail$/.test(path) && method === "GET") {
+    const id = path.split("/")[2];
+    const w = store.workItems.find(x => x.id === id);
+    if (!w) throw new Error("Not found");
+    return { ...w, blocked_by: [...w.blocked_by], doc_paths: [...w.doc_paths] } as T;
+  }
+  if (/^\/projects\/[^/]+\/modules\/[^/]+\/detail$/.test(path) && method === "GET") {
+    const id = path.split("/")[4];
+    const m = store.modules.find(x => x.id === id);
+    if (!m) throw new Error("Not found");
+    return { ...m } as T;
   }
   if (/^\/work-items\/[^/]+$/.test(path) && method === "PATCH") {
     const id = path.split("/")[2];
@@ -955,6 +1027,65 @@ function NcInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
 
 function NcTextarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea rows={3} className="nc-input w-full px-3 py-2 rounded-lg text-sm outline-none resize-none" {...props} />;
+}
+
+// Acceptance criteria — the done-definition pair, shared by both create modals, both
+// detail drawers, and the subtask quick-add row (2026-08-24, slice S3).
+//
+// Two fields on purpose: prose capped at 2 000 chars server-side, plus a single path to
+// a fuller document. The small cap makes "if it doesn't fit, point at a file" the path of
+// least resistance rather than an afterthought.
+//
+// The 20-char floor is already live in WorkItemUpsertArgs/ModuleUpsertArgs, so it is
+// surfaced as a hint here — an accurate affordance for a constraint that exists today,
+// NOT the required-on-create validation (that is slice S4 and is deliberately absent:
+// adding it now would reject creates the backend still accepts).
+function AcceptanceCriteriaFields({ criteria, criteriaRef, onCriteria, onCriteriaRef, disabled = false, hint = true, rows = 3 }: {
+  criteria: string;
+  criteriaRef: string;
+  onCriteria: (v: string) => void;
+  onCriteriaRef: (v: string) => void;
+  disabled?: boolean;
+  hint?: boolean;
+  rows?: number;
+}) {
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="block text-xs font-semibold tracking-widest uppercase mb-1.5" style={{ color: NC.stone }}>
+          Acceptance Criteria
+        </label>
+        <NcTextarea
+          value={criteria}
+          onChange={e => onCriteria(e.target.value)}
+          disabled={disabled}
+          rows={rows}
+          placeholder="Done when… e.g. `npm run build` exits 0 and the drawer renders stored content."
+        />
+        {hint && (
+          <p className="mt-1.5 text-[10px] leading-snug" style={{ color: "rgba(138,133,128,0.75)" }}>
+            What makes this done — one checkable condition, not a restatement of the title.
+            20 characters minimum, 2 000 maximum; point at a file below if it needs more room.
+          </p>
+        )}
+      </div>
+      <div>
+        <label className="block text-xs font-semibold tracking-widest uppercase mb-1.5" style={{ color: NC.stone }}>
+          Criteria Doc <span style={{ color: NC.stone, fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional)</span>
+        </label>
+        <div className="flex items-center gap-2">
+          <FileText size={13} style={{ color: NC.stone, flexShrink: 0 }} />
+          <NcInput
+            value={criteriaRef}
+            onChange={e => onCriteriaRef(e.target.value)}
+            disabled={disabled}
+            placeholder="workspace/project/criteria.md"
+            style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 12 }}
+          />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // Themed Radix Select wrapper — replaces native <select> for full brand-token control
@@ -1505,7 +1636,7 @@ function ProjectNavTree({ project, onSelectTask }: {
 function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onBack, onClose, onSave, onAddSubtask, onDeleteSubtask, onAddBlocker, onRemoveBlocker, onOpenTask, onOpenMove }: {
   task: WorkItem; allItems: WorkItem[]; projectName: string; moduleName?: string; onBack: () => void; onClose: () => void;
   onSave: (id: string, patch: Partial<WorkItem>) => Promise<void>;
-  onAddSubtask: (parentId: string, title: string) => Promise<void>;
+  onAddSubtask: (parentId: string, title: string, acceptanceCriteria?: string) => Promise<void>;
   onDeleteSubtask: (id: string) => Promise<void>;
   onAddBlocker: (taskId: string, blockerId: string) => Promise<void>;
   onRemoveBlocker: (taskId: string, blockerId: string) => Promise<void>;
@@ -1513,16 +1644,59 @@ function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onBack, 
   onOpenMove: () => void;
 }) {
   const [form, setForm] = useState({
-    title: task.title, description: task.description, state: task.state,
-    priority: task.priority, assignee: task.assignee,
+    title: task.title, description: task.description,
+    acceptance_criteria: task.acceptance_criteria ?? "",
+    acceptance_criteria_ref: task.acceptance_criteria_ref ?? "",
+    state: task.state, priority: task.priority, assignee: task.assignee,
   });
   const [saving, setSaving] = useState(false);
   const [newSubtask, setNewSubtask] = useState("");
+  const [newSubtaskCriteria, setNewSubtaskCriteria] = useState("");
   const [addingSubtask, setAddingSubtask] = useState(false);
   const [newDocPath, setNewDocPath] = useState("");
+  // Fetch-on-open (D14). `hydrating` gates Save; `hydrated` records whether the heavy
+  // read actually landed. `dirtyRef` stops a slow response from stomping typing.
+  const [hydrating, setHydrating] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const dirtyRef = useRef(false);
 
+  // Immediate paint from the list-derived row, then hydrate from the single-item route.
+  // The list payload never carries `description` (a _HEAVY_FIELDS entry stripped by
+  // summary_payload), which is why the drawer used to render an empty textarea and save
+  // that emptiness straight back over stored content.
   useEffect(() => {
-    setForm({ title: task.title, description: task.description, state: task.state, priority: task.priority, assignee: task.assignee });
+    let cancelled = false;
+    const openedId = task.id;
+    dirtyRef.current = false;
+    setForm({
+      title: task.title, description: task.description,
+      acceptance_criteria: task.acceptance_criteria ?? "",
+      acceptance_criteria_ref: task.acceptance_criteria_ref ?? "",
+      state: task.state, priority: task.priority, assignee: task.assignee,
+    });
+    setHydrated(false);
+    setHydrating(true);
+    (async () => {
+      try {
+        const detail = await api<WorkItem>(`/work-items/${openedId}/detail`);
+        if (cancelled || dirtyRef.current) return;
+        setForm(p => ({
+          ...p,
+          description: detail.description ?? "",
+          acceptance_criteria: detail.acceptance_criteria ?? "",
+          acceptance_criteria_ref: detail.acceptance_criteria_ref ?? "",
+        }));
+        setHydrated(true);
+      } catch {
+        // Detail read failed — keep the list-derived paint and stay un-hydrated.
+        // handleSave drops `description` from the patch in that state so a failed read
+        // can never turn into a silent wipe of stored content.
+        if (!cancelled) toast.error("Could not load full detail — description is read-only until reload");
+      } finally {
+        if (!cancelled) setHydrating(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [task.id]);
 
   const subtasks          = allItems.filter(i => i.parent_item_id === task.id);
@@ -1530,14 +1704,23 @@ function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onBack, 
   const releases          = allItems.filter(i => i.blocked_by.includes(task.id));
   const availableBlockers = allItems.filter(i => i.id !== task.id && !task.blocked_by.includes(i.id) && !i.parent_item_id);
 
-  async function handleSave() { setSaving(true); await onSave(task.id, form); setSaving(false); }
+  async function handleSave() {
+    setSaving(true);
+    // If the heavy read never landed, `form.description` is the list payload's empty
+    // string, not stored content. Omit the key entirely rather than PATCH "" over it —
+    // the adapter's whitelist only forwards keys that are present, so an omitted
+    // description is preserved server-side by preserve-on-omit.
+    const patch: Partial<WorkItem> = hydrated ? form : (({ description: _drop, ...rest }) => rest)(form);
+    await onSave(task.id, patch);
+    setSaving(false);
+  }
   useCmdEnter(handleSave);
 
   async function handleAddSubtask() {
     if (!newSubtask.trim()) return;
     setAddingSubtask(true);
-    await onAddSubtask(task.id, newSubtask.trim());
-    setNewSubtask(""); setAddingSubtask(false);
+    await onAddSubtask(task.id, newSubtask.trim(), newSubtaskCriteria.trim());
+    setNewSubtask(""); setNewSubtaskCriteria(""); setAddingSubtask(false);
   }
 
   async function addDocPath() {
@@ -1664,11 +1847,30 @@ function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onBack, 
           <NcInput value={form.assignee} onChange={e => setForm(p => ({ ...p, assignee: e.target.value }))} placeholder="Name or email" />
         </Field>
         <Field label="Description">
-          <NcTextarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Add a description…" rows={4} />
+          <NcTextarea
+            value={form.description}
+            onChange={e => { dirtyRef.current = true; setForm(p => ({ ...p, description: e.target.value })); }}
+            placeholder={hydrating ? "Loading…" : "Add a description…"}
+            rows={4}
+            disabled={hydrating}
+          />
         </Field>
 
+        <AcceptanceCriteriaFields
+          criteria={form.acceptance_criteria}
+          criteriaRef={form.acceptance_criteria_ref}
+          onCriteria={v => { dirtyRef.current = true; setForm(p => ({ ...p, acceptance_criteria: v })); }}
+          onCriteriaRef={v => { dirtyRef.current = true; setForm(p => ({ ...p, acceptance_criteria_ref: v })); }}
+          disabled={hydrating}
+          hint={false}
+          rows={4}
+        />
+
         <div className="flex justify-end">
-          <PrimaryBtn loading={saving} onClick={handleSave}>Save changes</PrimaryBtn>
+          {/* Save is held until the detail read settles: saving mid-flight would send the
+              list payload's empty description straight back over stored content — the
+              exact defect D14 exists to close. */}
+          <PrimaryBtn loading={saving} disabled={hydrating || saving} onClick={handleSave}>Save changes</PrimaryBtn>
         </div>
 
         {divider}
@@ -1695,9 +1897,21 @@ function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onBack, 
               ))}
             </div>
           )}
-          <div className="flex gap-2">
-            <NcInput value={newSubtask} onChange={e => setNewSubtask(e.target.value)} placeholder="Add a subtask…" onKeyDown={e => e.key === "Enter" && handleAddSubtask()} />
-            <TonalBtn loading={addingSubtask} onClick={handleAddSubtask} className="flex-shrink-0"><Plus size={13} /></TonalBtn>
+          {/* Its own criteria input, never the parent's — a subtask is a step of its
+              parent, so the parent's done-definition is the wrong criterion here. */}
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <NcInput value={newSubtask} onChange={e => setNewSubtask(e.target.value)} placeholder="Add a subtask…" onKeyDown={e => e.key === "Enter" && handleAddSubtask()} />
+              <TonalBtn loading={addingSubtask} onClick={handleAddSubtask} className="flex-shrink-0"><Plus size={13} /></TonalBtn>
+            </div>
+            {newSubtask.trim().length > 0 && (
+              <NcTextarea
+                value={newSubtaskCriteria}
+                onChange={e => setNewSubtaskCriteria(e.target.value)}
+                placeholder="Acceptance criteria for this subtask — done when…"
+                rows={2}
+              />
+            )}
           </div>
         </div>
 
@@ -1835,12 +2049,50 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onBack, onC
   onDeleteMod: (m: Mod) => void;
   onAddToCycle: (cycleId: string) => void;
 }) {
-  const [form, setForm] = useState({ name: mod.name, description: mod.description ?? "", folder_path: mod.folder_path ?? "" });
+  const [form, setForm] = useState({
+    name: mod.name, description: mod.description ?? "", folder_path: mod.folder_path ?? "",
+    acceptance_criteria: mod.acceptance_criteria ?? "",
+    acceptance_criteria_ref: mod.acceptance_criteria_ref ?? "",
+  });
   const [saving, setSaving] = useState(false);
   const [cycleOpen, setCycleOpen] = useState(false);
+  // Fetch-on-open (D14) — module twin of the task drawer. Same reasoning: the modules
+  // LIST payload never carries `description`, so this drawer rendered empty and saved
+  // empty back through the read-merge-write.
+  const [hydrating, setHydrating] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const dirtyRef = useRef(false);
 
   useEffect(() => {
-    setForm({ name: mod.name, description: mod.description ?? "", folder_path: mod.folder_path ?? "" });
+    let cancelled = false;
+    const openedId = mod.id;
+    const openedProject = mod.project_id;
+    dirtyRef.current = false;
+    setForm({
+      name: mod.name, description: mod.description ?? "", folder_path: mod.folder_path ?? "",
+      acceptance_criteria: mod.acceptance_criteria ?? "",
+      acceptance_criteria_ref: mod.acceptance_criteria_ref ?? "",
+    });
+    setHydrated(false);
+    setHydrating(true);
+    (async () => {
+      try {
+        const detail = await api<Mod>(`/projects/${openedProject}/modules/${openedId}/detail`);
+        if (cancelled || dirtyRef.current) return;
+        setForm(p => ({
+          ...p,
+          description: detail.description ?? "",
+          acceptance_criteria: detail.acceptance_criteria ?? "",
+          acceptance_criteria_ref: detail.acceptance_criteria_ref ?? "",
+        }));
+        setHydrated(true);
+      } catch {
+        if (!cancelled) toast.error("Could not load full detail — description is read-only until reload");
+      } finally {
+        if (!cancelled) setHydrating(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [mod.id]);
 
   const modTasks = allItems.filter(w => w.module_id === mod.id && !w.parent_item_id);
@@ -1849,7 +2101,11 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onBack, onC
 
   async function handleSave() {
     setSaving(true);
-    await onSave(mod.id, form);
+    // Same guard as the task drawer: an un-hydrated `description` is the list payload's
+    // empty string, not stored content. Omitting the key lets the read-merge-write below
+    // fall back to `current.description` instead of writing "" over the real value.
+    const patch: Partial<Mod> = hydrated ? form : (({ description: _drop, ...rest }) => rest)(form);
+    await onSave(mod.id, patch);
     setSaving(false);
   }
   useCmdEnter(handleSave);
@@ -1943,8 +2199,26 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onBack, onC
         {/* Description */}
         <div>
           <label className="block text-xs font-semibold tracking-widest uppercase mb-2" style={{ color: NC.stone }}>Description</label>
-          <NcTextarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Describe this module…" rows={3} />
+          <NcTextarea
+            value={form.description}
+            onChange={e => { dirtyRef.current = true; setForm(p => ({ ...p, description: e.target.value })); }}
+            placeholder={hydrating ? "Loading…" : "Describe this module…"}
+            rows={3}
+            disabled={hydrating}
+          />
         </div>
+
+        {/* Acceptance criteria — a module's done-definition is usually a rollup over its
+            children ("every child is done and <integration check> passes"). */}
+        <AcceptanceCriteriaFields
+          criteria={form.acceptance_criteria}
+          criteriaRef={form.acceptance_criteria_ref}
+          onCriteria={v => { dirtyRef.current = true; setForm(p => ({ ...p, acceptance_criteria: v })); }}
+          onCriteriaRef={v => { dirtyRef.current = true; setForm(p => ({ ...p, acceptance_criteria_ref: v })); }}
+          disabled={hydrating}
+          hint={false}
+          rows={3}
+        />
 
         {/* Folder path field — the single canonical folder-path surface for this module.
             (Prior standalone chip in the drawer body was removed 2026-07-29 — redundant
@@ -1958,7 +2232,7 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onBack, onC
         </div>
 
         <div className="flex items-center gap-2">
-          <PrimaryBtn loading={saving} onClick={handleSave}>Save changes</PrimaryBtn>
+          <PrimaryBtn loading={saving} disabled={hydrating || saving} onClick={handleSave}>Save changes</PrimaryBtn>
           <TonalBtn onClick={() => setCycleOpen(true)}><Calendar size={13} /> Add to cycle</TonalBtn>
           <TonalBtn danger onClick={() => { onClose(); onDeleteMod(mod); }} className="ml-auto"><Archive size={13} /> Archive</TonalBtn>
         </div>
@@ -2185,6 +2459,7 @@ function ModuleSection({ mod, modTasks, allItems, gripRef, onOpenMod, onDeleteMo
 
 const EMPTY_TASK_FORM = {
   title: "", description: "",
+  acceptance_criteria: "", acceptance_criteria_ref: "",
   state: "ready" as WorkItemState,
   assignee: "", module_id: null as string | null, parent_item_id: null as string | null,
 };
@@ -2239,6 +2514,8 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
   const [creatingMod, setCreatingMod] = useState(false);
   const [modName, setModName] = useState("");
   const [modDescription, setModDescription] = useState("");
+  const [modCriteria, setModCriteria] = useState("");
+  const [modCriteriaRef, setModCriteriaRef] = useState("");
   const [modSaving, setModSaving] = useState(false);
   const [deleteMod, setDeleteMod] = useState<Mod | null>(null);
 
@@ -2385,6 +2662,9 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
     }
   }
 
+  // The spread below carries acceptance_criteria/_ref into the POST body, but that alone
+  // is NOT what makes them persist: the create adapter builds an explicit backendBody and
+  // drops anything it does not name, so the two new keys had to be added there too.
   async function duplicateTask(task: WorkItem) {
     try {
       const { id: _id, ...rest } = task;
@@ -2407,12 +2687,17 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
     } catch { toast.error("Failed to promote"); }
   }
 
-  async function addSubtask(parentId: string, title: string) {
+  // The quick-add row bypasses the create modal with a literal payload, so it needs its
+  // OWN criteria argument. It deliberately does NOT inherit the parent's: a subtask is a
+  // *step of* its parent, so the parent's done-definition is the wrong criterion by
+  // construction — inheriting would be a disguised sentinel that reads as populated while
+  // asserting something false (spec, DECIDED).
+  async function addSubtask(parentId: string, title: string, acceptanceCriteria = "") {
     const parent = items.find(i => i.id === parentId); if (!parent) return;
     try {
       const created = await api<WorkItem>(`/projects/${projectId}/work-items`, {
         method: "POST",
-        body: JSON.stringify({ title, description: "", state: "ready" as WorkItemState, priority: "none" as WorkItemPriority, assignee: "", module_id: parent.module_id ?? null, parent_item_id: parentId }),
+        body: JSON.stringify({ title, description: "", acceptance_criteria: acceptanceCriteria, state: "ready" as WorkItemState, priority: "none" as WorkItemPriority, assignee: "", module_id: parent.module_id ?? null, parent_item_id: parentId }),
       });
       setItems(p => [...p, created]);
     } catch { toast.error("Failed to add subtask"); }
@@ -2470,9 +2755,19 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
     if (!modName.trim()) return toast.error("Name is required");
     setModSaving(true);
     try {
-      const m = await api<Mod>(`/projects/${projectId}/modules`, { method: "POST", body: JSON.stringify({ name: modName, description: modDescription }) });
+      const m = await api<Mod>(`/projects/${projectId}/modules`, {
+        method: "POST",
+        body: JSON.stringify({
+          name: modName,
+          description: modDescription,
+          acceptance_criteria: modCriteria,
+          acceptance_criteria_ref: modCriteriaRef,
+        }),
+      });
       setMods(p => [...p, m]); setItemOrder(prev => [...prev, m.id]);
-      setCreatingMod(false); setModName(""); setModDescription(""); toast.success("Module created");
+      setCreatingMod(false); setModName(""); setModDescription("");
+      setModCriteria(""); setModCriteriaRef("");
+      toast.success("Module created");
     } catch { toast.error("Failed to create module"); }
     finally { setModSaving(false); }
   }
@@ -2706,6 +3001,14 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
         <Modal open={creatingTask} onClose={() => setCreatingTask(false)} title={taskForm.parent_item_id ? "New Subtask" : "New Task"}>
           <Field label="Title"><NcInput value={taskForm.title} onChange={e => setTaskForm(p => ({ ...p, title: e.target.value }))} placeholder="Task title" autoFocus onKeyDown={e => e.key === "Enter" && createTask()} /></Field>
           <Field label="Description"><NcTextarea value={taskForm.description} onChange={e => setTaskForm(p => ({ ...p, description: e.target.value }))} placeholder="Optional description" /></Field>
+          <div className="mb-4">
+            <AcceptanceCriteriaFields
+              criteria={taskForm.acceptance_criteria}
+              criteriaRef={taskForm.acceptance_criteria_ref}
+              onCriteria={v => setTaskForm(p => ({ ...p, acceptance_criteria: v }))}
+              onCriteriaRef={v => setTaskForm(p => ({ ...p, acceptance_criteria_ref: v }))}
+            />
+          </div>
           <Field label="State"><NcSelect value={taskForm.state} onValueChange={v => setTaskForm(p => ({ ...p, state: v as WorkItemState }))} items={Object.entries(STATE_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color }))} /></Field>
           <Field label="Assignee">
             <NcSelect
@@ -2724,6 +3027,14 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
         <Modal open={creatingMod} onClose={() => setCreatingMod(false)} title="New Module" maxWidth="max-w-sm">
           <Field label="Name"><NcInput value={modName} onChange={e => setModName(e.target.value)} placeholder="Module name" autoFocus onKeyDown={e => e.key === "Enter" && createMod()} /></Field>
           <Field label="Description"><NcTextarea value={modDescription} onChange={e => setModDescription(e.target.value)} placeholder="Optional — what is this for?" rows={3} /></Field>
+          <div className="mb-4">
+            <AcceptanceCriteriaFields
+              criteria={modCriteria}
+              criteriaRef={modCriteriaRef}
+              onCriteria={setModCriteria}
+              onCriteriaRef={setModCriteriaRef}
+            />
+          </div>
           <div className="flex gap-2 justify-end pt-1"><TextBtn onClick={() => setCreatingMod(false)}>Cancel</TextBtn><PrimaryBtn loading={modSaving} onClick={createMod}>Create</PrimaryBtn></div>
         </Modal>
 
