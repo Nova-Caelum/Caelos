@@ -3647,8 +3647,6 @@ function InitiativeView({ initiative, allProjects, onUpdateInit }: {
   const unlinkedItems    = allItems.filter(i => !links.work_item_ids.includes(i.id));
   const linkedMods       = allMods.filter(m => links.module_ids.includes(m.id));
   const unlinkedMods     = allMods.filter(m => !links.module_ids.includes(m.id));
-  const statusCfg = INIT_STATE_CFG[initiative.state];
-
   const divider = <GlassSeparator className="my-4" />;
 
   return (
@@ -3657,7 +3655,7 @@ function InitiativeView({ initiative, allProjects, onUpdateInit }: {
         <p className="text-xs font-semibold tracking-widest uppercase mb-1" style={{ color: "#c9a84c" }}>Initiative</p>
         <div className="flex items-center gap-3 flex-wrap">
           <h1 style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 30, color: NC.cream, fontWeight: 600, lineHeight: 1.12, letterSpacing: "-0.028em" }}>{initiative.title}</h1>
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: statusCfg.color, background: `${statusCfg.color}1a` }}>{statusCfg.label}</span>
+          <StatusPill status={initiative.state} onChange={s => onUpdateInit(initiative.id, { state: s })} />
         </div>
         {initiative.external_id && <p className="text-xs mt-1" style={{ color: NC.stone }}>ID: {initiative.external_id}</p>}
         {initiative.description && <p className="text-sm mt-2 max-w-2xl" style={{ fontFamily: "'IBM Plex Sans', sans-serif", color: NC.stone, lineHeight: 1.55 }}>{initiative.description}</p>}
