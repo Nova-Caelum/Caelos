@@ -2412,7 +2412,26 @@ type ModuleSectionProps = {
 };
 
 function ModuleSection({ mod, modTasks, allItems, gripRef, onOpenMod, onDeleteMod, onAddTask, onSelectTask, onDeleteTask, onDuplicateTask, onPromoteTask, onAddSubtask, onMoveTask, onAddModToCycle, onAddTaskToCycle, onSaveTaskState }: ModuleSectionProps) {
-  const [expanded, setExpanded] = useState(true);
+  // Default collapsed; persisted per module (keyed by external_id) under one
+  // localStorage key so Daniel's expand/collapse choice survives refresh and
+  // project switches — same pattern as Sidebar's nc-sidebar-collapse-* keys.
+  const [expanded, setExpanded] = useState<boolean>(() => {
+    try {
+      const map = JSON.parse(localStorage.getItem("caelos.moduleExpanded") ?? "{}");
+      return typeof map[mod.id] === "boolean" ? map[mod.id] : false;
+    } catch { return false; }
+  });
+  const toggleExpanded = () => {
+    setExpanded(prev => {
+      const next = !prev;
+      try {
+        const map = JSON.parse(localStorage.getItem("caelos.moduleExpanded") ?? "{}");
+        map[mod.id] = next;
+        localStorage.setItem("caelos.moduleExpanded", JSON.stringify(map));
+      } catch {}
+      return next;
+    });
+  };
   const done     = modTasks.filter(t => t.state === "done" || t.state === "deferred" || t.state === "archived").length;
   const progress = modTasks.length > 0 ? Math.round((done / modTasks.length) * 100) : 0;
 
@@ -2431,7 +2450,7 @@ function ModuleSection({ mod, modTasks, allItems, gripRef, onOpenMod, onDeleteMo
               style={{ color: NC.stone }}
               aria-expanded={expanded}
               aria-label={expanded ? `Collapse ${mod.name}` : `Expand ${mod.name}`}
-              onClick={e => { e.stopPropagation(); setExpanded(p => !p); }}
+              onClick={e => { e.stopPropagation(); toggleExpanded(); }}
             >
               <Layers size={13} style={{ color: STATE_CFG[mod.state].color }} />
               {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
