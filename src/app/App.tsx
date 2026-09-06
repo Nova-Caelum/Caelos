@@ -1025,8 +1025,16 @@ function NcInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input className="nc-input w-full px-3 py-2 rounded-lg text-sm outline-none" {...props} />;
 }
 
-function NcTextarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea rows={3} className="nc-input w-full px-3 py-2 rounded-lg text-sm outline-none resize-none" {...props} />;
+function NcTextarea({ resizable, className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { resizable?: boolean }) {
+  // `resizable` is opt-in per call site (Info tab only, item 3) — every other
+  // NcTextarea instance keeps its current resize-none/rows=3 default untouched.
+  return (
+    <textarea
+      rows={3}
+      className={`nc-input w-full px-3 py-2 rounded-lg text-sm outline-none ${resizable ? "resize-y min-h-[180px]" : "resize-none"}${className ? ` ${className}` : ""}`}
+      {...props}
+    />
+  );
 }
 
 // Acceptance criteria — the done-definition pair, shared by both create modals, both
@@ -3465,7 +3473,7 @@ export function ProjectInfoTab({ project, onSave, onSwitchTab }: {
           <NcInput value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
         </Field>
         <Field label="Description">
-          <NcTextarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Optional description" rows={3} />
+          <NcTextarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Optional description" rows={8} resizable />
         </Field>
         <Field label="Folder Path">
           <div className="flex items-center gap-2">
