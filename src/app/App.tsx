@@ -2368,7 +2368,7 @@ function TaskRow({ task, allItems, depth, gripRef, onSelect, onDelete, onDuplica
       {expanded && subtasks.map(sub => (
         <TaskRow key={sub.id} task={sub} allItems={allItems} depth={depth + 1}
           onSelect={onSelect} onDelete={onDelete} onDuplicate={onDuplicate} onPromote={onPromote}
-          onAddSubtask={onAddSubtask} onAddToCycle={onAddToCycle} onMove={onMove} />
+          onAddSubtask={onAddSubtask} onAddToCycle={onAddToCycle} onMove={onMove} onSaveState={onSaveState} />
       ))}
     </div>
   );
@@ -2823,6 +2823,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
     onAddSubtask: openAddSubtask,
     onAddToCycle: (t: WorkItem) => setCycleTarget({ type: "task", task: t }),
     onMove: openMoveFor,
+    onSaveState: (id: string, state: WorkItemState) => saveTask(id, { state }),
   };
 
   return (
