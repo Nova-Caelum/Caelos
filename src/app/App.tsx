@@ -742,14 +742,25 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
   const initMatch = path.match(/^\/initiatives\/([^/]+)$/);
   if (initMatch && (method === "PATCH" || method === "DELETE")) {
     const external_id = initMatch[1];
-    const patchBody: Record<string, unknown> = {};
-    if (method === "DELETE") patchBody.state = "archived";
-    else {
-      if (body.title !== undefined) patchBody.title = body.title;
-      if (body.description !== undefined) patchBody.description = body.description;
-      if (body.state !== undefined) patchBody.state = body.state;
-      if (body.doc_paths !== undefined) patchBody.doc_paths = body.doc_paths;
+    // Backend has NO DELETE handler on /api/initiatives/{id} — archive = PATCH state.
+    // restFetch would strip the body on DELETE (line ~411), producing an empty DELETE
+    // request that 405s. Bypass by issuing an explicit PATCH here — mirrors the
+    // work-items bypass above.
+    if (method === "DELETE") {
+      const resp = await fetch(`${API_BASE}/api/initiatives/${external_id}`, {
+        method: "PATCH", headers, body: JSON.stringify({ state: "archived" }),
+      });
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => "");
+        throw new Error(`PATCH archive /api/initiatives/${external_id} → ${resp.status}: ${text.slice(0, 200)}`);
+      }
+      return adaptInitiativeRead(unwrapRow(await resp.json())) as T;
     }
+    const patchBody: Record<string, unknown> = {};
+    if (body.title !== undefined) patchBody.title = body.title;
+    if (body.description !== undefined) patchBody.description = body.description;
+    if (body.state !== undefined) patchBody.state = body.state;
+    if (body.doc_paths !== undefined) patchBody.doc_paths = body.doc_paths;
     const data = await restFetch(`/api/initiatives/${external_id}`, patchBody);
     return adaptInitiativeRead(unwrapRow(data)) as T;
   }
