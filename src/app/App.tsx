@@ -2425,8 +2425,15 @@ function ModuleSection({ mod, modTasks, allItems, gripRef, onOpenMod, onDeleteMo
             style={{ paddingLeft: 16, background: "rgba(255,255,255,0.02)", paddingTop: 8, paddingBottom: 8 }}
             onClick={() => onOpenMod(mod)}
           >
-            <Layers size={13} className="flex-shrink-0" style={{ color: STATE_CFG[mod.state].color }} />
-            <button className="flex-shrink-0 w-5 flex items-center justify-center" style={{ color: NC.stone }} onClick={e => { e.stopPropagation(); setExpanded(p => !p); }}>
+            <button
+              type="button"
+              className="flex-shrink-0 w-[28px] h-[28px] flex items-center justify-center gap-0.5 rounded transition-colors hover:bg-white/[0.06]"
+              style={{ color: NC.stone }}
+              aria-expanded={expanded}
+              aria-label={expanded ? `Collapse ${mod.name}` : `Expand ${mod.name}`}
+              onClick={e => { e.stopPropagation(); setExpanded(p => !p); }}
+            >
+              <Layers size={13} style={{ color: STATE_CFG[mod.state].color }} />
               {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
             </button>
             <div className="flex-1 min-w-0">
