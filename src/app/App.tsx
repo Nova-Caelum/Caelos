@@ -15,7 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectValue,
 } from "@/app/components/ui/select";
 import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckboxItem,
 } from "@/app/components/ui/dropdown-menu";
 import {
   Plus, ChevronLeft, ChevronRight, ChevronDown, Edit2, Copy, Archive, ArchiveRestore, X,
@@ -46,7 +46,11 @@ export type Project  = { id: string; name: string; description: string; folder_p
 // required field would break every one of them. Accepted-but-not-required server-side too
 // (required-on-create is S4). Not rendered on TaskRow/ModuleSection: drawer-only, same
 // convention `description` already follows.
-type Mod      = { id: string; project_id: string; name: string; folder_path: string; description: string; state: WorkItemState; team: string[]; parent_module_id?: string | null; acceptance_criteria?: string | null; acceptance_criteria_ref?: string | null };
+// `position` / `created_at` (Wave E, 2026-09-06): drag-order persistence. OPTIONAL for
+// the same reason as acceptance_criteria above — FOUNDRY_DEMO_* / mockApi literals don't
+// carry them. `position` mirrors the server's nullable double precision column (null =
+// unpositioned, sorts last); `created_at` is the tie-break for equal/null positions.
+type Mod      = { id: string; project_id: string; name: string; folder_path: string; description: string; state: WorkItemState; team: string[]; parent_module_id?: string | null; acceptance_criteria?: string | null; acceptance_criteria_ref?: string | null; position?: number | null; created_at?: string };
 type Cycle    = { id: string; project_id: string; name: string; start_date: string; end_date: string; state: CycleStatus; description: string };
 
 type WorkItemPriority = "none" | "low" | "medium" | "high" | "urgent";
@@ -57,6 +61,7 @@ type WorkItem = {
   acceptance_criteria?: string | null; acceptance_criteria_ref?: string | null;
   state: WorkItemState; priority: WorkItemPriority; assignee: string; team: string[];
   blocked_by: string[]; doc_paths: string[]; source_references: unknown;
+  position?: number | null; created_at?: string;
 };
 
 type Initiative = { id: string; external_id: string; title: string; description: string; state: InitiativeStatus; doc_paths: string[] };
@@ -298,6 +303,11 @@ function adaptWorkItemRead(x: any): WorkItem {
     blocked_by: x.blocked_by ?? [],
     doc_paths: x.doc_paths ?? [],
     source_references: x.source_references ?? null,
+    // Wave E (2026-09-06): server column is nullable double precision — coerce anything
+    // that isn't a real number (including the JSON `null` list reads carry today) to null
+    // rather than trusting `x.position ?? null`, which would let a stray string through.
+    position: typeof x.position === "number" ? x.position : null,
+    created_at: x.created_at ?? "",
   };
 }
 function adaptModuleRead(x: any): Mod {
@@ -313,6 +323,8 @@ function adaptModuleRead(x: any): Mod {
     state: (x.state as WorkItemState) ?? "pending-review",
     team: Array.isArray(x.team) ? x.team : [],
     parent_module_id: toExternalId(x.parent_module_id),
+    position: typeof x.position === "number" ? x.position : null,
+    created_at: x.created_at ?? "",
   };
 }
 function adaptCycleRead(x: any): Cycle {
@@ -628,6 +640,10 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
       if (body.module_id !== undefined) patchBody.module = body.module_id;
       if (body.project_id !== undefined) patchBody.project = body.project_id;
       if (body.parent_item_id !== undefined) patchBody.parent_work_item = body.parent_item_id;
+      // Item 7 (Wave E, 2026-09-06): drag-order persistence. `position` is a plain nullable
+      // float on the server (ops-server 0.9.16) — omit preserves, explicit null unpins,
+      // same preserve-on-omit contract every other field on this whitelist already follows.
+      if (body.position !== undefined) patchBody.position = body.position;
       // TODO(bi-dir-mvp): blocked_by / cycle_id / doc_paths / priority are not backend-mutable
       // fields on PATCH /api/work-items/{id} (blocked_by needs link_work_items/unlink_work_items;
       // cycle_id needs assign_cycle_work_items — out of Phase 4 scope, flagged for Phase 5+).
@@ -717,6 +733,10 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
       // carries the stored value and the merge round-trips correctly.
       acceptance_criteria: body?.acceptance_criteria !== undefined ? (body.acceptance_criteria || null) : (current.acceptance_criteria ?? null),
       acceptance_criteria_ref: body?.acceptance_criteria_ref !== undefined ? (body.acceptance_criteria_ref || null) : (current.acceptance_criteria_ref ?? null),
+      // Item 7 (Wave E, 2026-09-06): drag-order persistence. `get_module` DOES return
+      // `position` (unlike `description`, not a _HEAVY_FIELDS entry), so `current` carries
+      // the real stored value and this merge round-trips it exactly like every field above.
+      position: body?.position !== undefined ? body.position : (current.position ?? null),
       idempotency_key: idempKey("mod"),
     };
     if (body?.parent_module_id) args.parent_module = body.parent_module_id;
@@ -981,6 +1001,102 @@ function arrayMove<T>(arr: T[], from: number, to: number): T[] {
   return result;
 }
 
+// Wave E (2026-09-06) — drag-order persistence. Locked mechanism: read `position` in
+// both adapters, sort `(position ?? +∞) asc, modules-before-tasks, created_at desc`,
+// write on drop via fractional indexing. See handoff §Mechanism.
+
+// Root list = modules ∪ root tasks; per-module task lists share the same key minus the
+// module/task tie-break (both sides are tasks, so `isModule` is simply false on both).
+function positionCompare(
+  a: { position?: number | null; created_at?: string; isModule?: boolean },
+  b: { position?: number | null; created_at?: string; isModule?: boolean },
+): number {
+  const pa = typeof a.position === "number" ? a.position : Number.POSITIVE_INFINITY;
+  const pb = typeof b.position === "number" ? b.position : Number.POSITIVE_INFINITY;
+  if (pa !== pb) return pa - pb;
+  if (!!a.isModule !== !!b.isModule) return a.isModule ? -1 : 1;
+  return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+}
+
+// Fractional-indexing constants. 1024 gives ample halvings before a gap collapses below
+// POSITION_GAP_EPS and forces a renumber. MATERIALIZE_WRITE_CAP is the handoff's escalate-
+// don't-work-around threshold — a batch larger than this stops with nothing written.
+const POSITION_STEP = 1024;
+const POSITION_GAP_EPS = 1e-6;
+const MATERIALIZE_WRITE_CAP = 60;
+
+// Persists a reorder for one list (root, or one module's tasks) after a drop.
+// `ids` is the CURRENT visual order of the affected list (whatever is actually rendered —
+// hidden-by-filter rows are excluded, matching what could have been dragged in the first
+// place). Returns the write count so callers/tests can assert on it, or `null` when the
+// call was refused (moved id not found, or the materialize cap was hit — no writes fire
+// in either case).
+async function commitOrderWrite(opts: {
+  ids: string[];
+  movedId: string;
+  getPosition: (id: string) => number | null;
+  persist: (id: string, position: number) => Promise<void>;
+  applyLocal: (id: string, position: number) => void;
+}): Promise<{ writeCount: number } | null> {
+  const { ids, movedId, getPosition, persist, applyLocal } = opts;
+  const movedIndex = ids.indexOf(movedId);
+  if (movedIndex < 0) return null;
+
+  const hasNull = ids.some(id => getPosition(id) === null);
+  const prevId = ids[movedIndex - 1];
+  const nextId = ids[movedIndex + 1];
+  const prevPos = prevId ? getPosition(prevId) : null;
+  const nextPos = nextId ? getPosition(nextId) : null;
+  const gapTooSmall = !hasNull && prevPos !== null && nextPos !== null && (nextPos - prevPos) < POSITION_GAP_EPS;
+
+  if (hasNull || gapTooSmall) {
+    if (ids.length > MATERIALIZE_WRITE_CAP) {
+      toast.error(`Reorder needs ${ids.length} writes for this list — over the ${MATERIALIZE_WRITE_CAP}-write safety cap. Nothing was written.`);
+      return null;
+    }
+    const writes = ids.map((id, idx) => ({ id, position: (idx + 1) * POSITION_STEP }));
+    writes.forEach(w => applyLocal(w.id, w.position));
+    await Promise.all(writes.map(w => persist(w.id, w.position)));
+    return { writeCount: writes.length };
+  }
+
+  let newPos: number;
+  if (prevPos === null && nextPos !== null) newPos = nextPos - POSITION_STEP;
+  else if (prevPos !== null && nextPos === null) newPos = prevPos + POSITION_STEP;
+  else if (prevPos !== null && nextPos !== null) newPos = (prevPos + nextPos) / 2;
+  else newPos = POSITION_STEP; // sole item in the list — first-ever position
+
+  applyLocal(movedId, newPos);
+  await persist(movedId, newPos);
+  return { writeCount: 1 };
+}
+
+// ── Multi-state filter persistence (item 5) ─────────────────────────────────────
+// Per-project set of visible states, `localStorage`-backed. Default = all states except
+// archived — matches today's behaviour (archived rows are excluded from `items` entirely
+// by `load()`, and were the single state the old single-value filter always hid).
+const STATE_FILTER_LS_KEY = "caelos.stateFilter";
+const HIDE_DONE_STATES: WorkItemState[] = ["done", "deferred", "archived"];
+
+function defaultVisibleStates(allStates: WorkItemState[]): WorkItemState[] {
+  return allStates.filter(s => s !== "archived");
+}
+function loadStateFilter(projectId: string, allStates: WorkItemState[]): WorkItemState[] {
+  try {
+    const map = JSON.parse(localStorage.getItem(STATE_FILTER_LS_KEY) ?? "{}");
+    const stored = map[projectId];
+    if (Array.isArray(stored) && stored.length > 0 && stored.every(s => allStates.includes(s))) return stored;
+  } catch {}
+  return defaultVisibleStates(allStates);
+}
+function saveStateFilter(projectId: string, states: WorkItemState[]): void {
+  try {
+    const map = JSON.parse(localStorage.getItem(STATE_FILTER_LS_KEY) ?? "{}");
+    map[projectId] = states;
+    localStorage.setItem(STATE_FILTER_LS_KEY, JSON.stringify(map));
+  } catch {}
+}
+
 // ── Visual config ──────────────────────────────────────────────────────────────
 
 // Semantic state palette — Set A (task_workflow_state), brand-ui assignments, updated 2026-07-27
@@ -994,6 +1110,7 @@ const STATE_CFG: Record<WorkItemState, { label: string; color: string; bg: strin
   deferred:         { label: "Deferred",       color: "#8F8A80", bg: "rgba(143,138,128,0.08)" },
   archived:         { label: "Archived",       color: "#55506A", bg: "rgba(85,80,106,0.16)"  },
 };
+const ALL_STATES = Object.keys(STATE_CFG) as WorkItemState[];
 
 // Priority — brand-ui semantic palette
 const PRI_CFG: Record<WorkItemPriority, { label: string; color: string }> = {
@@ -1494,10 +1611,14 @@ const TASK_TYPE = (moduleId: string) => `task_${moduleId}`;
 interface DragItem { id: string; index: number }
 
 // Unified draggable wrapper for project-root items (modules OR root tasks)
-function DraggableProjectItem({ id, index, onMove, children }: {
+function DraggableProjectItem({ id, index, onMove, onDropEnd, children }: {
   id: string;
   index: number;
   onMove: (from: number, to: number) => void;
+  // Wave E: fires once per completed drag (drop landed on a valid target AND the index
+  // actually changed) — never on hover. `hover` above only reorders local state; this is
+  // the single place a reorder becomes a server write.
+  onDropEnd: (id: string) => void;
   children: (gripRef: React.RefObject<HTMLSpanElement | null>) => React.ReactNode;
 }) {
   const gripRef = useRef<HTMLSpanElement>(null);
@@ -1506,6 +1627,9 @@ function DraggableProjectItem({ id, index, onMove, children }: {
   const [{ isDragging }, drag, preview] = useDrag<DragItem, void, { isDragging: boolean }>({
     type: PROJECT_ROOT_TYPE,
     item: { id, index },
+    end: (item, monitor) => {
+      if (monitor.didDrop() && item.index !== index) onDropEnd(id);
+    },
     collect: m => ({ isDragging: m.isDragging() }),
   });
 
@@ -1540,7 +1664,7 @@ function DraggableProjectItem({ id, index, onMove, children }: {
 }
 
 // In-module task draggable wrapper
-function DraggableTaskRow({ task, index, onMove, ...rest }: TaskRowProps & { index: number; onMove: (from: number, to: number) => void }) {
+function DraggableTaskRow({ task, index, onMove, onDropEnd, ...rest }: TaskRowProps & { index: number; onMove: (from: number, to: number) => void; onDropEnd: (id: string) => void }) {
   const gripRef = useRef<HTMLSpanElement>(null);
   const rowRef  = useRef<HTMLDivElement>(null);
   const modKey  = task.module_id ?? "root";
@@ -1548,6 +1672,9 @@ function DraggableTaskRow({ task, index, onMove, ...rest }: TaskRowProps & { ind
   const [{ isDragging }, drag, preview] = useDrag<DragItem, void, { isDragging: boolean }>({
     type: TASK_TYPE(modKey),
     item: { id: task.id, index },
+    end: (item, monitor) => {
+      if (monitor.didDrop() && item.index !== index) onDropEnd(task.id);
+    },
     collect: m => ({ isDragging: m.isDragging() }),
   });
 
@@ -2406,12 +2533,15 @@ type ModuleSectionProps = {
   onDuplicateTask: (t: WorkItem) => void; onPromoteTask: (t: WorkItem) => void;
   onAddSubtask: (parentId: string) => void;
   onMoveTask: (from: number, to: number, moduleId: string) => void;
+  // Wave E: fires on drop (not hover) with the module id and the id of the task that
+  // was actually dragged — TasksPane persists the resulting order for this module.
+  onTaskDropEnd: (moduleId: string, taskId: string) => void;
   onAddModToCycle: (mod: Mod) => void;
   onAddTaskToCycle: (task: WorkItem) => void;
   onSaveTaskState: (id: string, state: WorkItemState) => void;
 };
 
-function ModuleSection({ mod, modTasks, allItems, gripRef, onOpenMod, onDeleteMod, onAddTask, onSelectTask, onDeleteTask, onDuplicateTask, onPromoteTask, onAddSubtask, onMoveTask, onAddModToCycle, onAddTaskToCycle, onSaveTaskState }: ModuleSectionProps) {
+function ModuleSection({ mod, modTasks, allItems, gripRef, onOpenMod, onDeleteMod, onAddTask, onSelectTask, onDeleteTask, onDuplicateTask, onPromoteTask, onAddSubtask, onMoveTask, onTaskDropEnd, onAddModToCycle, onAddTaskToCycle, onSaveTaskState }: ModuleSectionProps) {
   // Default collapsed; persisted per module (keyed by external_id) under one
   // localStorage key so Daniel's expand/collapse choice survives refresh and
   // project switches — same pattern as Sidebar's nc-sidebar-collapse-* keys.
@@ -2488,6 +2618,7 @@ function ModuleSection({ mod, modTasks, allItems, gripRef, onOpenMod, onDeleteMo
         <DraggableTaskRow
           key={task.id} task={task} index={idx} allItems={allItems} depth={1}
           onMove={(from, to) => onMoveTask(from, to, mod.id)}
+          onDropEnd={id => onTaskDropEnd(mod.id, id)}
           onSelect={onSelectTask} onDelete={onDeleteTask}
           onDuplicate={onDuplicateTask} onPromote={onPromoteTask}
           onAddSubtask={onAddSubtask} onAddToCycle={onAddTaskToCycle}
@@ -2519,8 +2650,49 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
   const [loading, setLoading] = useState(true);
 
   const [itemOrder, setItemOrder] = useState<string[]>([]);
+  // Wave E: `itemOrder`/`items` mirrors, mutated SYNCHRONOUSLY and imperatively wherever
+  // `moveRootItem`/`moveTask` mutate the corresponding state (never via `setState`'s
+  // updater form for reads). Verified empirically (instrumented drag, 2026-09-06):
+  // react-dnd's HTML5Backend drives `hover()`/`onMove` from raw native `addEventListener`
+  // callbacks outside React's render cycle, and `setState(updater)` does NOT run its
+  // updater synchronously — it only threads through queued updaters at React's next
+  // actual render pass. A same-tick "peek via setState" read a stale, pre-reorder value
+  // every time (`movedIndex` in the drop-end handler kept resolving to the ORIGINAL
+  // index, never the post-hover one) even though the visual reorder was already correct
+  // on screen. These refs are the fix: read from `.current`, which is updated the instant
+  // the move happens, not on whatever cadence React chooses to commit.
+  const itemOrderRef = useRef<string[]>([]);
+  const itemsRef = useRef<WorkItem[]>([]);
+  useEffect(() => { itemOrderRef.current = itemOrder; }, [itemOrder]);
+  useEffect(() => { itemsRef.current = items; }, [items]);
   const [search, setSearch] = useState("");
-  const [stateFilter, setStateFilter] = useState("all");
+  // Item 5 — multi-state filter, localStorage-persisted per project. Re-derived whenever
+  // `projectId` changes (TasksPane is one mounted instance reused across project switches,
+  // not remounted per project — see `load`'s own `[projectId]` dependency for the same
+  // pattern), never re-read on every render.
+  const [visibleStates, setVisibleStates] = useState<WorkItemState[]>(() => loadStateFilter(projectId, ALL_STATES));
+  useEffect(() => { setVisibleStates(loadStateFilter(projectId, ALL_STATES)); }, [projectId]);
+  const hideDoneActive = HIDE_DONE_STATES.every(s => !visibleStates.includes(s));
+  function toggleState(s: WorkItemState) {
+    setVisibleStates(prev => {
+      const next = prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s];
+      saveStateFilter(projectId, next);
+      return next;
+    });
+  }
+  function toggleHideDone() {
+    setVisibleStates(prev => {
+      // Un-hiding restores done+deferred only — never archived. Restoring all three would
+      // silently reveal archived rows nobody asked to see; archived's visibility is the
+      // dropdown's job alone. (Round-trip bug caught in verification: toggle on then off
+      // from the default set previously left "archived" checked that was never checked.)
+      const next = hideDoneActive
+        ? Array.from(new Set([...prev, "done", "deferred"]))
+        : prev.filter(s => !HIDE_DONE_STATES.includes(s));
+      saveStateFilter(projectId, next);
+      return next;
+    });
+  }
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedModId, setSelectedModId]   = useState<string | null>(null);
 
@@ -2587,14 +2759,23 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
       // This keeps the state filter dropdown consistent (its "Archived" option is redundant here; kept for parity with other states).
       const activeMods  = modsData.filter(m => m.state !== "archived");
       const activeItems = itemsData.filter(w => w.state !== "archived");
-      setItems(activeItems);
-      setMods(activeMods);
+      // Item 7 — read+sort: (position ?? +∞) asc, modules-before-tasks, created_at desc.
+      // The REST list endpoints already return each TABLE in this order, but modules and
+      // work-items are separate tables/endpoints — merging them into one interleaved root
+      // sequence is a client-side job. Sorting `items`/`mods` themselves too (not just the
+      // combined root order) keeps per-module task lists correctly ordered under the same
+      // key, and is a defensive no-op when the backend already delivered them sorted.
+      const sortedMods  = [...activeMods].sort(positionCompare);
+      const sortedItems = [...activeItems].sort(positionCompare);
+      setItems(sortedItems);
+      setMods(sortedMods);
       setCycles(cyclesData.filter(c => c.state !== "archived"));
       setMembers(membersData);
-      setItemOrder([
-        ...activeMods.map(m => m.id),
-        ...activeItems.filter(w => !w.module_id && !w.parent_item_id).map(w => w.id),
-      ]);
+      const rootEntries = [
+        ...sortedMods.map(m => ({ id: m.id, position: m.position, created_at: m.created_at, isModule: true })),
+        ...sortedItems.filter(w => !w.module_id && !w.parent_item_id).map(w => ({ id: w.id, position: w.position, created_at: w.created_at, isModule: false })),
+      ].sort(positionCompare);
+      setItemOrder(rootEntries.map(e => e.id));
     } catch { toast.error("Failed to load project data"); }
     finally { setLoading(false); }
   }, [fixtureMode, projectId]);
@@ -2607,15 +2788,77 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
 
   // ── DnD ─────────────────────────────────────────────────────────────────────
 
-  function moveRootItem(from: number, to: number) { setItemOrder(prev => arrayMove(prev, from, to)); }
-  function moveTask(from: number, to: number, moduleId: string) {
-    setItems(prev => {
-      const group = prev.filter(i => i.module_id === moduleId && !i.parent_item_id);
-      const fi = prev.findIndex(i => i.id === group[from]?.id);
-      const ti = prev.findIndex(i => i.id === group[to]?.id);
-      if (fi < 0 || ti < 0) return prev;
-      return arrayMove(prev, fi, ti);
+  // Both mutate `.current` SYNCHRONOUSLY, imperatively, in addition to calling the
+  // ordinary `setState` — see the itemOrderRef/itemsRef comment above for why: react-dnd's
+  // hover fires from a raw native event listener outside React's render cycle, and the
+  // drop-end handlers below need the TRUE current order the instant the drop happens, not
+  // whenever React next chooses to commit a render.
+  function moveRootItem(from: number, to: number) {
+    const next = arrayMove(itemOrderRef.current, from, to);
+    itemOrderRef.current = next;
+    setItemOrder(next);
+  }
+  // `visibleGroup` is the EXACT array ModuleSection rendered (`modTasks` — already passed
+  // through `visibleFilter`), not a fresh recomputation from `items`. Recomputing here
+  // without the filter was the pre-existing bug this fix closes: `from`/`to` are indices
+  // into the RENDERED (filtered) list, so resolving them against an unfiltered group
+  // silently picks the wrong anchor row the moment any row in this module is hidden by
+  // the state filter — exactly the scenario the new "Hide done" chip makes routine.
+  function moveTask(from: number, to: number, moduleId: string, visibleGroup: WorkItem[]) {
+    const fi = itemsRef.current.findIndex(i => i.id === visibleGroup[from]?.id);
+    const ti = itemsRef.current.findIndex(i => i.id === visibleGroup[to]?.id);
+    if (fi < 0 || ti < 0) return;
+    const next = arrayMove(itemsRef.current, fi, ti);
+    itemsRef.current = next;
+    setItems(next);
+  }
+
+  // Item 7 — write on drop. Fires once per completed drag (react-dnd `end`, `didDrop()`
+  // true, index actually changed — never on hover). Reads `itemOrderRef`/`itemsRef`
+  // (`.current`, imperative) rather than the closed-over `itemOrder`/`items` state
+  // variables — see the ref declarations above for why a plain render-scope read (or a
+  // `setState`-updater "peek", which was tried and empirically failed the same way) is
+  // stale at this exact call site. `mods` is read directly: nothing mutates it mid-drag.
+  async function handleRootDropEnd(movedId: string) {
+    const freshItemOrder = itemOrderRef.current;
+    const freshItems = itemsRef.current;
+    const modIds = new Set(mods.map(m => m.id));
+    const ids = freshItemOrder.filter(id => {
+      if (modIds.has(id)) return true; // module rows are never filtered out
+      const task = freshItems.find(i => i.id === id);
+      return !!task && visibleFilter(task);
     });
+    const getPosition = (id: string) =>
+      modIds.has(id) ? (mods.find(m => m.id === id)?.position ?? null) : (freshItems.find(i => i.id === id)?.position ?? null);
+    const persist = async (id: string, position: number) => {
+      if (modIds.has(id)) await api<Mod>(`/modules/${id}`, { method: "PATCH", body: JSON.stringify({ position, project_id: projectId }) });
+      else await api<WorkItem>(`/work-items/${id}`, { method: "PATCH", body: JSON.stringify({ position }) });
+    };
+    const applyLocal = (id: string, position: number) => {
+      if (modIds.has(id)) setMods(prev => prev.map(m => m.id === id ? { ...m, position } : m));
+      else { itemsRef.current = itemsRef.current.map(i => i.id === id ? { ...i, position } : i); setItems(itemsRef.current); }
+    };
+    try {
+      await commitOrderWrite({ ids, movedId, getPosition, persist, applyLocal });
+    } catch (e: any) {
+      toast.error(`Failed to save order: ${(e?.message || "unknown error").slice(0, 140)}`);
+      await load();
+    }
+  }
+
+  async function handleModuleDropEnd(moduleId: string, movedId: string) {
+    const freshItems = itemsRef.current;
+    const visible = freshItems.filter(w => w.module_id === moduleId && !w.parent_item_id && visibleFilter(w));
+    const ids = visible.map(t => t.id);
+    const getPosition = (id: string) => freshItems.find(i => i.id === id)?.position ?? null;
+    const persist = async (id: string, position: number) => { await api<WorkItem>(`/work-items/${id}`, { method: "PATCH", body: JSON.stringify({ position }) }); };
+    const applyLocal = (id: string, position: number) => { itemsRef.current = itemsRef.current.map(i => i.id === id ? { ...i, position } : i); setItems(itemsRef.current); };
+    try {
+      await commitOrderWrite({ ids, movedId, getPosition, persist, applyLocal });
+    } catch (e: any) {
+      toast.error(`Failed to save order: ${(e?.message || "unknown error").slice(0, 140)}`);
+      await load();
+    }
   }
 
   // ── Keyboard shortcuts ───────────────────────────────────────────────────────
@@ -2837,9 +3080,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
   // ── Render ───────────────────────────────────────────────────────────────────
 
   const visibleFilter = (task: WorkItem) => {
-    if (stateFilter !== "all" && task.state !== stateFilter) return false;
-    // When filter is "all" (default view), hide archived — they're accessible via Settings → Archived.
-    if (stateFilter === "all" && task.state === "archived") return false;
+    if (!visibleStates.includes(task.state)) return false;
     if (search && !task.title.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   };
@@ -2880,15 +3121,39 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
             <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: NC.stone }} />
             <input className="nc-search w-full pl-9 pr-3 py-2 text-sm" placeholder="Search tasks…" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <NcSelect
-            value={stateFilter}
-            onValueChange={setStateFilter}
-            triggerClassName="px-3 py-1.5 text-sm rounded-lg border outline-none w-auto"
-            items={[
-              { value: "all", label: "All states" },
-              ...Object.entries(STATE_CFG).map(([v, c]) => ({ value: v, label: c.label, color: c.color })),
-            ]}
-          />
+          {/* Item 5 — multi-state filter. Same nc-input trigger sizing the old single-value
+              NcSelect used (px-3 py-1.5 text-sm) so it stays no louder than the search box
+              beside it (pre-pick audit (a)); nc-glass-menu content matches every other
+              dropdown on this surface (audit (b)); colors are STATE_CFG only (audit (c)). */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="nc-input px-3 py-1.5 text-sm rounded-lg outline-none flex items-center gap-1.5 w-auto"
+                style={{ color: NC.cream }}
+              >
+                <span>{visibleStates.length} state{visibleStates.length === 1 ? "" : "s"}</span>
+                <ChevronDown size={12} style={{ opacity: 0.55, flexShrink: 0 }} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="bottom" align="start" sideOffset={6} className="nc-glass-menu min-w-[190px]" style={{ color: NC.cream }}>
+              {ALL_STATES.map(s => (
+                <DropdownMenuCheckboxItem
+                  key={s}
+                  checked={visibleStates.includes(s)}
+                  onCheckedChange={() => toggleState(s)}
+                  onSelect={e => e.preventDefault()}
+                  className="gap-2 text-sm cursor-pointer"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: STATE_CFG[s].color }} aria-hidden="true" />
+                  {STATE_CFG[s].label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Chip interactive selected={hideDoneActive} tone={hideDoneActive ? "done" : "neutral"} onClick={toggleHideDone}>
+            Hide done
+          </Chip>
           <div className="ml-auto">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -2919,7 +3184,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
               if (entry.type === "module") {
                 const modTasks = items.filter(w => w.module_id === entry.id && !w.parent_item_id && visibleFilter(w));
                 return (
-                  <DraggableProjectItem key={entry.id} id={entry.id} index={idx} onMove={moveRootItem}>
+                  <DraggableProjectItem key={entry.id} id={entry.id} index={idx} onMove={moveRootItem} onDropEnd={handleRootDropEnd}>
                     {gripRef => (
                       <ModuleSection
                         mod={entry.mod} modTasks={modTasks} allItems={items} gripRef={gripRef}
@@ -2931,7 +3196,8 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
                         onDuplicateTask={duplicateTask}
                         onPromoteTask={promoteTask}
                         onAddSubtask={openAddSubtask}
-                        onMoveTask={moveTask}
+                        onMoveTask={(from, to, moduleId) => moveTask(from, to, moduleId, modTasks)}
+                        onTaskDropEnd={handleModuleDropEnd}
                         onAddModToCycle={m => setCycleTarget({ type: "module", mod: m })}
                         onAddTaskToCycle={t => setCycleTarget({ type: "task", task: t })}
                         onSaveTaskState={(id, state) => saveTask(id, { state })}
@@ -2942,7 +3208,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
               }
               if (!visibleFilter(entry.task)) return null;
               return (
-                <DraggableProjectItem key={entry.id} id={entry.id} index={idx} onMove={moveRootItem}>
+                <DraggableProjectItem key={entry.id} id={entry.id} index={idx} onMove={moveRootItem} onDropEnd={handleRootDropEnd}>
                   {gripRef => <TaskRow task={entry.task} allItems={items} depth={0} gripRef={gripRef} {...sharedTaskProps} />}
                 </DraggableProjectItem>
               );
