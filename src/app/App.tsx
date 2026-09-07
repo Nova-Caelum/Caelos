@@ -2751,6 +2751,10 @@ const EMPTY_TASK_FORM = {
   acceptance_criteria: "", acceptance_criteria_ref: "",
   state: "ready" as WorkItemState,
   assignee: "", module_id: null as string | null, parent_item_id: null as string | null,
+  // Item 9 (Wave D, 2026-09-06): Related Docs, addable at create time — see the
+  // New Task / New Subtask modal below. Maps onto `source_references[].uri` at the
+  // adapter boundary (api()'s work-items POST block), same as the drawer's field.
+  doc_paths: [] as string[],
 };
 
 export function TasksPane({ projectId, projectName, pendingTaskId, onClearPending, fixtureMode = false }: {
@@ -2812,6 +2816,11 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
   const [creatingTask, setCreatingTask] = useState(false);
   const [taskForm, setTaskForm] = useState(EMPTY_TASK_FORM);
   const [taskSaving, setTaskSaving] = useState(false);
+  // Item 9 (Wave D, 2026-09-06): WIP text for the create-modal's Related Docs add row —
+  // mirrors `newDocPath` in TaskDrawer/InitiativeView. TasksPane stays mounted across
+  // modal opens (unlike the drawer, which unmounts), so this is reset explicitly in
+  // openAddTask/openAddSubtask alongside the rest of `taskForm`.
+  const [newTaskDocPath, setNewTaskDocPath] = useState("");
   const [deleteTask, setDeleteTask] = useState<WorkItem | null>(null);
   // Move-task machinery: list of ALL projects for the picker + per-project module cache
   const [allProjects, setAllProjects] = useState<Project[]>([]);
@@ -2992,11 +3001,24 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
 
   // ── Task handlers ────────────────────────────────────────────────────────────
 
-  function openAddTask(moduleId: string | null = null) { setTaskForm({ ...EMPTY_TASK_FORM, module_id: moduleId }); setCreatingTask(true); }
+  function openAddTask(moduleId: string | null = null) { setTaskForm({ ...EMPTY_TASK_FORM, module_id: moduleId }); setNewTaskDocPath(""); setCreatingTask(true); }
   function openAddSubtask(parentId: string) {
     const parent = items.find(i => i.id === parentId);
     setTaskForm({ ...EMPTY_TASK_FORM, parent_item_id: parentId, module_id: parent?.module_id ?? null });
+    setNewTaskDocPath("");
     setCreatingTask(true);
+  }
+
+  // Item 9 (Wave D, 2026-09-06): add/remove for the create-modal's Related Docs field —
+  // same add/remove-row pattern as TaskDrawer's addDocPath/removeDocPath, scoped to the
+  // in-flight `taskForm` instead of a saved task.
+  function addTaskDocPath() {
+    if (!newTaskDocPath.trim()) return;
+    setTaskForm(p => ({ ...p, doc_paths: [...p.doc_paths, newTaskDocPath.trim()] }));
+    setNewTaskDocPath("");
+  }
+  function removeTaskDocPath(path: string) {
+    setTaskForm(p => ({ ...p, doc_paths: p.doc_paths.filter(x => x !== path) }));
   }
 
   async function createTask() {
@@ -3006,7 +3028,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
       const item = await api<WorkItem>(`/projects/${projectId}/work-items`, { method: "POST", body: JSON.stringify(taskForm) });
       setItems(p => [...p, item]);
       if (!taskForm.module_id && !taskForm.parent_item_id) setItemOrder(prev => [...prev, item.id]);
-      setCreatingTask(false); setTaskForm(EMPTY_TASK_FORM);
+      setCreatingTask(false); setTaskForm(EMPTY_TASK_FORM); setNewTaskDocPath("");
       toast.success(taskForm.parent_item_id ? "Subtask created" : "Task created");
     } catch { toast.error("Failed to create task"); }
     finally { setTaskSaving(false); }
@@ -3444,6 +3466,26 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
                 ...members.map(member => ({ value: member.name, label: member.name })),
               ]}
             />
+          </Field>
+          {/* Item 9 (Wave D, 2026-09-06): Related Docs, addable at create time — same
+              add/remove-row pattern as TaskDrawer's Related Docs (maps onto
+              source_references[].uri at the adapter boundary; see EMPTY_TASK_FORM). */}
+          <Field label={`Related Docs${taskForm.doc_paths.length ? ` (${taskForm.doc_paths.length})` : ""}`}>
+            {taskForm.doc_paths.length > 0 && (
+              <div className="space-y-0.5 mb-2">
+                {taskForm.doc_paths.map((p, i) => (
+                  <div key={i} className="flex items-center gap-2 group py-1.5 px-2 rounded-lg hover:bg-white/[0.06]">
+                    <FileText size={11} style={{ color: NC.stone, flexShrink: 0 }} />
+                    <span className="flex-1 text-xs font-mono truncate" style={{ color: NC.cream }}>{p}</span>
+                    <button onClick={() => removeTaskDocPath(p)} className="opacity-0 group-hover:opacity-100 p-0.5 rounded transition-opacity" style={{ color: NC.stone }}><X size={11} /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <NcInput value={newTaskDocPath} onChange={e => setNewTaskDocPath(e.target.value)} placeholder="/path/to/doc.md" onKeyDown={e => e.key === "Enter" && addTaskDocPath()} style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 12 }} />
+              <TonalBtn onClick={addTaskDocPath} className="flex-shrink-0"><Plus size={13} /></TonalBtn>
+            </div>
           </Field>
           <div className="flex gap-2 justify-end pt-1"><TextBtn onClick={() => setCreatingTask(false)}>Cancel</TextBtn><PrimaryBtn loading={taskSaving} onClick={createTask}>Create</PrimaryBtn></div>
         </Modal>
