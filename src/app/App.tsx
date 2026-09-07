@@ -64,7 +64,10 @@ type WorkItem = {
   position?: number | null; created_at?: string;
 };
 
-type Initiative = { id: string; external_id: string; title: string; description: string; state: InitiativeStatus; doc_paths: string[] };
+// `uuid` (Wave D, 2026-09-06): the row UUID, kept alongside the external-id-keyed `id`
+// the same way `WorkItem.uuid` already does — the /links sub-resource needs it (see
+// initiativeUuidByExternalId above); every other initiative route stays external_id-keyed.
+type Initiative = { id: string; uuid?: string; external_id: string; title: string; description: string; state: InitiativeStatus; doc_paths: string[] };
 type InitLinks  = { project_ids: string[]; module_ids: string[]; work_item_ids: string[] };
 
 // get_recent_activity entry shape (post-migration; author is TEXT, work_item_id is the anchor)
@@ -246,6 +249,22 @@ function toExternalId(ref: unknown): string | null {
   return externalIdByUuid.get(ref) ?? ref;
 }
 
+// Item 5 (Wave D, 2026-09-06): the initiative link/unlink sub-resource
+// (`/api/initiatives/{id}/links...`) is keyed by row UUID server-side
+// (`.eq("id", initiative_id)` in rest_add_initiative_link / rest_delete_initiative_link),
+// while every OTHER initiative route (list, PATCH, list_initiative_links) is keyed by
+// external_id — same id-space split as externalIdByUuid above, scoped to this one
+// sub-resource. Populated whenever an initiative row is read (adaptInitiativeRead), so
+// the common case (initiatives list loads before InitiativeView ever fires a link/unlink
+// call) never needs api()'s fallback fetch.
+const initiativeUuidByExternalId = new Map<string, string>();
+
+function rememberInitiativeUuid(row: any): void {
+  if (typeof row?.id === "string" && typeof row?.external_id === "string") {
+    initiativeUuidByExternalId.set(row.external_id, row.id);
+  }
+}
+
 // Module rows own the uuid → external_id mapping that work-item `module_id` refs
 // resolve through, but not every caller fetches modules — the initiative and cycle
 // views read work-items on their own. Priming here makes a work-items response
@@ -339,8 +358,10 @@ function adaptCycleRead(x: any): Cycle {
   };
 }
 function adaptInitiativeRead(x: any): Initiative {
+  rememberInitiativeUuid(x);
   return {
     id: x.external_id ?? x.id ?? "",
+    uuid: x.id ?? undefined,
     external_id: x.external_id ?? x.id ?? "",
     title: x.title ?? x.name ?? "",
     description: x.description ?? "",
@@ -433,6 +454,21 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
   // work_graph_contracts.py handlers 2026-07-27) — unwrap .row when present.
   const unwrapRow = (d: any) => (d && typeof d === "object" && "row" in d) ? d.row : d;
 
+  // Item 5 (Wave D, 2026-09-06): resolve an initiative's external_id to its row UUID for
+  // the /links sub-resource (see initiativeUuidByExternalId comment above). Deliberately
+  // NOT built on `restFetch` — restFetch always issues the OUTER `method` (this helper
+  // can fire mid-DELETE), which would send a DELETE to the initiatives LIST route.
+  async function resolveInitiativeUuid(externalId: string): Promise<string> {
+    const cached = initiativeUuidByExternalId.get(externalId);
+    if (cached) return cached;
+    const resp = await fetch(`${API_BASE}/api/initiatives`, { headers });
+    if (!resp.ok) throw new Error(`GET /api/initiatives → ${resp.status} (resolving UUID for ${externalId})`);
+    ((await resp.json()) as any[]).forEach(rememberInitiativeUuid);
+    const found = initiativeUuidByExternalId.get(externalId);
+    if (!found) throw new Error(`initiative not found: ${externalId}`);
+    return found;
+  }
+
   // === Special-case routes with NO backend surface (client-served) ===
   // Members: sourced from the live agent registry (list_agents), not the deleted ROSTER const.
   const mem = path.match(/^\/projects\/([^/]+)\/members(?:\/([^/]+))?$/);
@@ -461,8 +497,21 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
     return (await mcpCall<any>("append_worklog", args)) as T;
   }
 
-  if (/^\/initiatives\/[^/]+\/links$/.test(path) && method === "GET") {
-    return { project_ids: [], module_ids: [], work_item_ids: [] } as T;
+  const initLinksGetMatch = path.match(/^\/initiatives\/([^/]+)\/links$/);
+  if (initLinksGetMatch && method === "GET") {
+    // No REST GET exists for this sub-resource (item 5) — read via the MCP tool, which
+    // (unlike the UUID-keyed REST POST/DELETE routes below) is external_id-keyed.
+    // handle_list_initiative_links enriches each row's `target` with the target's own
+    // external identifier — project code for `project`, external_id for `module`/`work_item`
+    // (main.py handle_list_initiative_links, ~5884).
+    const rows = await mcpCall<Array<{ link_type: string; target: string }>>("list_initiative_links", { initiative: initLinksGetMatch[1] });
+    const links: InitLinks = { project_ids: [], module_ids: [], work_item_ids: [] };
+    for (const r of rows ?? []) {
+      if (r.link_type === "project") links.project_ids.push(r.target);
+      else if (r.link_type === "module") links.module_ids.push(r.target);
+      else if (r.link_type === "work_item") links.work_item_ids.push(r.target);
+    }
+    return links as T;
   }
 
   // === Projects ===
@@ -784,12 +833,30 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
     const data = await restFetch(`/api/initiatives/${external_id}`, patchBody);
     return adaptInitiativeRead(unwrapRow(data)) as T;
   }
-  if (/^\/initiatives\/[^/]+\/links$/.test(path) && method === "POST") {
-    const data = await restFetch(`/api${path}`, { ...body, idempotency_key: idempKey("idem") });
-    return data as T;
+  const initLinksPostMatch = path.match(/^\/initiatives\/([^/]+)\/links$/);
+  if (initLinksPostMatch && method === "POST") {
+    // Item 5: InitiativeView's link* functions keep sending the old batched shape
+    // ({initiative_id, project_ids[], module_ids[], work_item_ids[]}) — each call
+    // populates exactly one array with one target today, but this handles the general
+    // case. The server (rest_add_initiative_link) wants {link_type, target_id}, ONE
+    // call per target, against the initiative's row UUID (never its external_id).
+    const uuid = await resolveInitiativeUuid(initLinksPostMatch[1]);
+    const targets: Array<{ link_type: "project" | "module" | "work_item"; target_id: string }> = [
+      ...((body.project_ids ?? []) as string[]).map(target_id => ({ link_type: "project" as const, target_id })),
+      ...((body.module_ids ?? []) as string[]).map(target_id => ({ link_type: "module" as const, target_id })),
+      ...((body.work_item_ids ?? []) as string[]).map(target_id => ({ link_type: "work_item" as const, target_id })),
+    ];
+    let last: any;
+    for (const target of targets) {
+      last = await restFetch(`/api/initiatives/${uuid}/links`, target);
+    }
+    return last as T;
   }
-  if (/^\/initiatives\/[^/]+\/links\/[^/]+\/[^/]+$/.test(path) && method === "DELETE") {
-    const data = await restFetch(`/api${path}`);
+  const initLinksDeleteMatch = path.match(/^\/initiatives\/([^/]+)\/links\/([^/]+)\/([^/]+)$/);
+  if (initLinksDeleteMatch && method === "DELETE") {
+    const [, extId, linkType, targetId] = initLinksDeleteMatch;
+    const uuid = await resolveInitiativeUuid(extId);
+    const data = await restFetch(`/api/initiatives/${uuid}/links/${encodeURIComponent(linkType)}/${encodeURIComponent(targetId)}`);
     return data as T;
   }
 
