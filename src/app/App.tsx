@@ -1608,7 +1608,18 @@ const PROJECT_ROOT_TYPE = "project_root";
 // Per-module task drag type (prevents cross-module drops)
 const TASK_TYPE = (moduleId: string) => `task_${moduleId}`;
 
-interface DragItem { id: string; index: number }
+// `startIndex` is set once at drag-start and never touched by `hover` — it is the fixed
+// baseline `end()` diffs against. `index` alone is unsafe here: react-dnd's `useDrag` spec
+// is unmemoized (no deps array), so `useDragSource`'s `useEffect(() => { handler.spec = spec
+// }, [spec])` re-points `endDrag()` at the LATEST render's `end` closure on every commit
+// (verified in node_modules/react-dnd/dist/hooks/useDrag/{useDragSource,DragSourceImpl}.js).
+// In a real mouse drag, React commits between hover and drop, so by drop time this row may
+// have already re-rendered with a NEW `index` prop equal to the post-hover `item.index` —
+// making `item.index !== index` compare a moved target against itself and silently skip the
+// write. Empirically reproduced 2026-09-06: a drag with a real ~150ms gap between hover and
+// drop visually reordered the list but fired zero PATCH/POST writes. `startIndex` fixes this
+// because hover only ever mutates `item.index`, never `item.startIndex`.
+interface DragItem { id: string; index: number; startIndex: number }
 
 // Unified draggable wrapper for project-root items (modules OR root tasks)
 function DraggableProjectItem({ id, index, onMove, onDropEnd, children }: {
@@ -1626,9 +1637,9 @@ function DraggableProjectItem({ id, index, onMove, onDropEnd, children }: {
 
   const [{ isDragging }, drag, preview] = useDrag<DragItem, void, { isDragging: boolean }>({
     type: PROJECT_ROOT_TYPE,
-    item: { id, index },
+    item: { id, index, startIndex: index },
     end: (item, monitor) => {
-      if (monitor.didDrop() && item.index !== index) onDropEnd(id);
+      if (monitor.didDrop() && item.index !== item.startIndex) onDropEnd(id);
     },
     collect: m => ({ isDragging: m.isDragging() }),
   });
@@ -1671,9 +1682,9 @@ function DraggableTaskRow({ task, index, onMove, onDropEnd, ...rest }: TaskRowPr
 
   const [{ isDragging }, drag, preview] = useDrag<DragItem, void, { isDragging: boolean }>({
     type: TASK_TYPE(modKey),
-    item: { id: task.id, index },
+    item: { id: task.id, index, startIndex: index },
     end: (item, monitor) => {
-      if (monitor.didDrop() && item.index !== index) onDropEnd(task.id);
+      if (monitor.didDrop() && item.index !== item.startIndex) onDropEnd(task.id);
     },
     collect: m => ({ isDragging: m.isDragging() }),
   });
