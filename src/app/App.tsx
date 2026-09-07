@@ -64,7 +64,10 @@ type WorkItem = {
   position?: number | null; created_at?: string;
 };
 
-type Initiative = { id: string; external_id: string; title: string; description: string; state: InitiativeStatus; doc_paths: string[] };
+// `uuid` (Wave D, 2026-09-06): the row UUID, kept alongside the external-id-keyed `id`
+// the same way `WorkItem.uuid` already does — the /links sub-resource needs it (see
+// initiativeUuidByExternalId above); every other initiative route stays external_id-keyed.
+type Initiative = { id: string; uuid?: string; external_id: string; title: string; description: string; state: InitiativeStatus; doc_paths: string[] };
 type InitLinks  = { project_ids: string[]; module_ids: string[]; work_item_ids: string[] };
 
 // get_recent_activity entry shape (post-migration; author is TEXT, work_item_id is the anchor)
@@ -246,6 +249,22 @@ function toExternalId(ref: unknown): string | null {
   return externalIdByUuid.get(ref) ?? ref;
 }
 
+// Item 5 (Wave D, 2026-09-06): the initiative link/unlink sub-resource
+// (`/api/initiatives/{id}/links...`) is keyed by row UUID server-side
+// (`.eq("id", initiative_id)` in rest_add_initiative_link / rest_delete_initiative_link),
+// while every OTHER initiative route (list, PATCH, list_initiative_links) is keyed by
+// external_id — same id-space split as externalIdByUuid above, scoped to this one
+// sub-resource. Populated whenever an initiative row is read (adaptInitiativeRead), so
+// the common case (initiatives list loads before InitiativeView ever fires a link/unlink
+// call) never needs api()'s fallback fetch.
+const initiativeUuidByExternalId = new Map<string, string>();
+
+function rememberInitiativeUuid(row: any): void {
+  if (typeof row?.id === "string" && typeof row?.external_id === "string") {
+    initiativeUuidByExternalId.set(row.external_id, row.id);
+  }
+}
+
 // Module rows own the uuid → external_id mapping that work-item `module_id` refs
 // resolve through, but not every caller fetches modules — the initiative and cycle
 // views read work-items on their own. Priming here makes a work-items response
@@ -301,7 +320,11 @@ function adaptWorkItemRead(x: any): WorkItem {
     assignee: x.assignee_agent ?? x.assignee ?? "",
     team: Array.isArray(x.team) ? x.team : [],
     blocked_by: x.blocked_by ?? [],
-    doc_paths: x.doc_paths ?? [],
+    // Item 9 (Wave D, 2026-09-06): work items carry no `doc_paths` column on the
+    // backend — only `source_references[{uri, anchor?}]`. Derive the drawer/modal-facing
+    // `doc_paths` from it here rather than trusting `x.doc_paths` (always undefined on
+    // real rows); `x.doc_paths ?? []` was the bug — it silently produced `[]` forever.
+    doc_paths: Array.isArray(x.source_references) ? x.source_references.map((r: any) => r.uri) : [],
     source_references: x.source_references ?? null,
     // Wave E (2026-09-06): server column is nullable double precision — coerce anything
     // that isn't a real number (including the JSON `null` list reads carry today) to null
@@ -339,8 +362,10 @@ function adaptCycleRead(x: any): Cycle {
   };
 }
 function adaptInitiativeRead(x: any): Initiative {
+  rememberInitiativeUuid(x);
   return {
     id: x.external_id ?? x.id ?? "",
+    uuid: x.id ?? undefined,
     external_id: x.external_id ?? x.id ?? "",
     title: x.title ?? x.name ?? "",
     description: x.description ?? "",
@@ -433,6 +458,21 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
   // work_graph_contracts.py handlers 2026-07-27) — unwrap .row when present.
   const unwrapRow = (d: any) => (d && typeof d === "object" && "row" in d) ? d.row : d;
 
+  // Item 5 (Wave D, 2026-09-06): resolve an initiative's external_id to its row UUID for
+  // the /links sub-resource (see initiativeUuidByExternalId comment above). Deliberately
+  // NOT built on `restFetch` — restFetch always issues the OUTER `method` (this helper
+  // can fire mid-DELETE), which would send a DELETE to the initiatives LIST route.
+  async function resolveInitiativeUuid(externalId: string): Promise<string> {
+    const cached = initiativeUuidByExternalId.get(externalId);
+    if (cached) return cached;
+    const resp = await fetch(`${API_BASE}/api/initiatives`, { headers });
+    if (!resp.ok) throw new Error(`GET /api/initiatives → ${resp.status} (resolving UUID for ${externalId})`);
+    ((await resp.json()) as any[]).forEach(rememberInitiativeUuid);
+    const found = initiativeUuidByExternalId.get(externalId);
+    if (!found) throw new Error(`initiative not found: ${externalId}`);
+    return found;
+  }
+
   // === Special-case routes with NO backend surface (client-served) ===
   // Members: sourced from the live agent registry (list_agents), not the deleted ROSTER const.
   const mem = path.match(/^\/projects\/([^/]+)\/members(?:\/([^/]+))?$/);
@@ -461,8 +501,21 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
     return (await mcpCall<any>("append_worklog", args)) as T;
   }
 
-  if (/^\/initiatives\/[^/]+\/links$/.test(path) && method === "GET") {
-    return { project_ids: [], module_ids: [], work_item_ids: [] } as T;
+  const initLinksGetMatch = path.match(/^\/initiatives\/([^/]+)\/links$/);
+  if (initLinksGetMatch && method === "GET") {
+    // No REST GET exists for this sub-resource (item 5) — read via the MCP tool, which
+    // (unlike the UUID-keyed REST POST/DELETE routes below) is external_id-keyed.
+    // handle_list_initiative_links enriches each row's `target` with the target's own
+    // external identifier — project code for `project`, external_id for `module`/`work_item`
+    // (main.py handle_list_initiative_links, ~5884).
+    const rows = await mcpCall<Array<{ link_type: string; target: string }>>("list_initiative_links", { initiative: initLinksGetMatch[1] });
+    const links: InitLinks = { project_ids: [], module_ids: [], work_item_ids: [] };
+    for (const r of rows ?? []) {
+      if (r.link_type === "project") links.project_ids.push(r.target);
+      else if (r.link_type === "module") links.module_ids.push(r.target);
+      else if (r.link_type === "work_item") links.work_item_ids.push(r.target);
+    }
+    return links as T;
   }
 
   // === Projects ===
@@ -550,6 +603,12 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
         // omitted (not sent as null) when absent so it can't clear an existing value.
         if (body.module_id) backendBody.module = body.module_id;
         if (body.parent_item_id) backendBody.parent_work_item = body.parent_item_id;
+        // Item 9 (Wave D, 2026-09-06): work items have no `doc_paths` column — the
+        // create-modal's Related Docs field maps onto `source_references[].uri`, the
+        // same field PATCH uses (see the wiMatch PATCH block below).
+        if (Array.isArray(body.doc_paths) && body.doc_paths.length > 0) {
+          backendBody.source_references = (body.doc_paths as string[]).map(uri => ({ uri }));
+        }
       } else if (kind === "modules") {
         backendBody = {
           external_id: body.external_id ?? idempKey("mod"),
@@ -644,13 +703,38 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
       // float on the server (ops-server 0.9.16) — omit preserves, explicit null unpins,
       // same preserve-on-omit contract every other field on this whitelist already follows.
       if (body.position !== undefined) patchBody.position = body.position;
-      // TODO(bi-dir-mvp): blocked_by / cycle_id / doc_paths / priority are not backend-mutable
-      // fields on PATCH /api/work-items/{id} (blocked_by needs link_work_items/unlink_work_items;
+      // TODO(bi-dir-mvp): blocked_by / cycle_id / priority are not backend-mutable fields
+      // on PATCH /api/work-items/{id} (blocked_by needs link_work_items/unlink_work_items;
       // cycle_id needs assign_cycle_work_items — out of Phase 4 scope, flagged for Phase 5+).
       // NOTE (2026-07-31): `project` mutation on this PATCH is empirically untested against
       // the ops-server contract. If backend rejects/ignores, moveTask_ will surface the error.
     }
-    if (Object.keys(patchBody).length === 0) return {} as T;
+    // Item 9 (Wave D, 2026-09-06): work items carry no `doc_paths` column — the drawer's
+    // Related Docs field maps onto `source_references[].uri` (the create-body twin lives
+    // in the work-items POST block above). A bare `{uri}` per entry would silently drop
+    // any `anchor` an entry already carried, so this reads the row's CURRENT raw
+    // source_references and carries the anchor forward for every uri that's still
+    // present — new/added uris get `{uri}` with no anchor, same as create.
+    if (body.doc_paths !== undefined) {
+      let currentRefs: Array<{ uri: string; anchor?: string | null }> = [];
+      try {
+        const resp = await fetch(`${API_BASE}/api/work-items/${encodeURIComponent(external_id)}`, { headers });
+        if (resp.ok) {
+          const row = unwrapRow(await resp.json());
+          if (Array.isArray(row?.source_references)) currentRefs = row.source_references;
+        }
+      } catch { /* best-effort merge — a failed read still lets the save go through bare */ }
+      const anchorByUri = new Map(currentRefs.map(r => [r.uri, r.anchor]));
+      patchBody.source_references = (body.doc_paths as string[]).map(uri => {
+        const anchor = anchorByUri.get(uri);
+        return anchor ? { uri, anchor } : { uri };
+      });
+    }
+    // Guard the silent-no-op class (item 9's root cause, generalized): an empty patchBody
+    // used to `return {} as T` WITHOUT a network call, and every caller does
+    // `setItems(p => p.map(i => i.id === id ? updated : i))` — replacing the real row with
+    // `{}`. Throwing here routes every caller's existing catch → toast.error instead.
+    if (Object.keys(patchBody).length === 0) throw new Error("nothing to save");
     const data = await restFetch(`/api/work-items/${external_id}`, patchBody);
     return adaptWorkItemRead(unwrapRow(data)) as T;
   }
@@ -784,12 +868,30 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
     const data = await restFetch(`/api/initiatives/${external_id}`, patchBody);
     return adaptInitiativeRead(unwrapRow(data)) as T;
   }
-  if (/^\/initiatives\/[^/]+\/links$/.test(path) && method === "POST") {
-    const data = await restFetch(`/api${path}`, { ...body, idempotency_key: idempKey("idem") });
-    return data as T;
+  const initLinksPostMatch = path.match(/^\/initiatives\/([^/]+)\/links$/);
+  if (initLinksPostMatch && method === "POST") {
+    // Item 5: InitiativeView's link* functions keep sending the old batched shape
+    // ({initiative_id, project_ids[], module_ids[], work_item_ids[]}) — each call
+    // populates exactly one array with one target today, but this handles the general
+    // case. The server (rest_add_initiative_link) wants {link_type, target_id}, ONE
+    // call per target, against the initiative's row UUID (never its external_id).
+    const uuid = await resolveInitiativeUuid(initLinksPostMatch[1]);
+    const targets: Array<{ link_type: "project" | "module" | "work_item"; target_id: string }> = [
+      ...((body.project_ids ?? []) as string[]).map(target_id => ({ link_type: "project" as const, target_id })),
+      ...((body.module_ids ?? []) as string[]).map(target_id => ({ link_type: "module" as const, target_id })),
+      ...((body.work_item_ids ?? []) as string[]).map(target_id => ({ link_type: "work_item" as const, target_id })),
+    ];
+    let last: any;
+    for (const target of targets) {
+      last = await restFetch(`/api/initiatives/${uuid}/links`, target);
+    }
+    return last as T;
   }
-  if (/^\/initiatives\/[^/]+\/links\/[^/]+\/[^/]+$/.test(path) && method === "DELETE") {
-    const data = await restFetch(`/api${path}`);
+  const initLinksDeleteMatch = path.match(/^\/initiatives\/([^/]+)\/links\/([^/]+)\/([^/]+)$/);
+  if (initLinksDeleteMatch && method === "DELETE") {
+    const [, extId, linkType, targetId] = initLinksDeleteMatch;
+    const uuid = await resolveInitiativeUuid(extId);
+    const data = await restFetch(`/api/initiatives/${uuid}/links/${encodeURIComponent(linkType)}/${encodeURIComponent(targetId)}`);
     return data as T;
   }
 
@@ -2649,6 +2751,10 @@ const EMPTY_TASK_FORM = {
   acceptance_criteria: "", acceptance_criteria_ref: "",
   state: "ready" as WorkItemState,
   assignee: "", module_id: null as string | null, parent_item_id: null as string | null,
+  // Item 9 (Wave D, 2026-09-06): Related Docs, addable at create time — see the
+  // New Task / New Subtask modal below. Maps onto `source_references[].uri` at the
+  // adapter boundary (api()'s work-items POST block), same as the drawer's field.
+  doc_paths: [] as string[],
 };
 
 export function TasksPane({ projectId, projectName, pendingTaskId, onClearPending, fixtureMode = false }: {
@@ -2710,6 +2816,11 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
   const [creatingTask, setCreatingTask] = useState(false);
   const [taskForm, setTaskForm] = useState(EMPTY_TASK_FORM);
   const [taskSaving, setTaskSaving] = useState(false);
+  // Item 9 (Wave D, 2026-09-06): WIP text for the create-modal's Related Docs add row —
+  // mirrors `newDocPath` in TaskDrawer/InitiativeView. TasksPane stays mounted across
+  // modal opens (unlike the drawer, which unmounts), so this is reset explicitly in
+  // openAddTask/openAddSubtask alongside the rest of `taskForm`.
+  const [newTaskDocPath, setNewTaskDocPath] = useState("");
   const [deleteTask, setDeleteTask] = useState<WorkItem | null>(null);
   // Move-task machinery: list of ALL projects for the picker + per-project module cache
   const [allProjects, setAllProjects] = useState<Project[]>([]);
@@ -2890,11 +3001,24 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
 
   // ── Task handlers ────────────────────────────────────────────────────────────
 
-  function openAddTask(moduleId: string | null = null) { setTaskForm({ ...EMPTY_TASK_FORM, module_id: moduleId }); setCreatingTask(true); }
+  function openAddTask(moduleId: string | null = null) { setTaskForm({ ...EMPTY_TASK_FORM, module_id: moduleId }); setNewTaskDocPath(""); setCreatingTask(true); }
   function openAddSubtask(parentId: string) {
     const parent = items.find(i => i.id === parentId);
     setTaskForm({ ...EMPTY_TASK_FORM, parent_item_id: parentId, module_id: parent?.module_id ?? null });
+    setNewTaskDocPath("");
     setCreatingTask(true);
+  }
+
+  // Item 9 (Wave D, 2026-09-06): add/remove for the create-modal's Related Docs field —
+  // same add/remove-row pattern as TaskDrawer's addDocPath/removeDocPath, scoped to the
+  // in-flight `taskForm` instead of a saved task.
+  function addTaskDocPath() {
+    if (!newTaskDocPath.trim()) return;
+    setTaskForm(p => ({ ...p, doc_paths: [...p.doc_paths, newTaskDocPath.trim()] }));
+    setNewTaskDocPath("");
+  }
+  function removeTaskDocPath(path: string) {
+    setTaskForm(p => ({ ...p, doc_paths: p.doc_paths.filter(x => x !== path) }));
   }
 
   async function createTask() {
@@ -2904,7 +3028,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
       const item = await api<WorkItem>(`/projects/${projectId}/work-items`, { method: "POST", body: JSON.stringify(taskForm) });
       setItems(p => [...p, item]);
       if (!taskForm.module_id && !taskForm.parent_item_id) setItemOrder(prev => [...prev, item.id]);
-      setCreatingTask(false); setTaskForm(EMPTY_TASK_FORM);
+      setCreatingTask(false); setTaskForm(EMPTY_TASK_FORM); setNewTaskDocPath("");
       toast.success(taskForm.parent_item_id ? "Subtask created" : "Task created");
     } catch { toast.error("Failed to create task"); }
     finally { setTaskSaving(false); }
@@ -3342,6 +3466,26 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
                 ...members.map(member => ({ value: member.name, label: member.name })),
               ]}
             />
+          </Field>
+          {/* Item 9 (Wave D, 2026-09-06): Related Docs, addable at create time — same
+              add/remove-row pattern as TaskDrawer's Related Docs (maps onto
+              source_references[].uri at the adapter boundary; see EMPTY_TASK_FORM). */}
+          <Field label={`Related Docs${taskForm.doc_paths.length ? ` (${taskForm.doc_paths.length})` : ""}`}>
+            {taskForm.doc_paths.length > 0 && (
+              <div className="space-y-0.5 mb-2">
+                {taskForm.doc_paths.map((p, i) => (
+                  <div key={i} className="flex items-center gap-2 group py-1.5 px-2 rounded-lg hover:bg-white/[0.06]">
+                    <FileText size={11} style={{ color: NC.stone, flexShrink: 0 }} />
+                    <span className="flex-1 text-xs font-mono truncate" style={{ color: NC.cream }}>{p}</span>
+                    <button onClick={() => removeTaskDocPath(p)} className="opacity-0 group-hover:opacity-100 p-0.5 rounded transition-opacity" style={{ color: NC.stone }}><X size={11} /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <NcInput value={newTaskDocPath} onChange={e => setNewTaskDocPath(e.target.value)} placeholder="/path/to/doc.md" onKeyDown={e => e.key === "Enter" && addTaskDocPath()} style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 12 }} />
+              <TonalBtn onClick={addTaskDocPath} className="flex-shrink-0"><Plus size={13} /></TonalBtn>
+            </div>
           </Field>
           <div className="flex gap-2 justify-end pt-1"><TextBtn onClick={() => setCreatingTask(false)}>Cancel</TextBtn><PrimaryBtn loading={taskSaving} onClick={createTask}>Create</PrimaryBtn></div>
         </Modal>
