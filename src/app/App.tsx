@@ -320,7 +320,11 @@ function adaptWorkItemRead(x: any): WorkItem {
     assignee: x.assignee_agent ?? x.assignee ?? "",
     team: Array.isArray(x.team) ? x.team : [],
     blocked_by: x.blocked_by ?? [],
-    doc_paths: x.doc_paths ?? [],
+    // Item 9 (Wave D, 2026-09-06): work items carry no `doc_paths` column on the
+    // backend — only `source_references[{uri, anchor?}]`. Derive the drawer/modal-facing
+    // `doc_paths` from it here rather than trusting `x.doc_paths` (always undefined on
+    // real rows); `x.doc_paths ?? []` was the bug — it silently produced `[]` forever.
+    doc_paths: Array.isArray(x.source_references) ? x.source_references.map((r: any) => r.uri) : [],
     source_references: x.source_references ?? null,
     // Wave E (2026-09-06): server column is nullable double precision — coerce anything
     // that isn't a real number (including the JSON `null` list reads carry today) to null
@@ -599,6 +603,12 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
         // omitted (not sent as null) when absent so it can't clear an existing value.
         if (body.module_id) backendBody.module = body.module_id;
         if (body.parent_item_id) backendBody.parent_work_item = body.parent_item_id;
+        // Item 9 (Wave D, 2026-09-06): work items have no `doc_paths` column — the
+        // create-modal's Related Docs field maps onto `source_references[].uri`, the
+        // same field PATCH uses (see the wiMatch PATCH block below).
+        if (Array.isArray(body.doc_paths) && body.doc_paths.length > 0) {
+          backendBody.source_references = (body.doc_paths as string[]).map(uri => ({ uri }));
+        }
       } else if (kind === "modules") {
         backendBody = {
           external_id: body.external_id ?? idempKey("mod"),
@@ -693,13 +703,38 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
       // float on the server (ops-server 0.9.16) — omit preserves, explicit null unpins,
       // same preserve-on-omit contract every other field on this whitelist already follows.
       if (body.position !== undefined) patchBody.position = body.position;
-      // TODO(bi-dir-mvp): blocked_by / cycle_id / doc_paths / priority are not backend-mutable
-      // fields on PATCH /api/work-items/{id} (blocked_by needs link_work_items/unlink_work_items;
+      // TODO(bi-dir-mvp): blocked_by / cycle_id / priority are not backend-mutable fields
+      // on PATCH /api/work-items/{id} (blocked_by needs link_work_items/unlink_work_items;
       // cycle_id needs assign_cycle_work_items — out of Phase 4 scope, flagged for Phase 5+).
       // NOTE (2026-07-31): `project` mutation on this PATCH is empirically untested against
       // the ops-server contract. If backend rejects/ignores, moveTask_ will surface the error.
     }
-    if (Object.keys(patchBody).length === 0) return {} as T;
+    // Item 9 (Wave D, 2026-09-06): work items carry no `doc_paths` column — the drawer's
+    // Related Docs field maps onto `source_references[].uri` (the create-body twin lives
+    // in the work-items POST block above). A bare `{uri}` per entry would silently drop
+    // any `anchor` an entry already carried, so this reads the row's CURRENT raw
+    // source_references and carries the anchor forward for every uri that's still
+    // present — new/added uris get `{uri}` with no anchor, same as create.
+    if (body.doc_paths !== undefined) {
+      let currentRefs: Array<{ uri: string; anchor?: string | null }> = [];
+      try {
+        const resp = await fetch(`${API_BASE}/api/work-items/${encodeURIComponent(external_id)}`, { headers });
+        if (resp.ok) {
+          const row = unwrapRow(await resp.json());
+          if (Array.isArray(row?.source_references)) currentRefs = row.source_references;
+        }
+      } catch { /* best-effort merge — a failed read still lets the save go through bare */ }
+      const anchorByUri = new Map(currentRefs.map(r => [r.uri, r.anchor]));
+      patchBody.source_references = (body.doc_paths as string[]).map(uri => {
+        const anchor = anchorByUri.get(uri);
+        return anchor ? { uri, anchor } : { uri };
+      });
+    }
+    // Guard the silent-no-op class (item 9's root cause, generalized): an empty patchBody
+    // used to `return {} as T` WITHOUT a network call, and every caller does
+    // `setItems(p => p.map(i => i.id === id ? updated : i))` — replacing the real row with
+    // `{}`. Throwing here routes every caller's existing catch → toast.error instead.
+    if (Object.keys(patchBody).length === 0) throw new Error("nothing to save");
     const data = await restFetch(`/api/work-items/${external_id}`, patchBody);
     return adaptWorkItemRead(unwrapRow(data)) as T;
   }
