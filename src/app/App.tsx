@@ -380,6 +380,7 @@ async function mcpCall<T>(name: string, args: Record<string, unknown>): Promise<
   const data = await response.json();
   if (data?.error) throw new Error(`MCP ${name} error: ${JSON.stringify(data.error).slice(0, 200)}`);
   const raw = data?.result?.content?.[0]?.text;
+  if (data?.result?.isError) throw new Error(typeof raw === "string" ? raw : `MCP ${name} failed`);
   if (raw === undefined) return data?.result as T;
   try { return JSON.parse(raw) as T; } catch { return raw as unknown as T; }
 }
@@ -512,13 +513,15 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
     return ((await restFetch("/api/projects")) as any[]).map(adaptProjectRead) as T;
   }
   if (path === "/projects" && method === "POST") {
-    const code = body.code || slugify(body.name ?? "project");
+    // The backend exposes upsert, not create-only. Give each new project its own
+    // key so duplicate names (or slug collisions) cannot overwrite another project.
+    const code = `${slugify(body.name ?? "project").replace(/-$/, "")}-${crypto.randomUUID()}`;
     const args: Record<string, unknown> = { code, name: body.name ?? "Untitled" };
     if (body.description) args.description = body.description;
     if (body.folder_path) args.folder_path = body.folder_path;
     if (body.status) args.status = body.status;
     if (body.team) args.team = body.team;
-    const r = await mcpCall<any>("add_project", args);
+    const r = await mcpCall<any>("upsert_project", args);
     return adaptProjectRead(unwrapRow(r)) as T;
   }
   const projMatch = path.match(/^\/projects\/([^/]+)$/);
@@ -1167,6 +1170,27 @@ async function commitOrderWrite(opts: {
 // by `load()`, and were the single state the old single-value filter always hid).
 const STATE_FILTER_LS_KEY = "caelos.stateFilter";
 const HIDE_DONE_STATES: WorkItemState[] = ["done", "deferred", "archived"];
+
+// Evaluate completion from all loaded work, never the search/state-filtered rows.
+// Descendants can inherit their module through a parent task rather than module_id.
+function isModuleComplete(mod: Mod, modules: Mod[], items: WorkItem[], ancestors = new Set<string>()): boolean {
+  if (ancestors.has(mod.id)) return false;
+  const branch = new Set(ancestors).add(mod.id);
+  const children = modules.filter(m => m.parent_module_id === mod.id);
+  if (children.some(child => !isModuleComplete(child, modules, items, branch))) return false;
+  const taskIds = new Set(items.filter(t => t.module_id === mod.id).map(t => t.id));
+  let previousSize = -1;
+  while (taskIds.size !== previousSize) {
+    previousSize = taskIds.size;
+    for (const task of items) {
+      if (task.parent_item_id && taskIds.has(task.parent_item_id)) taskIds.add(task.id);
+    }
+  }
+  const tasks = items.filter(t => taskIds.has(t.id));
+  if (tasks.some(t => !HIDE_DONE_STATES.includes(t.state))) return false;
+  // An empty active module is a place to plan work, not completed work.
+  return tasks.length > 0 || children.length > 0 || HIDE_DONE_STATES.includes(mod.state);
+}
 
 function defaultVisibleStates(allStates: WorkItemState[]): WorkItemState[] {
   return allStates.filter(s => s !== "archived");
@@ -2630,7 +2654,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
     const freshItems = itemsRef.current;
     const modIds = new Set(mods.map(m => m.id));
     const ids = freshItemOrder.filter(id => {
-      if (modIds.has(id)) return true; // module rows are never filtered out
+      if (modIds.has(id)) return !hideDoneActive || !isModuleComplete(mods.find(m => m.id === id)!, mods, freshItems);
       const task = freshItems.find(i => i.id === id);
       return !!task && visibleFilter(task);
     });
@@ -2986,6 +3010,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
           ) : (
             orderedEntries.map((entry, idx) => {
               if (entry.type === "module") {
+                if (hideDoneActive && isModuleComplete(entry.mod, mods, items)) return null;
                 const modTasks = items.filter(w => w.module_id === entry.id && !w.parent_item_id && visibleFilter(w));
                 return (
                   <DraggableProjectItem key={entry.id} id={entry.id} index={idx} onMove={moveRootItem} onDropEnd={handleRootDropEnd}>
@@ -3995,7 +4020,7 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
       setCreatingProject(false); setPForm({ name: "", description: "", folder_path: "" });
       toast.success("Project created");
       onSelect({ type: "project", item: p });
-    } catch { toast.error("Failed to create project"); }
+    } catch (error) { toast.error(`Failed to create project: ${error instanceof Error ? error.message.slice(0, 160) : "Please try again"}`); }
     finally { setSaving(false); }
   }
 

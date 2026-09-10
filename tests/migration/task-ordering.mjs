@@ -6,13 +6,14 @@ const errors=[];page.on('pageerror',e=>errors.push(e.message));
 const project={code:'order-fixture',name:'Ordering fixture',status:'in-progress',team:[]};
 const mod={id:'module-uuid',external_id:'module-order',project_code:project.code,name:'Ordering module',state:'ready',team:[],position:null};
 const task=(id,name,state='ready',module_id=null)=>({id:id+'-uuid',external_id:id,name,state,module_id,project_code:project.code,position:null});
+const hiddenMod={...mod,id:'hidden-module-uuid',external_id:'hidden-module',name:'Finished module',state:'done'};
 const tasks=[task('hidden','Hidden finished','done',mod.external_id),task('alpha','Alpha','ready',mod.external_id),task('beta','Beta','ready',mod.external_id),task('root','Root')];
 const writes=[];let failOrder=false;
 await page.route('**/*',async route=>{
  const req=route.request(),u=new URL(req.url());let data=[];
  if(u.pathname.startsWith('/api/')){
   if(u.pathname==='/api/projects')data=[project];
-  if(u.pathname.endsWith('/modules'))data=[mod];
+  if(u.pathname.endsWith('/modules'))data=[mod,hiddenMod];
   if(u.pathname.endsWith('/work-items'))data=tasks;
   if(u.pathname.startsWith('/api/work-items/')){
    data=tasks.find(t=>t.external_id===u.pathname.split('/').at(-1));
@@ -26,9 +27,10 @@ await page.route('**/*',async route=>{
  }
  if(u.pathname==='/mcp'){
   const {params}=req.postDataJSON();
-  if(params.name==='get_module')data=mod;
+  if(params.name==='get_module')data=params.arguments.external_id===hiddenMod.external_id?hiddenMod:mod;
   if(params.name==='upsert_module'){
-   writes.push({id:mod.external_id,...params.arguments});Object.assign(mod,params.arguments);data={row:mod};
+   const target=params.arguments.external_id===hiddenMod.external_id?hiddenMod:mod;
+   writes.push({id:target.external_id,...params.arguments});Object.assign(target,params.arguments);data={row:target};
   }
   await route.fulfill({json:{result:{content:[{type:'text',text:JSON.stringify(data)}]}}});return;
  }
@@ -64,6 +66,9 @@ try{
  await drag(moduleRow(),row('root'),'Ordering module');await rootSaved;
  await page.reload();await row('root').waitFor();
  assert.deepEqual(await order(),['root','module-order'],'Mixed root order survives reload');
- assert(tasks[3].position<mod.position);assert.deepEqual(errors,[]);
+ assert(tasks[3].position<mod.position);
+ assert.equal(hiddenMod.position,null,'Hidden module retains its position');
+ assert(!writes.some(w=>w.id==='hidden-module'),'Hidden modules must not receive reorder writes');
+ assert.deepEqual(errors,[]);
  console.log('PASS filtered module pointer order, hidden-row preservation, failed-drop recovery, mixed root/module persistence and reload; zero page errors');
 }finally{await browser.close();}
