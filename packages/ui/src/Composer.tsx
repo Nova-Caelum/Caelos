@@ -3,6 +3,8 @@ import {
   ComposerInternal,
   PermissionControlInternal,
 } from "./composer-internal";
+import type { ComposerCommand, ComposerAgent } from "./composer-commands";
+export type { ComposerCommand, ComposerAgent } from "./composer-commands";
 export type ReplyFormat = "text" | "voice" | "both";
 export type ComposerAddition =
   | "File or folder"
@@ -31,6 +33,13 @@ export interface ComposerProps {
   onLiveChange?: (live: boolean) => void;
   onDictate?: () => void;
   onAdd?: (kind: ComposerAddition) => void;
+  /** Installed commands and skills. Omit to disable suggestions; [] shows an empty registry. */
+  commands?: ComposerCommand[];
+  /** Only the agents participating in this chat. Omit to disable @ suggestions. */
+  agents?: ComposerAgent[];
+  /** Agent whose model/reasoning the controlled props currently describe. */
+  activeAgentId?: string;
+  onActiveAgentChange?: (agentId: string) => void;
   disabled?: boolean;
   placeholder?: string;
   label?: string;
@@ -42,6 +51,10 @@ export interface ComposerProps {
 export function Composer(props: ComposerProps) {
   return (
     <ComposerInternal
+      commands={undefined}
+      agents={undefined}
+      activeAgentId={undefined}
+      onActiveAgentChange={undefined}
       context={undefined}
       header={undefined}
       footer={undefined}

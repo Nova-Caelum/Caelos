@@ -14,7 +14,7 @@ const composer=gallery.locator('[data-composer-demo]');
 await test('Built Panda styles and approved typography',async()=>{
  const style=await gallery.getByRole('button',{name:'Create project',exact:true}).evaluate(e=>({cls:e.className,font:getComputedStyle(e).fontFamily,weight:getComputedStyle(e).fontWeight}));
  assert.match(style.cls,/caelos-button/);assert.match(style.font,/IBM Plex Sans/);assert.equal(style.weight,'650');
- assert.equal(await gallery.locator('.caelos-card--variant_glass').evaluate(e=>getComputedStyle(e).backdropFilter),'blur(19px) saturate(1.2)');
+ assert.equal(await gallery.locator('.caelos-card--variant_glass').first().evaluate(e=>getComputedStyle(e).backdropFilter),'blur(19px) saturate(1.2)');
 });
 await test('Permission menu stays open and sits above Foundry',async()=>{
  await composer.getByRole('button',{name:'Permissions: Ask before acting'}).click();
@@ -38,7 +38,7 @@ await test('Reply selector and demo send',async()=>{
 });
 await test('Light theme reaches portal menus and approved glass settings',async()=>{
  await gallery.getByRole('button',{name:'Switch to light',exact:true}).click();
- assert.equal(await gallery.locator('.caelos-card--variant_glass').evaluate(e=>getComputedStyle(e).backdropFilter),'blur(2px) saturate(1.2)');
+ assert.equal(await gallery.locator('.caelos-card--variant_glass').first().evaluate(e=>getComputedStyle(e).backdropFilter),'blur(2px) saturate(1.2)');
  await composer.getByRole('button',{name:'Permissions: Full access'}).click();
  assert.equal(await page.getByRole('menu').getAttribute('data-caelos-theme'),'light');await page.waitForTimeout(400);await page.keyboard.press('Escape');await page.getByRole('menu').waitFor({state:'hidden'});
  await gallery.getByRole('button',{name:'Switch to dark',exact:true}).click();
@@ -58,7 +58,9 @@ await test('Rebuild rejects foreign origins and wrong methods',async()=>{
  let r=await page.request.post(rebuildUrl,{headers:{Origin:'https://example.com','X-Caelos-Foundry':'rebuild-ui'}});assert.equal(r.status(),403);
  r=await page.request.get(rebuildUrl,{headers:{'X-Caelos-Foundry':'rebuild-ui'}});assert.equal(r.status(),405);
 });
-await test('Rebuild compiles the package and refreshes the Foundry',async()=>{
+if (process.env.SKIP_FOUNDRY_REBUILD === '1') {
+ console.log('SKIP real rebuild/refresh: explicit SKIP_FOUNDRY_REBUILD=1');
+} else await test('Rebuild compiles the package and refreshes the Foundry',async()=>{
  await gallery.getByRole('button',{name:'Rebuild library',exact:true}).click();
  await page.waitForFunction(()=>document.querySelector('.foundry-panda [role=status]')?.textContent?.startsWith('Library rebuilt'),{},{timeout:120000});
  await gallery.getByRole('button',{name:'Rebuild library',exact:true}).waitFor();

@@ -25,6 +25,10 @@ The legacy app tuning controls change the old seed system; they do not author th
 
 The conversation composer demonstrates the approved [Progressive Selector](INTERACTION-PATTERNS.md#progressive-selector). Use its state and acceptance contract when reviewing matching controls; the hover and click behavior is part of the design system, not a demo-only flourish.
 
+The composer also demonstrates the [slash command autocomplete](INTERACTION-PATTERNS.md#slash-command-autocomplete). Type `/` for the sample command/skill catalog; names are the only row content, and hover or arrow navigation exposes a summary tooltip. Selection edits the local draft without invoking an agent. Installed catalogs are supplied by the host application.
+
+Type `@` in the primary composer to tag one of three sample participants using the same name-only picker and summary tooltip. The secondary composer has an empty roster to demonstrate per-chat scope. The host supplies real participants via `Composer.agents`.
+
 ## Verification
 
 With the local Foundry running, execute from the repository root:

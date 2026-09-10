@@ -1,4 +1,5 @@
 import { definePreset } from "@pandacss/dev";
+import { foundation, typography } from "./foundation-recipes";
 import { approvedTokens } from "./tokens";
 import {
   avatar,
@@ -18,6 +19,9 @@ import {
 import { composerCss, composerKeyframes } from "./composer-styles";
 const dark = {
   ...approvedTokens,
+  "--nc-ground": "var(--sys-ground)",
+  "--nc-chrome": "var(--sys-chrome)",
+  "--nc-elevated": "var(--sys-elevated)",
   "--il-ink": "#f5ead5",
   "--il-muted": "#b7afc4",
   "--il-dim": "#958ba5",
@@ -49,6 +53,9 @@ const dark = {
     "color-mix(in srgb,var(--sys-sem-atmospheric) 24%,transparent)",
 } as const;
 const light = {
+  "--nc-ground": "#eee8f2",
+  "--nc-chrome": "#e6dfea",
+  "--nc-elevated": "#f3eef6",
   "--il-ink": "#33283e",
   "--il-muted": "#665771",
   "--il-dim": "#74647e",
@@ -99,7 +106,7 @@ export default definePreset({
           atmospheric: { value: approvedTokens["--sys-sem-atmospheric"] },
         },
       },
-      recipes: { avatar, button, card, chip, row, tooltip },
+      recipes: { foundation, typography, avatar, button, card, chip, row, tooltip },
       slotRecipes: { overlay, disclosure, identity, field: input, menu, scroll: scrollArea },
       keyframes: {
         "nc-overlay-in": { from: { opacity: 0 }, to: { opacity: 1 } },

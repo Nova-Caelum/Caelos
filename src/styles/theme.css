@@ -243,12 +243,6 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 /* Active nav item — accent-tint background + inset accent left edge (no layout shift) */
-.nc-nav-active {
-  background: var(--nc-accent-tint);
-  color: var(--nc-text-cream);
-  box-shadow: inset 2px 0 0 var(--nc-accent);
-}
-
 /* ─────────────────────────────────────────────────────────────────────────────
    Ambient depth — a diffuse light-rig on the ground surface.
    Five layers, painted in stacking order (topmost first per CSS spec):
@@ -341,82 +335,4 @@ textarea:focus:not(:focus-visible),
 [data-radix-popper-content-wrapper] > *:not(:where([data-caelos-theme], [data-caelos-theme] *))[data-state="closed"] {
   animation: nc-pop-out 100ms cubic-bezier(0.4, 0, 1, 1);
   transform-origin: var(--radix-popper-transform-origin, center);
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   Text input / textarea / select-trigger — einUI-inspired liquid-glass focus.
-   Rest: quiet fill + hairline border.
-   Focus: diagonal gradient fill (light-indigo → sage, non-accent to avoid
-   ground-collision), soft focus-purple hairline (#A896F0 @ 20%), diffuse
-   outer glow that fades to transparent (rounded/soft, not hard-ring), whisper
-   inset top highlight.
-   Smooth pop-in: @property lets the gradient color-stops interpolate over the
-   transition duration; without it, background transitions from solid → gradient
-   would snap. Falls back gracefully to snap on browsers without @property.
-   Replaces the harsh `focus:border-[#6D5AD1]` outline pattern.
-   ────────────────────────────────────────────────────────────────────────── */
-@property --nc-input-fill-a {
-  syntax: '<color>';
-  inherits: false;
-  initial-value: rgba(255, 255, 255, 0.02);
-}
-@property --nc-input-fill-b {
-  syntax: '<color>';
-  inherits: false;
-  initial-value: rgba(255, 255, 255, 0);
-}
-
-.nc-input {
-  --nc-input-fill-a: rgba(255, 255, 255, 0.02);
-  --nc-input-fill-b: rgba(255, 255, 255, 0);
-  background: linear-gradient(135deg, var(--nc-input-fill-a) 0%, var(--nc-input-fill-b) 100%);
-  border: 1px solid var(--nc-hair-2);
-  border-radius: 0.5rem;
-  color: var(--nc-text-cream);
-  transition:
-    --nc-input-fill-a 240ms cubic-bezier(0.16, 1, 0.3, 1),
-    --nc-input-fill-b 240ms cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 200ms cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 240ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-.nc-input::placeholder { color: var(--nc-text-dim); }
-.nc-input:hover:not(:disabled):not(:focus) {
-  --nc-input-fill-a: rgba(255, 255, 255, 0.03);
-  border-color: var(--nc-hair-3);
-}
-.nc-input:focus,
-.nc-input:focus-visible,
-.nc-input:focus-within {
-  outline: none;
-  --nc-input-fill-a: rgba(142, 150, 204, 0.22);
-  --nc-input-fill-b: rgba(122, 158, 147, 0.16);
-  border-color: rgba(168, 150, 240, 0.16);
-  box-shadow: 0 0 10px rgba(168, 150, 240, 0.28);
-}
-.nc-input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Retained for the release multi-state filter until shared checkbox-menu approval. */
-.nc-glass-menu {
-  background: rgba(42, 37, 64, 0.55) !important;
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(109, 90, 209, 0.28) !important;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.55),
-    0 0 0 1px rgba(255, 255, 255, 0.02),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-}
-.nc-glass-menu [role="menuitem"] {
-  transition: background 120ms ease, color 120ms ease;
-  border-radius: 6px;
-}
-.nc-glass-menu [role="menuitem"]:focus,
-.nc-glass-menu [role="menuitem"][data-highlighted] {
-  background: rgba(109, 90, 209, 0.22) !important;
-  color: var(--nc-text-cream) !important;
-  outline: none;
 }

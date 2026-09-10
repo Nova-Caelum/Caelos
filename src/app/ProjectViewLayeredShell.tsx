@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
-import { Card, TabsRoot, TabsList, TabsTrigger, TabsContent } from "@nova-caelum/ui";
+import { Card, Heading, Text, Separator, TabsRoot, TabsList, TabsTrigger, TabsContent } from "@nova-caelum/ui";
 import { Folder } from "lucide-react";
-import { NC } from "../design/tokens";
-import { GlassSeparator } from "./components/ui/glass-separator";
 import {
   ProjectInfoTab,
   TasksPane,
@@ -53,25 +51,16 @@ export function ProjectViewLayeredShell({
       <Card variant="glass" data-foundry-surface="project" className="flex-1 flex flex-col overflow-hidden" style={{ padding: 0, minHeight: 0 }}>
           {/* Header block — verbatim from canonical ProjectView (App.tsx:2948-2960) */}
           <div className="px-7 flex-shrink-0" style={{ paddingTop: 28, paddingBottom: 28 }}>
-            <p
-              className="text-xs font-semibold tracking-widest uppercase mb-2.5"
-              style={{ color: NC.accent }}
+            <Text as="p" variant="label"
+              className="    mb-2.5"
+
             >
               Project
-            </p>
+            </Text>
             <div className="flex items-center gap-3 flex-wrap">
-              <h1
-                style={{
-                  fontFamily: "'IBM Plex Sans', sans-serif",
-                  fontSize: 30,
-                  color: NC.cream,
-                  fontWeight: 600,
-                  lineHeight: 1.12,
-                  letterSpacing: "-0.028em",
-                }}
-              >
+              <Heading as="h1" size="page">
                 {project.name}
-              </h1>
+              </Heading>
               <StatusPill
                 status={project.status}
                 onChange={(s) => onSaveProject(project.id, { status: s })}
@@ -81,22 +70,22 @@ export function ProjectViewLayeredShell({
               </div>
             </div>
             {project.description && (
-              <p className="text-sm mt-4" style={{ color: NC.stone }}>
+              <Text as="p" tone="muted" className=" mt-4">
                 {project.description}
-              </p>
+              </Text>
             )}
             {project.folder_path && (
-              <p
-                className="flex items-center gap-1.5 text-xs font-mono mt-4"
-                style={{ color: "rgba(138,133,128,0.6)" }}
+              <Text as="p" variant="small" tone="dim"
+                className="flex items-center gap-1.5  font-mono mt-4"
+
               >
                 <Folder size={11} />
-                {project.folder_path}
-              </p>
+                <span>{project.folder_path}</span>
+              </Text>
             )}
           </div>
 
-          <GlassSeparator />
+          <Separator />
 
           {/* Tab content panes — driven by external Chip row via TabsPrimitive.Root value binding */}
           <TabsContent

@@ -33,3 +33,7 @@ FOUNDRY_URL=http://127.0.0.1:5194/?foundry=1 node packages/ui/tests/foundry.mjs
 The Foundry shared suite performs a real local package rebuild and refresh. Do not run another package build concurrently. Other application fixtures must be finished before this refresh test. The app's full temporary TypeScript diagnostics retain pre-existing mock/design-tool errors; shared package typecheck is part of its build. There is no installed remote enforcement.
 
 `completed-modules.mjs` covers Hide done across completed, mixed, empty, nested-module, and subtask cases, including reload and completing the last task. `project-initiative.mjs` rejects the retired `add_project` tool and models HTTP 200 MCP errors; it also verifies blank folder paths and independent same-name project creation. Use the production bundle for application regressions as documented in the release notes.
+
+September 10 Level 1 additions: `activity.mjs` verifies UUID-scoped history, failed-load retry, explicit read-only state, nested Escape/focus and narrow bounds. `task-rows.mjs` also requires the current responsive markup and a usable title width. Run the latter against the fresh production preview to avoid Vite optimized-dependency staleness.
+
+`packages/ui/tests/foundations.mjs` verifies the new shared foundations. The shared Foundry suite accepts `SKIP_FOUNDRY_REBUILD=1` and visibly reports that check as skipped; use this only when the real rebuild cannot run and report the limitation. It does not convert a skipped rebuild into a passing check.

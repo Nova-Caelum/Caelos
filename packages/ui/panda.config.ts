@@ -8,6 +8,8 @@ export default defineConfig({
   outdir: "styled-system",
   staticCss: {
     recipes: {
+      foundation: ["*"],
+      typography: ["*"],
       overlay: ["*"],
       avatar: ["*"],
       identity: ["*"],

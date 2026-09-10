@@ -1,3 +1,4 @@
+import { Heading, Text, Range, Checkbox, LinkButton } from "@nova-caelum/ui";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { AlertTriangle, Check, ChevronsLeft, ChevronsRight, Clipboard, ExternalLink, GitPullRequest, RotateCcw, Save, SlidersHorizontal, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -61,9 +62,6 @@ const labelStyle: CSSProperties = {
   justifyContent: "space-between",
   gap: 12,
   color: "var(--sys-text-secondary)",
-  fontSize: 12,
-  fontWeight: 620,
-  letterSpacing: ".01em",
 };
 
 const IMPORTED_OVERRIDE = parseFoundryOverride(seedOverride);
@@ -148,21 +146,19 @@ function RangeControl({
 }) {
   return (
     <label style={{ display: "grid", gap: 7 }}>
-      <span style={labelStyle}>
+      <Text variant="small" tone="muted" style={labelStyle}>
         <span>{label}</span>
         <span style={{ color: "var(--sys-text-primary)", fontVariantNumeric: "tabular-nums" }}>
           {value.toFixed(step < 0.01 ? 3 : step < 1 ? 2 : 0)}{unit}
         </span>
-      </span>
-      <input
+      </Text>
+      <Range
         aria-label={label}
-        type="range"
         min={min}
         max={max}
         step={step}
         value={value}
         onInput={(event) => onChange(Number((event.currentTarget as HTMLInputElement).value))}
-        style={{ width: "100%", accentColor: "var(--sys-accent)", cursor: "ew-resize" }}
       />
     </label>
   );
@@ -473,7 +469,7 @@ export default function Foundry() {
       `}</style>
       <header style={{ padding: "20px 20px 18px", display: "grid", gap: 14 }}>
         <label style={{ display: "grid", gridTemplateColumns: "auto minmax(0, 1fr)", alignItems: "center", gap: 10 }}>
-          <span style={{ color: "var(--sys-text-faint)", fontSize: 10, fontWeight: 720, letterSpacing: ".1em", textTransform: "uppercase" }}>Test against</span>
+          <Text variant="label" tone="dim">Test against</Text>
           <Select
             label="Test against"
             value={testTarget || "__empty__"}
@@ -486,21 +482,21 @@ export default function Foundry() {
           <div style={{ display: "grid", gap: 6 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--sys-accent-on-tint)" }}>
               <Sparkles size={15} strokeWidth={1.8} />
-              <span style={{ fontSize: 10, fontWeight: 760, letterSpacing: ".16em", textTransform: "uppercase" }}>The Foundry</span>
+              <Text variant="label" tone="accent">The Foundry</Text>
             </div>
-            <h1 style={{ margin: 0, fontSize: 21, lineHeight: 1.15, letterSpacing: "-.025em", fontWeight: 680 }}>Caelos design library</h1>
-            <p style={{ margin: 0, maxWidth: 360, color: "var(--sys-text-tertiary)", fontSize: 12, lineHeight: 1.5 }}>
+            <Heading as="h1" size="title">Caelos design library</Heading>
+            <Text as="p" variant="small" tone="muted" style={{ maxWidth: 360 }}>
               {view === "components"
                 ? "The approved Panda components, installed from the shared UI package."
                 : "Legacy app tuning. These controls affect the existing app, not the Panda library."}
-            </p>
-            {view === "tune" && <span
+            </Text>
+            {view === "tune" && <Text variant="small"
               data-testid="foundry-staging-status"
               data-staged-keys={stagedKeyCount}
-              style={{ color: stagedKeyCount ? "var(--sys-sem-progress)" : "var(--sys-text-faint)", fontSize: 10, fontWeight: 650 }}
+              style={{ color: stagedKeyCount ? "var(--sys-sem-progress)" : "var(--sys-text-faint)",  }}
             >
               staged: {stagedKeyCount ? `override active (${stagedKeyCount} keys)` : "clean"}
-            </span>}
+            </Text>}
           </div>
           <div style={{ display: "grid", justifyItems: "end", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: "var(--sys-space-2)" }}>
@@ -520,7 +516,7 @@ export default function Foundry() {
         </div>
         <section aria-label="Canvas surface previews" style={{ display: "grid", gap: 10 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={labelStyle}>Canvas textures</span>
+            <Text variant="small" tone="muted" style={labelStyle}>Canvas textures</Text>
             <Button variant="text" size="sm"
               disabled={Object.values(surfacePreviews).every(mode => mode === "current")}
               onClick={() => setSurfacePreviews({ project: "current", module: "current" })}>Reset textures</Button>
@@ -528,19 +524,19 @@ export default function Foundry() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
             {CARD_SURFACES.map(({ target, label }) => (
               <label key={target} style={{ display: "grid", gap: 6, minWidth: 0 }}>
-                <span style={labelStyle}>{label}</span>
+                <Text variant="small" tone="muted" style={labelStyle}>{label}</Text>
                 <Select label={`${label} texture`} value={surfacePreviews[target]} options={TEXTURE_OPTIONS}
                   onValueChange={value => setSurfacePreviews(current => ({ ...current, [target]: value as SurfacePreview }))} />
               </label>
             ))}
           </div>
-          <p style={{ margin: 0, color: "var(--sys-text-tertiary)", fontSize: 11, lineHeight: 1.5 }}>
+          <Text as="p" variant="small" tone="muted">
             Preview on the project canvas. Current restores the existing card. Texture choices reset on reload and are not included in Stage or Commit + Push.
-          </p>
+          </Text>
         </section>
         {view === "tune" && <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 7 }} aria-label="Surface ladder">
           {SURFACE_NAMES.map((name) => (
-            <button
+            <Button variant="text" size="sm"
               key={name}
               type="button"
               aria-label={`${name} surface · ${seeds.character.modes[name]}`}
@@ -550,7 +546,7 @@ export default function Foundry() {
               <span style={{ color: "var(--sys-accent-on-tint)", fontSize: 7, fontWeight: 760, letterSpacing: ".08em", textTransform: "uppercase" }}>{seeds.character.modes[name]}</span>
               <span data-surface={name} style={{ display: "block", height: 28, borderRadius: 7, border: "1px solid var(--sys-hair-1)" }} />
               <span style={{ overflow: "hidden", color: "var(--sys-text-faint)", fontSize: 8, textOverflow: "ellipsis" }}>{name}</span>
-            </button>
+            </Button>
           ))}
         </div>}
         <RowGroup aria-label="Foundry view">
@@ -567,11 +563,11 @@ export default function Foundry() {
       <section style={{ ...section, display: "grid", gap: 15 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <SlidersHorizontal size={14} color="var(--sys-text-tertiary)" />
-          <h2 style={{ margin: 0, fontSize: 12, fontWeight: 720, letterSpacing: ".08em", textTransform: "uppercase" }}>Surface field</h2>
+          <Text as="p" variant="label">Surface field</Text>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", alignItems: "end", gap: 10 }}>
           <label style={{ display: "grid", gap: 7 }}>
-            <span style={labelStyle}><span>Ground hex</span><span style={{ color: groundHexError ? "var(--sys-sem-danger-on-tint)" : "var(--sys-text-faint)", fontSize: 10 }}>{groundHexError ? "Use #RGB or #RRGGBB" : lightnessOnly ? "L only" : "full re-anchor"}</span></span>
+            <Text variant="small" tone="muted" style={labelStyle}><span>Ground hex</span><Text variant="small" style={{ color: groundHexError ? "var(--sys-sem-danger-on-tint)" : "var(--sys-text-faint)" }}>{groundHexError ? "Use #RGB or #RRGGBB" : lightnessOnly ? "L only" : "full re-anchor"}</Text></Text>
             <Input
               invalid={groundHexError}
               aria-label="Ground hex"
@@ -589,8 +585,8 @@ export default function Foundry() {
 
             />
           </label>
-          <label style={{ display: "inline-flex", alignItems: "center", gap: 7, minHeight: 34, color: "var(--sys-text-secondary)", fontSize: 11, whiteSpace: "nowrap" }}>
-            <input type="checkbox" checked={lightnessOnly} onChange={(event) => setLightnessOnly(event.currentTarget.checked)} /> L only
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 7, minHeight: 34, color: "var(--sys-text-secondary)", whiteSpace: "nowrap" }}>
+            <Checkbox checked={lightnessOnly} onChange={(event) => setLightnessOnly(event.currentTarget.checked)} /> <Text variant="small">L only</Text>
           </label>
         </div>
         <RangeControl label="Ground lightness" value={seeds.color.groundBase.l} min={0.08} max={0.36} step={0.001} onChange={(value) => updateColor((next) => { next.groundBase.l = value; })} />
@@ -607,11 +603,11 @@ export default function Foundry() {
       </section>
 
       <section style={{ ...section, display: "grid", gap: 17 }}>
-        <h2 style={{ margin: 0, fontSize: 12, fontWeight: 720, letterSpacing: ".08em", textTransform: "uppercase" }}>Accent authorship</h2>
+        <Text as="p" variant="label">Accent authorship</Text>
         {(["cool", "hot"] as const).map((name) => (
           <div key={name} style={{ display: "grid", gap: 10, padding: 12, border: "1px solid var(--sys-hair-1)", borderRadius: 12, background: "rgba(255,255,255,.018)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ ...labelStyle, textTransform: "capitalize" }}>{name}</span>
+              <Text variant="small" tone="muted" style={{ ...labelStyle, textTransform: "capitalize" }}>{name}</Text>
               <span style={{ width: 26, height: 16, borderRadius: 99, background: name === "cool" ? "var(--sys-accent)" : "var(--sys-accent-hot)", border: "1px solid var(--sys-hair-2)" }} />
             </div>
             <RangeControl label="Lightness" value={seeds.color.accents[name].l} min={0.3} max={0.9} step={0.001} onChange={(value) => updateColor((next) => { next.accents[name].l = value; })} />
@@ -622,7 +618,7 @@ export default function Foundry() {
       </section>
 
       <section style={{ ...section, display: "grid", gap: 14 }}>
-        <h2 style={{ margin: 0, fontSize: 12, fontWeight: 720, letterSpacing: ".08em", textTransform: "uppercase" }}>Text contrast targets</h2>
+        <Text as="p" variant="label">Text contrast targets</Text>
         {(["primary", "secondary", "tertiary", "faint"] as const).map((name) => (
           <RangeControl
             key={name}
@@ -641,9 +637,9 @@ export default function Foundry() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <SlidersHorizontal size={14} color="var(--sys-text-tertiary)" />
-            <h2 style={{ margin: 0, fontSize: 12, fontWeight: 720, letterSpacing: ".08em", textTransform: "uppercase" }}>Shape field</h2>
+            <Text as="p" variant="label">Shape field</Text>
           </div>
-          <span style={{ color: "var(--sys-text-faint)", fontSize: 10 }}>{Object.keys(shapeTheme.css).length} tokens</span>
+          <Text variant="small" tone="dim">{Object.keys(shapeTheme.css).length} tokens</Text>
         </div>
 
         <RangeControl label="Space unit" value={seeds.shape.spaceUnit} min={2} max={8} step={1} unit="px" onChange={(value) => updateShape((next) => { next.spaceUnit = value; })} />
@@ -657,12 +653,12 @@ export default function Foundry() {
 
       <section aria-label="Shape specimens" style={{ ...section, display: "grid", gap: 18 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-          <h2 style={{ margin: 0, fontSize: 12, fontWeight: 720, letterSpacing: ".08em", textTransform: "uppercase" }}>Shape specimens</h2>
-          <span style={{ color: "var(--sys-text-faint)", fontSize: 9, letterSpacing: ".08em", textTransform: "uppercase" }}>Output only · move dials</span>
+          <Text as="p" variant="label">Shape specimens</Text>
+          <Text variant="label" tone="dim">Output only · move dials</Text>
         </div>
 
         <div style={{ display: "grid", gap: 9 }}>
-          <span style={labelStyle}>Spacing ruler</span>
+          <Text variant="small" tone="muted" style={labelStyle}>Spacing ruler</Text>
           <div data-testid="spacing-ruler" style={{ display: "grid", gridTemplateColumns: "repeat(8, minmax(0, 1fr))", alignItems: "end", gap: 5, height: 54 }}>
             {Array.from({ length: 8 }, (_, index) => (
               <div key={index} style={{ display: "grid", placeItems: "end center", gap: 4 }}>
@@ -674,7 +670,7 @@ export default function Foundry() {
         </div>
 
         <div style={{ display: "grid", gap: 9 }}>
-          <span style={labelStyle}>Radius curve</span>
+          <Text variant="small" tone="muted" style={labelStyle}>Radius curve</Text>
           <div data-testid="radius-specimens" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 7 }}>
             {(["sm", "md", "lg", "xl", "full"] as const).map((name) => (
               <div key={name} style={{ display: "grid", gap: 5, textAlign: "center" }}>
@@ -686,7 +682,7 @@ export default function Foundry() {
         </div>
 
         <div style={{ display: "grid", gap: 9 }}>
-          <span style={labelStyle}>Elevation stack</span>
+          <Text variant="small" tone="muted" style={labelStyle}>Elevation stack</Text>
           <div data-testid="elevation-specimens" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 9 }}>
             {[0, 1, 2, 3].map((level) => (
               <div key={level} style={{ display: "grid", placeItems: "center", minHeight: 44, borderRadius: "var(--sys-radius-md)", color: "var(--sys-text-tertiary)", background: "var(--sys-elevated)", border: "1px solid var(--sys-border-1)", boxShadow: `var(--sys-elev-${level})`, fontSize: 9 }}>
@@ -696,7 +692,7 @@ export default function Foundry() {
           </div>
         </div>
 
-        <button
+        <Button
           data-testid="motion-specimen"
           type="button"
           onPointerDown={() => setMotionActive(true)}
@@ -719,12 +715,12 @@ export default function Foundry() {
           }}
         >
           Press to preview motion
-        </button>
+        </Button>
       </section>
 
       <Disclosure style={section} title={`Token ledger · ${Object.keys(combinedCss).length}`}>
         <Card variant="flat" style={{ marginTop: 14, padding: 0, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", fontSize: 10 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
             <thead style={{ color: "var(--sys-text-faint)", background: "rgba(255,255,255,.025)", textAlign: "left" }}>
               <tr><th style={{ padding: "8px 9px", width: "53%" }}>Token</th><th style={{ padding: "8px 5px" }}>Value</th><th style={{ padding: "8px 5px", width: 44 }}>Lc</th><th style={{ padding: "8px 5px", width: 30 }} aria-label="Clamped">C</th></tr>
             </thead>
@@ -734,9 +730,9 @@ export default function Foundry() {
                 const isClamped = theme.meta.clamped.includes(name);
                 return (
                   <tr key={name} style={{ borderTop: "1px solid var(--sys-hair-1)" }}>
-                    <td title={name} style={{ padding: "7px 9px", overflow: "hidden", color: "var(--sys-text-tertiary)", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "var(--nc-font-mono, ui-monospace)" }}>{name.replace("--sys-", "")}</td>
-                    <td title={value} style={{ padding: "7px 5px", overflow: "hidden", color: "var(--sys-text-secondary)", textOverflow: "ellipsis", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{value}</td>
-                    <td style={{ padding: "7px 5px", color: "var(--sys-text-tertiary)", fontVariantNumeric: "tabular-nums" }}>{lc === undefined ? "—" : Math.abs(lc).toFixed(1)}</td>
+                    <td title={name} style={{ padding: "7px 9px", overflow: "hidden", color: "var(--sys-text-tertiary)", textOverflow: "ellipsis", whiteSpace: "nowrap",  }}><Text variant="mono" tone="muted">{name.replace("--sys-", "")}</Text></td>
+                    <td title={value} style={{ padding: "7px 5px", overflow: "hidden", color: "var(--sys-text-secondary)", textOverflow: "ellipsis", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}><Text variant="mono">{value}</Text></td>
+                    <td style={{ padding: "7px 5px", color: "var(--sys-text-tertiary)", fontVariantNumeric: "tabular-nums" }}><Text variant="small" tone="muted">{lc === undefined ? "—" : Math.abs(lc).toFixed(1)}</Text></td>
                     <td style={{ padding: "7px 5px", color: isClamped ? "var(--sys-sem-progress)" : "var(--sys-text-faint)" }}>{isClamped ? "●" : "·"}</td>
                   </tr>
                 );
@@ -754,37 +750,35 @@ export default function Foundry() {
             <div style={{ display: "grid", gap: 16, padding: 20 }}>
               {promotionResult ? (
                 <div style={{ display: "grid", gap: 14 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 9, color: "var(--sys-sem-done-on-tint)", fontSize: 13, fontWeight: 720 }}>
-                    <Check size={16} /> Promotion PR opened
+                  <div style={{ display: "flex", alignItems: "center", gap: 9, color: "var(--sys-sem-done-on-tint)",  }}>
+                    <Check size={16} /> <Text>Promotion PR opened</Text>
                   </div>
                   <Card variant="flat" style={{ padding: 13 }}>
-                    <div style={{ color: "var(--sys-text-faint)", marginBottom: 5 }}>Branch</div>
-                    <code style={{ color: "var(--sys-text-secondary)" }}>{promotionResult.branch}</code>
+                    <Text as="div" variant="label" tone="dim" style={{ marginBottom: 5 }}>Branch</Text>
+                    <Text variant="mono" tone="muted">{promotionResult.branch}</Text>
                   </Card>
-                  <a
-                    href={promotionResult.prUrl}
+                  <LinkButton href={promotionResult.prUrl}
                     target="_blank"
                     rel="noreferrer"
-                    style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, minHeight: 40, border: "1px solid var(--sys-accent-line)", borderRadius: 10, color: "var(--sys-accent-on-tint)", background: "var(--sys-accent-tint)", fontSize: 12, fontWeight: 720, textDecoration: "none" }}
                   >
                     Open pull request <ExternalLink size={13} />
-                  </a>
+                  </LinkButton>
                 </div>
               ) : (
                 <>
                   <div style={{ display: "grid", gap: 8 }}>
                     <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-                      <strong style={{ fontSize: 12 }}>Seed diff</strong>
-                      <span style={{ color: "var(--sys-text-faint)", fontSize: 10 }}>{promotionDiff.length} changed values</span>
+                      <Text variant="label">Seed diff</Text>
+                      <Text variant="small" tone="dim">{promotionDiff.length} changed values</Text>
                     </div>
                     <Card variant="flat" style={{ padding: 0, overflow: "hidden" }}><ScrollArea viewportLabel="Seed diff" style={{ maxHeight: 210 }}>
                       {promotionDiff.length ? promotionDiff.slice(0, 24).map((entry) => (
-                        <div key={entry.path} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 12, padding: "9px 11px", borderTop: "1px solid var(--sys-hair-1)", fontSize: 10 }}>
-                          <code title={entry.path} style={{ overflow: "hidden", color: "var(--sys-text-tertiary)", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.path}</code>
-                          <span style={{ color: "var(--sys-text-faint)", fontVariantNumeric: "tabular-nums" }}>{entry.before} → <span style={{ color: "var(--sys-text-secondary)" }}>{entry.after}</span></span>
+                        <div key={entry.path} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 12, padding: "9px 11px", borderTop: "1px solid var(--sys-hair-1)" }}>
+                          <Text variant="mono" title={entry.path} style={{ overflow: "hidden", color: "var(--sys-text-tertiary)", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.path}</Text>
+                          <Text variant="small" tone="dim" style={{ fontVariantNumeric: "tabular-nums" }}>{entry.before} → <Text variant="small">{entry.after}</Text></Text>
                         </div>
                       )) : (
-                        <div style={{ padding: 13, color: "var(--sys-text-faint)", fontSize: 11 }}>No staged seed values differ from the committed defaults.</div>
+                        <Text as="div" variant="small" tone="dim" style={{ padding: 13 }}>No staged seed values differ from the committed defaults.</Text>
                       )}
                     </ScrollArea></Card>
                   </div>
@@ -804,13 +798,13 @@ export default function Foundry() {
                   )}
 
                   {promoteStatus && !promoteStatus.ghReady && (
-                    <div role="alert" style={{ color: "var(--sys-sem-danger-on-tint)", fontSize: 11 }}>GitHub CLI authentication is unavailable.</div>
+                    <Text as="div" variant="small" role="alert" style={{ color: "var(--sys-sem-danger-on-tint)" }}>GitHub CLI authentication is unavailable.</Text>
                   )}
-                  {promotionError && <div role="alert" style={{ color: "var(--sys-sem-danger-on-tint)", fontSize: 11 }}>{promotionError}</div>}
+                  {promotionError && <Text as="div" variant="small" role="alert" style={{ color: "var(--sys-sem-danger-on-tint)" }}>{promotionError}</Text>}
 
-                  <p style={{ margin: 0, color: "var(--sys-text-secondary)", fontSize: 12, lineHeight: 1.5 }}>
+                  <Text as="p" variant="small" tone="muted">
                     Are you sure? This opens a PR that deploys a preview.
-                  </p>
+                  </Text>
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
                     <Button size="sm" disabled={promotionBusy} onClick={closePromotion}>Cancel</Button>
                     <Button size="sm"
