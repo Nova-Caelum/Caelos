@@ -755,7 +755,7 @@ export const TaskRow = forwardRef<HTMLDivElement, TaskRowProps>(function TaskRow
     : tone === "atmospheric" || tone === "structural" ? `var(--sys-sem-${tone})`
     : `var(--nc-${tone === "done" ? "sage" : tone})`;
   return (
-    <div {...props} ref={ref} className={cx(row({ variant: "list" }), className)}
+    <div {...props} ref={ref} data-task-row="true" className={cx(row({ variant: "list" }), className)}
       style={{ cursor: "default", ...style }}
       onClick={e => {
         onClick?.(e);
@@ -764,9 +764,9 @@ export const TaskRow = forwardRef<HTMLDivElement, TaskRowProps>(function TaskRow
       {leading}
       <span aria-hidden style={{ width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0 }} />
       <button type="button" onClick={onOpen} className={button({ variant: "text" })}
-        style={{ flex: 1, minWidth: 0, justifyContent: "flex-start", textAlign: "left", whiteSpace: "normal", overflowWrap: "anywhere",
+        style={{ flex: 1, minWidth: 0, height: "auto", minHeight: 32, paddingBlock: 4, justifyContent: "flex-start", textAlign: "left", whiteSpace: "normal", overflowWrap: "anywhere",
           textDecoration: status === "done" ? "line-through" : undefined,
-          color: status === "done" || status === "deferred" ? "var(--il-dim)" : undefined }}>
+          color: `var(--task-row-title-color, ${status === "done" || status === "deferred" ? "var(--il-dim)" : "var(--il-muted)"})` }}>
         {title}
       </button>
       {afterTitle}

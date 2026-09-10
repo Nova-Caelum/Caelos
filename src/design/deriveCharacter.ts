@@ -4,15 +4,22 @@ import type { Seed } from "./seed";
 
 const SURFACES: SurfaceName[] = ["chrome", "ground", "elevated", "elevated-2", "top"];
 
-export function deriveCharacter(character: CharacterSeed, color: Seed): string {
+// Optional targets let Foundry preview textures on shared cards without changing
+// their production recipe or the surrounding surface ladder.
+export function deriveCharacter(
+  character: CharacterSeed,
+  color: Seed,
+  targets?: Partial<Record<SurfaceName, string>>,
+): string {
   const graphLine = oklchToHex({ l: 0.58, c: color.hueVector.c, h: color.hueVector.h });
   const graphMix = Math.round(character.graphIntensity * 100);
   const glassMix = Math.round((0.46 + character.glassIntensity * 0.34) * 100);
   const blur = Math.round(8 + character.glassIntensity * 24);
 
   return SURFACES.map((surface) => {
+    if (targets && !targets[surface]) return "";
     const mode = character.modes[surface];
-    const selector = `[data-surface="${surface}"]`;
+    const selector = targets?.[surface] ?? `[data-surface="${surface}"]`;
     if (mode === "graph") {
       return `${selector} {
   background-color: var(--sys-${surface}) !important;
@@ -20,6 +27,8 @@ export function deriveCharacter(character: CharacterSeed, color: Seed): string {
     linear-gradient(color-mix(in srgb, ${graphLine} ${graphMix}%, transparent) 1px, transparent 1px),
     linear-gradient(90deg, color-mix(in srgb, ${graphLine} ${graphMix}%, transparent) 1px, transparent 1px) !important;
   background-size: 28px 28px !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }`;
     }
     if (mode === "glass") {

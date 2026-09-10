@@ -68,7 +68,9 @@ try{
  const moduleRow=aside.getByRole('button',{name:'Module fixture',exact:true});await moduleRow.waitFor();await moduleRow.focus();await page.keyboard.press('Enter');
  await aside.getByRole('button',{name:'Task Alpha',exact:true}).click();
  const drawer=page.getByRole('dialog').filter({has:page.getByRole('heading',{name:'Task Alpha',exact:true})});await drawer.waitFor();
+ await drawer.evaluate(e=>Promise.all(e.getAnimations({subtree:true}).map(a=>a.finished.catch(()=>{}))));
  await page.keyboard.press('Escape');await drawer.waitFor({state:'detached'});
+ await page.waitForFunction(()=>document.activeElement?.textContent?.trim()==='Task Alpha');
  await projectRow.focus();await page.keyboard.press('Shift+F10');await page.getByRole('menuitem',{name:'Edit',exact:true}).click();
  await page.getByRole('tab',{name:'Info',exact:true}).waitFor();assert.equal(await page.getByRole('tab',{name:'Info',exact:true}).getAttribute('aria-selected'),'true');
  await projectRow.click({button:'right'});await page.getByRole('menuitem',{name:'Duplicate',exact:true}).waitFor();

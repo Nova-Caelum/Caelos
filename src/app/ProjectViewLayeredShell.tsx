@@ -50,7 +50,7 @@ export function ProjectViewLayeredShell({
       <TabsList aria-label="Project sections" className="flex-shrink-0">
         {TABS.map(t => <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>)}
       </TabsList>
-      <Card variant="glass" className="flex-1 flex flex-col overflow-hidden" style={{ padding: 0, minHeight: 0 }}>
+      <Card variant="glass" data-foundry-surface="project" className="flex-1 flex flex-col overflow-hidden" style={{ padding: 0, minHeight: 0 }}>
           {/* Header block — verbatim from canonical ProjectView (App.tsx:2948-2960) */}
           <div className="px-7 flex-shrink-0" style={{ paddingTop: 28, paddingBottom: 28 }}>
             <p
