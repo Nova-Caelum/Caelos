@@ -67,7 +67,7 @@
     "tailwind-merge": "3.2.0",
     "tw-animate-css": "1.3.8",
     "vaul": "1.1.2",
-    "@nova-caelum/ui": "file:packages/ui"
+    "@nova-caelum/ui": "0.1.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.1.12",

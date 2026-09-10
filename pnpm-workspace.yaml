@@ -21,3 +21,6 @@ supportedArchitectures:
     - arm64
   libc:
     - glibc
+
+# Keep generated UI files visible to the app after the workspace build.
+linkWorkspacePackages: true
