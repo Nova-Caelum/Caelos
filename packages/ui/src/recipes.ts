@@ -352,7 +352,18 @@ export const row = defineRecipe({
   variants: {
     variant: {
       sidebar: {},
-      list: { minHeight: "56px" },
+      list: {
+        minHeight: "56px",
+        "&[data-task-row]:is(:hover,:focus-within)": {
+          "--task-row-title-color": "var(--nc-text-hover)",
+          "&::before": {
+            opacity: 1,
+            filter: "none",
+            background: "linear-gradient(105deg,#8e9de040,#9190c82e)",
+            boxShadow: "inset 0 0 0 1px #b2bce526",
+          },
+        },
+      },
       tab: {
         width: "auto",
         borderRadius: "999px",

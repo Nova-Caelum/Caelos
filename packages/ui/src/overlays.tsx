@@ -2,7 +2,7 @@ import React, { forwardRef, useId, useRef, type ReactNode } from "react";
 import * as RadixDialog from "@radix-ui/react-dialog";
 import * as RadixContextMenu from "@radix-ui/react-context-menu";
 import * as Dropdown from "@radix-ui/react-dropdown-menu";
-import { X } from "lucide-react";
+import { Check, Minus, X } from "lucide-react";
 import { card, menu, overlay } from "../styled-system/recipes/index.mjs";
 import { themeAttributes, useCaelosTheme } from "./theme";
 import { IconButton, ScrollArea } from "./components";
@@ -101,6 +101,15 @@ export const ActionMenuContent = forwardRef<React.ElementRef<typeof Dropdown.Con
 });
 export const ActionMenuItem = forwardRef<React.ElementRef<typeof Dropdown.Item>, React.ComponentPropsWithoutRef<typeof Dropdown.Item>>(function ActionMenuItem({ className, ...props }, ref) {
   return <Dropdown.Item {...props} ref={ref} className={cx(menu({ layout: "action" }).item, className)} />;
+});
+/** Checkbox semantics and a stable indicator column within the shared compact menu. */
+export const ActionMenuCheckboxItem = forwardRef<React.ElementRef<typeof Dropdown.CheckboxItem>, React.ComponentPropsWithoutRef<typeof Dropdown.CheckboxItem>>(function ActionMenuCheckboxItem({ className, children, checked, ...props }, ref) {
+  return <Dropdown.CheckboxItem {...props} ref={ref} checked={checked} className={cx(menu({ layout: "action" }).item, className)}>
+    <span aria-hidden="true" style={{ width: 14, height: 14, flexShrink: 0 }}>
+      <Dropdown.ItemIndicator>{checked === "indeterminate" ? <Minus size={14} /> : <Check size={14} />}</Dropdown.ItemIndicator>
+    </span>
+    {children}
+  </Dropdown.CheckboxItem>;
 });
 export function ActionMenuSeparator(props: React.ComponentPropsWithoutRef<typeof Dropdown.Separator>) {
   return <Dropdown.Separator {...props} className={cx(menu({ layout: "action" }).separator, props.className)} />;

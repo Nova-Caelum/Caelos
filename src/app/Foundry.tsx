@@ -21,6 +21,18 @@ import { cloneShapeSeed, DEFAULT_SHAPE_SEED, type ShapeSeed } from "../design/sh
 import { Badge, Button, CaelosProvider, Card, Dialog, Disclosure, IconButton, Input, Row, RowGroup, ScrollArea, Select, Tooltip } from "@nova-caelum/ui";
 import FoundryPandaGallery from "./FoundryPandaGallery";
 
+type SurfacePreview = SurfaceMode | "current";
+const CARD_SURFACES = [
+  { target: "project", surface: "elevated", label: "Project card" },
+  { target: "module", surface: "elevated-2", label: "Module cards" },
+] as const;
+const TEXTURE_OPTIONS = [
+  { value: "current", label: "Current" },
+  { value: "plain", label: "Plain" },
+  { value: "graph", label: "Graph paper" },
+  { value: "glass", label: "Glass" },
+];
+
 const ROUND_TRIP_HEXES = [
   "#12121E", "#1C1B28", "#221E33", "#2A2540", "#F4EAD5", "#9089A0",
   "#6E677E", "#55506A", "#6D5AD1", "#7A9E93", "#5B7D73", "#E8B87A",
@@ -179,6 +191,18 @@ export default function Foundry() {
   const [copied, setCopied] = useState<"seed" | "css" | null>(null);
   const [motionActive, setMotionActive] = useState(false);
   const [view, setView] = useState<"components" | "tune">("components");
+  const [surfacePreviews, setSurfacePreviews] = useState<Record<"project" | "module", SurfacePreview>>({ project: "current", module: "current" });
+  const previewCss = useMemo(() => {
+    const character = cloneCharacterSeed(seeds.character);
+    const targets: Partial<Record<SurfaceName, string>> = {};
+    for (const { target, surface } of CARD_SURFACES) {
+      const mode = surfacePreviews[target];
+      if (mode === "current") continue;
+      character.modes[surface] = mode;
+      targets[surface] = `[data-foundry-surface="${target}"]`;
+    }
+    return deriveCharacter(character, seeds.color, targets);
+  }, [surfacePreviews, seeds.character, seeds.color]);
   const [groundHex, setGroundHex] = useState(() => oklchToHex(IMPORTED_STAGED_SEEDS.color.groundBase).toUpperCase());
   const [groundHexEditing, setGroundHexEditing] = useState(false);
   const [groundHexError, setGroundHexError] = useState(false);
@@ -423,6 +447,7 @@ export default function Foundry() {
 
   return (
     <CaelosProvider>
+    <style data-foundry-surface-preview>{previewCss}</style>
     <Card variant="glass" role="complementary"
       data-testid="foundry-panel"
       data-math-status={mathPassed ? "passed" : "failed"}
@@ -493,6 +518,26 @@ export default function Foundry() {
             </Button>}
           </div>
         </div>
+        <section aria-label="Canvas surface previews" style={{ display: "grid", gap: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={labelStyle}>Canvas textures</span>
+            <Button variant="text" size="sm"
+              disabled={Object.values(surfacePreviews).every(mode => mode === "current")}
+              onClick={() => setSurfacePreviews({ project: "current", module: "current" })}>Reset textures</Button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+            {CARD_SURFACES.map(({ target, label }) => (
+              <label key={target} style={{ display: "grid", gap: 6, minWidth: 0 }}>
+                <span style={labelStyle}>{label}</span>
+                <Select label={`${label} texture`} value={surfacePreviews[target]} options={TEXTURE_OPTIONS}
+                  onValueChange={value => setSurfacePreviews(current => ({ ...current, [target]: value as SurfacePreview }))} />
+              </label>
+            ))}
+          </div>
+          <p style={{ margin: 0, color: "var(--sys-text-tertiary)", fontSize: 11, lineHeight: 1.5 }}>
+            Preview on the project canvas. Current restores the existing card. Texture choices reset on reload and are not included in Stage or Commit + Push.
+          </p>
+        </section>
         {view === "tune" && <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 7 }} aria-label="Surface ladder">
           {SURFACE_NAMES.map((name) => (
             <button

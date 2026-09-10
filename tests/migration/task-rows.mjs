@@ -73,8 +73,8 @@ try{
  assert.equal(await page.getByRole('dialog').count(),1);
  await page.keyboard.press('Escape');await createTask.waitFor({state:'detached'});
  await moduleHeader.getByRole('button',{name:/Module fixture 0\/2/}).focus();await page.keyboard.press('Shift+F10');
- await page.getByRole('menuitem',{name:'Open',exact:true}).waitFor();
- await page.keyboard.press('Escape');assert.equal(await page.getByRole('dialog').count(),0);
+ await page.getByRole('menuitem',{name:'Open',exact:true}).waitFor();await settle(page.getByRole('menu'));
+ await page.keyboard.press('Escape');await page.getByRole('menu').waitFor({state:'detached'});assert.equal(await page.getByRole('dialog').count(),0);
  await page.getByLabel('Search tasks',{exact:true}).fill('Alpha');await row('task-b').waitFor({state:'detached'});assert.equal(await row('task-a').count(),1);
  await page.getByLabel('Search tasks',{exact:true}).fill('');await row('task-b').waitFor();
  await page.getByLabel('Filter task states',{exact:true}).click();await settle(page.getByRole('menu'));
@@ -131,7 +131,7 @@ try{
  await detail.getByRole('button',{name:'Save changes',exact:true}).click();await page.getByText('Saved',{exact:true}).last().waitFor();
  await page.keyboard.press('Escape');await detail.waitFor({state:'detached'});
  await page.reload();await row('task-root').getByRole('img',{name:'caelum',exact:true}).waitFor();
- await row('task-root').click({button:'right'});await page.getByRole('menuitem',{name:'Move…',exact:true}).click();
+ await row('task-root').click({button:'right'});await settle(page.getByRole('menu'));await page.getByRole('menuitem',{name:'Move…',exact:true}).click();
  const move=page.getByRole('dialog',{name:'Move task',exact:true});await settle(move);
  assert(await move.getByRole('button',{name:'Move',exact:true}).isDisabled());
  await move.getByLabel('Module',{exact:true}).click();await page.getByRole('option',{name:'Module fixture',exact:true}).click();

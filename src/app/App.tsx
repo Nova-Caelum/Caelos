@@ -1,7 +1,6 @@
 // Nova Caelum — Task Management Dashboard
 import { useState, useEffect, useCallback, useRef } from "react";
-import { CaelosProvider, Card, Chip, Row, Tooltip, Breadcrumb, BreadcrumbItem, BreadcrumbSeparator, TaskRow as SharedTaskRow, Badge, StatusSelect, type Tone, Input, TextArea, Button, UserCard, PersonChip, ScrollArea, Select as SharedSelect, Drawer, Dialog, IconButton, ActionMenuRoot, ActionMenuTrigger, ActionMenuContent, ActionMenuItem, ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@nova-caelum/ui";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem } from "@/app/components/ui/dropdown-menu";
+import { CaelosProvider, Card, Chip, Row, Tooltip, Breadcrumb, BreadcrumbItem, BreadcrumbSeparator, TaskRow as SharedTaskRow, Badge, StatusSelect, type Tone, Input, TextArea, Button, UserCard, PersonChip, ScrollArea, Select as SharedSelect, Drawer, Dialog, IconButton, ActionMenuRoot, ActionMenuTrigger, ActionMenuContent, ActionMenuItem, ActionMenuCheckboxItem, ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@nova-caelum/ui";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Toaster } from "sonner";
@@ -2373,10 +2372,10 @@ export function ModuleSection({ mod, modTasks, allItems, gripRef, onOpenMod, onD
   const progress = modTasks.length > 0 ? Math.round((done / modTasks.length) * 100) : 0;
 
   return (
-    <div>
+    <Card data-foundry-surface="module" style={{ padding: 0 }}>
       <ContextMenu>
         <ContextMenuTrigger asChild>
-          <Card data-module-id={mod.id} className="flex items-center gap-1.5 pr-4 group"
+          <div data-module-id={mod.id} className="flex items-center gap-1.5 pr-4 group"
             style={{ paddingLeft: 16, paddingTop: 8, paddingBottom: 8 }}
             onClick={e => { if (e.currentTarget.contains(e.target as Node) && !(e.target as HTMLElement).closest("button,[data-task-control]")) onOpenMod(mod); }}>
             <IconButton variant="text" size="sm" label={`${expanded ? "Collapse" : "Expand"} ${mod.name}`}
@@ -2400,7 +2399,7 @@ export function ModuleSection({ mod, modTasks, allItems, gripRef, onOpenMod, onD
             <span ref={gripRef} data-task-control aria-label={`Drag ${mod.name}`} className="flex-shrink-0 w-4 flex items-center justify-center cursor-grab active:cursor-grabbing">
               <GripVertical size={12} />
             </span>
-          </Card>
+          </div>
         </ContextMenuTrigger>
         <ContextMenuContent>
           <ContextMenuItem onClick={() => onOpenMod(mod)}><Edit2 size={13} /> Open</ContextMenuItem>
@@ -2422,7 +2421,7 @@ export function ModuleSection({ mod, modTasks, allItems, gripRef, onOpenMod, onD
           onSaveState={onSaveTaskState}
         />
       ))}
-    </div>
+    </Card>
   );
 }
 
@@ -2940,37 +2939,28 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
         {/* Toolbar */}
         <div className="flex items-center gap-3 px-5 py-3 flex-shrink-0" style={{ borderColor: NC.borderFaint }}>
           <Input variant="search" aria-label="Search tasks" name="taskSearch" wrapperClassName="flex-1 min-w-0 max-w-sm" placeholder="Search tasks…" value={search} onChange={e => setSearch(e.target.value)} />
-          {/* Item 5 — multi-state filter. Same nc-input trigger sizing the old single-value
-              NcSelect used (px-3 py-1.5 text-sm) so it stays no louder than the search box
-              beside it (pre-pick audit (a)); nc-glass-menu content matches every other
-              dropdown on this surface (audit (b)); colors are STATE_CFG only (audit (c)). */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label="Filter task states"
-                className="nc-input px-3 py-1.5 text-sm rounded-lg outline-none flex items-center gap-1.5 w-auto"
-                style={{ color: NC.cream }}
-              >
+          {/* Keep the menu open while selecting multiple visible task states. */}
+          <ActionMenuRoot>
+            <ActionMenuTrigger asChild>
+              <Button variant="tonal" aria-label="Filter task states">
                 <span>{visibleStates.length} state{visibleStates.length === 1 ? "" : "s"}</span>
                 <ChevronDown size={12} style={{ opacity: 0.55, flexShrink: 0 }} />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="bottom" align="start" sideOffset={6} className="nc-glass-menu min-w-[190px]" style={{ color: NC.cream }}>
+              </Button>
+            </ActionMenuTrigger>
+            <ActionMenuContent side="bottom" align="start" aria-label="Task state filters">
               {ALL_STATES.map(s => (
-                <DropdownMenuCheckboxItem
+                <ActionMenuCheckboxItem
                   key={s}
                   checked={visibleStates.includes(s)}
                   onCheckedChange={() => toggleState(s)}
                   onSelect={e => e.preventDefault()}
-                  className="gap-2 text-sm cursor-pointer"
                 >
                   <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: STATE_CFG[s].color }} aria-hidden="true" />
                   {STATE_CFG[s].label}
-                </DropdownMenuCheckboxItem>
+                </ActionMenuCheckboxItem>
               ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </ActionMenuContent>
+          </ActionMenuRoot>
           <Chip selected={hideDoneActive} onClick={toggleHideDone}>
             Hide done
           </Chip>
@@ -4108,13 +4098,11 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
                       <IconButton variant="text" label={`${isExpanded ? "Collapse" : "Expand"} ${p.name}`}
                         aria-expanded={isExpanded} onClick={() => toggleProject(p.id)}
                         icon={isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />} />
-                      <Tooltip label={p.name}>
-                        <Row variant="sidebar" className="flex-1 min-w-0" selected={isActive}
-                          leadingIcon={<FolderOpen size={13} className="shrink-0" />}
-                          onClick={() => onSelect({ type: "project", item: p })}>
-                          <span className="block truncate">{p.name}</span>
-                        </Row>
-                      </Tooltip>
+                      <Row variant="sidebar" className="flex-1 min-w-0" selected={isActive}
+                        leadingIcon={<FolderOpen size={13} className="shrink-0" />}
+                        onClick={() => onSelect({ type: "project", item: p })}>
+                        <span className="block truncate">{p.name}</span>
+                      </Row>
                     </div>
                   </ContextMenuTrigger>
                   <ContextMenuContent>
