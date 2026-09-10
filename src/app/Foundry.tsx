@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { AlertTriangle, Check, ChevronsLeft, ChevronsRight, Clipboard, ExternalLink, GitPullRequest, RefreshCw, RotateCcw, Save, SlidersHorizontal, Sparkles, Trash2, X } from "lucide-react";
+import { AlertTriangle, Check, ChevronsLeft, ChevronsRight, Clipboard, ExternalLink, GitPullRequest, RotateCcw, Save, SlidersHorizontal, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { cloneCharacterSeed, DEFAULT_CHARACTER, SURFACE_NAMES, type CharacterSeed, type SurfaceMode, type SurfaceName } from "../design/characterSeed";
 import { diffFoundrySeeds, seedLiteral } from "../design/codegen";
@@ -18,8 +18,8 @@ import {
 import seedOverride from "../design/seed.override.json";
 import { cloneSeed, DEFAULT_SEED, type Seed } from "../design/seed";
 import { cloneShapeSeed, DEFAULT_SHAPE_SEED, type ShapeSeed } from "../design/shapeSeed";
-import { Row } from "../primitives";
-import PrimitiveGallery from "./PrimitiveGallery";
+import { Badge, Button, CaelosProvider, Card, Dialog, Disclosure, IconButton, Input, Row, RowGroup, ScrollArea, Select, Tooltip } from "@nova-caelum/ui";
+import FoundryPandaGallery from "./FoundryPandaGallery";
 
 const ROUND_TRIP_HEXES = [
   "#12121E", "#1C1B28", "#221E33", "#2A2540", "#F4EAD5", "#9089A0",
@@ -29,20 +29,13 @@ const ROUND_TRIP_HEXES = [
 
 const panel: CSSProperties = {
   position: "fixed",
-  zIndex: 2147483000,
+  zIndex: 40,
   top: 20,
   right: 20,
   width: "min(560px, calc(100vw - 32px))",
-  maxHeight: "calc(100vh - 40px)",
+  maxHeight: "calc(100dvh - 40px)",
   overflow: "auto",
-  color: "var(--sys-text-primary)",
-  background: "color-mix(in srgb, var(--sys-chrome) 94%, transparent)",
-  border: "1px solid var(--sys-hair-2)",
-  borderRadius: 18,
-  boxShadow: "0 28px 90px rgba(0,0,0,.52), 0 10px 32px rgba(0,0,0,.28)",
-  backdropFilter: "blur(22px) saturate(1.12)",
-  WebkitBackdropFilter: "blur(22px) saturate(1.12)",
-  fontFamily: "var(--nc-font-ui, Inter, ui-sans-serif, system-ui)",
+  padding: 0,
 };
 
 const section: CSSProperties = {
@@ -163,45 +156,6 @@ function RangeControl({
   );
 }
 
-function MiniButton({
-  children,
-  onClick,
-  primary = false,
-  disabled = false,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  primary?: boolean;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 7,
-        minHeight: 34,
-        padding: "0 11px",
-        borderRadius: 9,
-        border: `1px solid ${primary ? "var(--sys-accent-line)" : "var(--sys-hair-2)"}`,
-        color: primary ? "var(--sys-accent-on-tint)" : "var(--sys-text-secondary)",
-        background: primary ? "var(--sys-accent-tint)" : "rgba(255,255,255,.025)",
-        font: "inherit",
-        fontSize: 12,
-        fontWeight: 650,
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.55 : 1,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
 export default function Foundry() {
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -231,8 +185,8 @@ export default function Foundry() {
   const [lightnessOnly, setLightnessOnly] = useState(false);
   const [targets, setTargets] = useState<FoundryTarget[]>([]);
   const [testTarget, setTestTarget] = useState(() => window.localStorage.getItem("caelos.foundryTarget") ?? "");
-  const [primitiveRefresh, setPrimitiveRefresh] = useState(0);
-  const [primitivePulse, setPrimitivePulse] = useState(false);
+  const collapseRef = useRef<HTMLButtonElement>(null);
+  const revealRef = useRef<HTMLButtonElement>(null);
   const frame = useRef<number | null>(null);
   const latestCss = useRef<Record<string, string>>({});
   const theme = useMemo(() => derive(seeds.color), [seeds.color]);
@@ -270,7 +224,7 @@ export default function Foundry() {
 
   useLayoutEffect(() => {
     document.documentElement.style.setProperty("--foundry-panel-offset", "600px");
-    return () => document.documentElement.style.removeProperty("--foundry-panel-offset");
+    return () => { document.documentElement.style.removeProperty("--foundry-panel-offset"); };
   }, []);
 
   useEffect(() => {
@@ -358,25 +312,6 @@ export default function Foundry() {
     if (value) window.localStorage.setItem("caelos.foundryTarget", value);
     else window.localStorage.removeItem("caelos.foundryTarget");
     window.dispatchEvent(new CustomEvent("caelos:foundry-select", { detail: { id: value || null } }));
-  }, []);
-
-  const refreshPrimitives = useCallback(async () => {
-    if (import.meta.env.DEV) {
-      const response = await fetch(`/src/primitives/primitives.css?foundry-refresh=${Date.now()}`);
-      if (response.ok) {
-        let style = document.getElementById("foundry-primitives-refresh") as HTMLStyleElement | null;
-        if (!style) {
-          style = document.createElement("style");
-          style.id = "foundry-primitives-refresh";
-          document.head.appendChild(style);
-        }
-        style.textContent = await response.text();
-      }
-    }
-    setPrimitiveRefresh((value) => value + 1);
-    setPrimitivePulse(true);
-    window.setTimeout(() => setPrimitivePulse(false), 650);
-    toast.success("Canonical primitives refreshed");
   }, []);
 
   const copy = useCallback(async (kind: "seed" | "css") => {
@@ -469,11 +404,12 @@ export default function Foundry() {
   }, [stagedOverride]);
 
   const closePromotion = useCallback(() => {
+    if (promotionBusy) return;
     window.sessionStorage.removeItem(PROMOTION_RECEIPT_KEY);
     setPromotionOpen(false);
     setPromotionResult(null);
     setPromotionError(null);
-  }, []);
+  }, [promotionBusy]);
 
   const roundTripMax = useMemo(() => Math.max(...ROUND_TRIP_HEXES.map((hex) => (
     hexChannelDistance(hex, oklchToHex(hexToOklch(hex)))
@@ -486,9 +422,8 @@ export default function Foundry() {
   const stagedKeyCount = countOverrideKeys(stagedOverride);
 
   return (
-    <>
-    <aside
-      data-surface="top"
+    <CaelosProvider>
+    <Card variant="glass" role="complementary"
       data-testid="foundry-panel"
       data-math-status={mathPassed ? "passed" : "failed"}
       data-roundtrip-max={roundTripMax}
@@ -504,6 +439,8 @@ export default function Foundry() {
         transition: "transform 0.28s ease",
       }}
       aria-label="Caelos Foundry"
+      aria-hidden={collapsed || undefined}
+      {...(collapsed ? { inert: "" } : {})}
     >
       <style>{`
         @keyframes foundry-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
@@ -512,15 +449,13 @@ export default function Foundry() {
       <header style={{ padding: "20px 20px 18px", display: "grid", gap: 14 }}>
         <label style={{ display: "grid", gridTemplateColumns: "auto minmax(0, 1fr)", alignItems: "center", gap: 10 }}>
           <span style={{ color: "var(--sys-text-faint)", fontSize: 10, fontWeight: 720, letterSpacing: ".1em", textTransform: "uppercase" }}>Test against</span>
-          <select
-            aria-label="Test against"
-            value={testTarget}
-            onChange={(event) => chooseTarget(event.currentTarget.value)}
-            style={{ minWidth: 0, height: 32, border: "1px solid var(--sys-hair-2)", borderRadius: 9, padding: "0 10px", color: "var(--sys-text-secondary)", background: "var(--sys-elevated)" }}
-          >
-            <option value="">Empty state</option>
-            {targets.map((target) => <option key={`${target.type}:${target.id}`} value={target.id}>{target.type === "project" ? "Project" : "Initiative"} · {target.label}</option>)}
-          </select>
+          <Select
+            label="Test against"
+            value={testTarget || "__empty__"}
+            onValueChange={value => chooseTarget(value === "__empty__" ? "" : value)}
+            options={[{ value: "__empty__", label: "Empty state" }, ...targets.map(target => ({ value: target.id, label: `${target.type === "project" ? "Project" : "Initiative"} · ${target.label}` }))]}
+            style={{ minWidth: 0 }}
+          />
         </label>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
           <div style={{ display: "grid", gap: 6 }}>
@@ -528,73 +463,37 @@ export default function Foundry() {
               <Sparkles size={15} strokeWidth={1.8} />
               <span style={{ fontSize: 10, fontWeight: 760, letterSpacing: ".16em", textTransform: "uppercase" }}>The Foundry</span>
             </div>
-            <h1 style={{ margin: 0, fontSize: 21, lineHeight: 1.15, letterSpacing: "-.025em", fontWeight: 680 }}>Derived design system</h1>
+            <h1 style={{ margin: 0, fontSize: 21, lineHeight: 1.15, letterSpacing: "-.025em", fontWeight: 680 }}>Caelos design library</h1>
             <p style={{ margin: 0, maxWidth: 360, color: "var(--sys-text-tertiary)", fontSize: 12, lineHeight: 1.5 }}>
               {view === "components"
-                ? "Exercise the five token-only primitives, then inspect every authored size and state."
-                : "Tune authored color and shape seeds. Every component and output specimen follows live."}
+                ? "The approved Panda components, installed from the shared UI package."
+                : "Legacy app tuning. These controls affect the existing app, not the Panda library."}
             </p>
-            <span
+            {view === "tune" && <span
               data-testid="foundry-staging-status"
               data-staged-keys={stagedKeyCount}
               style={{ color: stagedKeyCount ? "var(--sys-sem-progress)" : "var(--sys-text-faint)", fontSize: 10, fontWeight: 650 }}
             >
               staged: {stagedKeyCount ? `override active (${stagedKeyCount} keys)` : "clean"}
-            </span>
+            </span>}
           </div>
           <div style={{ display: "grid", justifyItems: "end", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: "var(--sys-space-2)" }}>
-              <button
-                type="button"
-                aria-label="Collapse Foundry"
-                title="Collapse Foundry"
-                onClick={() => setCollapsed(true)}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "calc(var(--sys-space-1) * 8)",
-                  height: "calc(var(--sys-space-1) * 8)",
-                  padding: 0,
-                  border: "1px solid var(--sys-hair-2)",
-                  borderRadius: "var(--sys-radius-md)",
-                  color: "var(--sys-text-secondary)",
-                  background: "var(--sys-elevated)",
-                  cursor: "pointer",
-                }}
-              >
-                <ChevronsRight size={15} />
-              </button>
-              <div
-              title={mathPassed ? "Color math and APCA targets verified" : "Math verification needs attention"}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 8px",
-                borderRadius: 999,
-                color: mathPassed ? "var(--sys-sem-done-on-tint)" : "var(--sys-sem-danger-on-tint)",
-                background: mathPassed ? "var(--sys-sem-done-tint)" : "var(--sys-sem-danger-tint)",
-                border: `1px solid ${mathPassed ? "var(--sys-sem-done-line)" : "var(--sys-sem-danger-line)"}`,
-                fontSize: 10,
-                fontWeight: 720,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {mathPassed ? <Check size={12} /> : <SlidersHorizontal size={12} />}
-              {mathPassed ? "Math verified" : "Check math"}
-              </div>
+              <IconButton ref={collapseRef} label="Collapse Foundry" icon={<ChevronsRight size={15} />} onClick={() => { setCollapsed(true); requestAnimationFrame(() => revealRef.current?.focus()); }} />
+              {view === "tune" && <Tooltip label={mathPassed ? "Color math and APCA targets verified" : "Math verification needs attention"}>
+                <span style={{ whiteSpace: "nowrap", flexShrink: 0 }}><Badge tone={mathPassed ? "done" : "danger"}>{mathPassed ? <Check size={12} /> : <SlidersHorizontal size={12} />}{mathPassed ? "Math verified" : "Check math"}</Badge></span>
+              </Tooltip>}
             </div>
-            <MiniButton
-              primary
+            {view === "tune" && <Button size="sm"
+              variant="primary"
               disabled={stagingBusy || promotionBusy || stagedKeyCount === 0}
               onClick={() => void openPromotion()}
             >
               <GitPullRequest size={13} /> Commit + Push
-            </MiniButton>
+            </Button>}
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 7 }} aria-label="Surface ladder">
+        {view === "tune" && <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 7 }} aria-label="Surface ladder">
           {SURFACE_NAMES.map((name) => (
             <button
               key={name}
@@ -608,25 +507,18 @@ export default function Foundry() {
               <span style={{ overflow: "hidden", color: "var(--sys-text-faint)", fontSize: 8, textOverflow: "ellipsis" }}>{name}</span>
             </button>
           ))}
-        </div>
-        <Row.Group variant="pill" aria-label="Foundry view">
-          <Row variant="tab" selected={view === "components"} onClick={() => setView("components")} leadingIcon={<Sparkles />}>
+        </div>}
+        <RowGroup aria-label="Foundry view">
+          <Row variant="tab" selected={view === "components"} onClick={() => setView("components")} leadingIcon={<Sparkles size={14} />}>
             Components
           </Row>
-          <Row variant="tab" selected={view === "tune"} onClick={() => setView("tune")} leadingIcon={<SlidersHorizontal />}>
-            Tune system
+          <Row variant="tab" selected={view === "tune"} onClick={() => setView("tune")} leadingIcon={<SlidersHorizontal size={14} />}>
+            Legacy app tuning
           </Row>
-        </Row.Group>
+        </RowGroup>
       </header>
 
-      {view === "components" ? <>
-        <div style={{ ...section, display: "flex", justifyContent: "flex-end", paddingBlock: 10 }}>
-          <MiniButton onClick={() => void refreshPrimitives()}><RefreshCw size={13} /> Refresh primitives</MiniButton>
-        </div>
-        <div key={primitiveRefresh} style={{ animation: primitivePulse ? "foundry-pulse 650ms ease" : undefined }}>
-          <PrimitiveGallery />
-        </div>
-      </> : <>
+      {view === "components" ? <FoundryPandaGallery /> : <>
       <section style={{ ...section, display: "grid", gap: 15 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <SlidersHorizontal size={14} color="var(--sys-text-tertiary)" />
@@ -635,20 +527,21 @@ export default function Foundry() {
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", alignItems: "end", gap: 10 }}>
           <label style={{ display: "grid", gap: 7 }}>
             <span style={labelStyle}><span>Ground hex</span><span style={{ color: groundHexError ? "var(--sys-sem-danger-on-tint)" : "var(--sys-text-faint)", fontSize: 10 }}>{groundHexError ? "Use #RGB or #RRGGBB" : lightnessOnly ? "L only" : "full re-anchor"}</span></span>
-            <input
+            <Input
+              invalid={groundHexError}
               aria-label="Ground hex"
               value={groundHex}
               onFocus={() => setGroundHexEditing(true)}
               onChange={(event) => setGroundHex(event.currentTarget.value)}
               onBlur={() => { applyGroundHex(); setGroundHexEditing(false); }}
               onKeyDown={(event) => {
-                if (event.key === "Enter") {
+                if (event.key === "Enter" && !event.nativeEvent.isComposing) {
                   event.preventDefault();
                   applyGroundHex();
                   event.currentTarget.blur();
                 }
               }}
-              style={{ height: 34, border: `1px solid ${groundHexError ? "var(--sys-sem-danger)" : "var(--sys-hair-2)"}`, borderRadius: 9, padding: "0 10px", color: "var(--sys-text-primary)", background: "var(--sys-ground)", fontFamily: "var(--sys-font-mono, ui-monospace, monospace)", animation: groundHexError ? "foundry-shake 360ms ease" : undefined }}
+
             />
           </label>
           <label style={{ display: "inline-flex", alignItems: "center", gap: 7, minHeight: 34, color: "var(--sys-text-secondary)", fontSize: 11, whiteSpace: "nowrap" }}>
@@ -784,11 +677,8 @@ export default function Foundry() {
         </button>
       </section>
 
-      <details style={section}>
-        <summary style={{ cursor: "pointer", listStyle: "none", fontSize: 12, fontWeight: 720, letterSpacing: ".08em", textTransform: "uppercase" }}>
-          Token ledger · {Object.keys(combinedCss).length}
-        </summary>
-        <div style={{ marginTop: 14, overflow: "hidden", border: "1px solid var(--sys-hair-1)", borderRadius: 11 }}>
+      <Disclosure style={section} title={`Token ledger · ${Object.keys(combinedCss).length}`}>
+        <Card variant="flat" style={{ marginTop: 14, padding: 0, overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", fontSize: 10 }}>
             <thead style={{ color: "var(--sys-text-faint)", background: "rgba(255,255,255,.025)", textAlign: "left" }}>
               <tr><th style={{ padding: "8px 9px", width: "53%" }}>Token</th><th style={{ padding: "8px 5px" }}>Value</th><th style={{ padding: "8px 5px", width: 44 }}>Lc</th><th style={{ padding: "8px 5px", width: 30 }} aria-label="Clamped">C</th></tr>
@@ -808,68 +698,24 @@ export default function Foundry() {
               })}
             </tbody>
           </table>
-        </div>
-      </details>
+        </Card>
+      </Disclosure>
       </>}
 
-      {promotionOpen && (
-        <div
-          role="presentation"
-          style={{
-            position: "fixed",
-            zIndex: 2147483100,
-            inset: 0,
-            display: "grid",
-            placeItems: "center",
-            padding: 18,
-            background: "rgba(5, 6, 12, .78)",
-            backdropFilter: "blur(10px)",
-          }}
-        >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="foundry-promote-title"
-            style={{
-              width: "min(520px, 100%)",
-              maxHeight: "min(680px, calc(100vh - 36px))",
-              overflow: "auto",
-              border: "1px solid var(--sys-hair-3)",
-              borderRadius: 16,
-              color: "var(--sys-text-primary)",
-              background: "var(--sys-elevated-2)",
-              boxShadow: "var(--sys-elev-3)",
-            }}
-          >
-            <header style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, padding: 20, borderBottom: "1px solid var(--sys-hair-1)" }}>
-              <div style={{ display: "grid", gap: 6 }}>
-                <span style={{ color: "var(--sys-accent-on-tint)", fontSize: 10, fontWeight: 760, letterSpacing: ".14em", textTransform: "uppercase" }}>Promote staging</span>
-                <h2 id="foundry-promote-title" style={{ margin: 0, fontSize: 19, letterSpacing: "-.02em" }}>Commit + Push</h2>
-                <p style={{ margin: 0, color: "var(--sys-text-tertiary)", fontSize: 12, lineHeight: 1.5 }}>
-                  Create an isolated seed branch and open a GitHub pull request.
-                </p>
-              </div>
-              <button
-                type="button"
-                aria-label="Close promotion dialog"
-                onClick={closePromotion}
-                disabled={promotionBusy}
-                style={{ display: "grid", placeItems: "center", width: 32, height: 32, padding: 0, border: "1px solid var(--sys-hair-2)", borderRadius: 9, color: "var(--sys-text-secondary)", background: "transparent", cursor: promotionBusy ? "not-allowed" : "pointer" }}
-              >
-                <X size={15} />
-              </button>
-            </header>
-
+      <Dialog open={promotionOpen} onOpenChange={open => { if (!open) closePromotion(); }}
+        title="Commit + Push" closeLabel="Close promotion dialog"
+        description="Create an isolated seed branch and open a GitHub pull request."
+        style={{ width: "min(520px, calc(100vw - 32px))" }}>
             <div style={{ display: "grid", gap: 16, padding: 20 }}>
               {promotionResult ? (
                 <div style={{ display: "grid", gap: 14 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 9, color: "var(--sys-sem-done-on-tint)", fontSize: 13, fontWeight: 720 }}>
                     <Check size={16} /> Promotion PR opened
                   </div>
-                  <div style={{ padding: 13, border: "1px solid var(--sys-hair-2)", borderRadius: 11, background: "var(--sys-ground)", fontSize: 11 }}>
+                  <Card variant="flat" style={{ padding: 13 }}>
                     <div style={{ color: "var(--sys-text-faint)", marginBottom: 5 }}>Branch</div>
                     <code style={{ color: "var(--sys-text-secondary)" }}>{promotionResult.branch}</code>
-                  </div>
+                  </Card>
                   <a
                     href={promotionResult.prUrl}
                     target="_blank"
@@ -886,7 +732,7 @@ export default function Foundry() {
                       <strong style={{ fontSize: 12 }}>Seed diff</strong>
                       <span style={{ color: "var(--sys-text-faint)", fontSize: 10 }}>{promotionDiff.length} changed values</span>
                     </div>
-                    <div style={{ maxHeight: 210, overflow: "auto", border: "1px solid var(--sys-hair-1)", borderRadius: 11, background: "var(--sys-ground)" }}>
+                    <Card variant="flat" style={{ padding: 0, overflow: "hidden" }}><ScrollArea viewportLabel="Seed diff" style={{ maxHeight: 210 }}>
                       {promotionDiff.length ? promotionDiff.slice(0, 24).map((entry) => (
                         <div key={entry.path} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 12, padding: "9px 11px", borderTop: "1px solid var(--sys-hair-1)", fontSize: 10 }}>
                           <code title={entry.path} style={{ overflow: "hidden", color: "var(--sys-text-tertiary)", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.path}</code>
@@ -895,21 +741,21 @@ export default function Foundry() {
                       )) : (
                         <div style={{ padding: 13, color: "var(--sys-text-faint)", fontSize: 11 }}>No staged seed values differ from the committed defaults.</div>
                       )}
-                    </div>
+                    </ScrollArea></Card>
                   </div>
 
                   {promoteStatus?.manualSeedDiff && (
-                    <div role="alert" style={{ display: "flex", alignItems: "flex-start", gap: 9, padding: 12, border: "1px solid var(--sys-sem-progress-line)", borderRadius: 11, color: "var(--sys-sem-progress-on-tint)", background: "var(--sys-sem-progress-tint)", fontSize: 11, lineHeight: 1.45 }}>
+                    <Card variant="flat" role="alert" style={{ display: "flex", alignItems: "flex-start", gap: 9, padding: 12 }}>
                       <AlertTriangle size={15} style={{ flex: "0 0 auto", marginTop: 1 }} />
                       <span><strong>Working seed differs from HEAD.</strong> Promotion will replace the manual seed edit in this worktree after the PR opens.</span>
-                    </div>
+                    </Card>
                   )}
 
                   {hasUnsavedLiveChanges && (
-                    <div role="note" style={{ display: "flex", alignItems: "flex-start", gap: 9, padding: 12, border: "1px solid var(--sys-hair-2)", borderRadius: 11, color: "var(--sys-text-secondary)", background: "var(--sys-elevated)", fontSize: 11, lineHeight: 1.45 }}>
+                    <Card variant="flat" role="note" style={{ display: "flex", alignItems: "flex-start", gap: 9, padding: 12 }}>
                       <AlertTriangle size={15} style={{ flex: "0 0 auto", marginTop: 1 }} />
                       <span>Live dials differ from staging. Save them first if they should be included; promotion uses staged values only.</span>
-                    </div>
+                    </Card>
                   )}
 
                   {promoteStatus && !promoteStatus.ghReady && (
@@ -921,65 +767,39 @@ export default function Foundry() {
                     Are you sure? This opens a PR that deploys a preview.
                   </p>
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-                    <MiniButton disabled={promotionBusy} onClick={closePromotion}>Cancel</MiniButton>
-                    <MiniButton
-                      primary
+                    <Button size="sm" disabled={promotionBusy} onClick={closePromotion}>Cancel</Button>
+                    <Button size="sm"
+                      variant="primary"
                       disabled={promotionBusy || !promoteStatus?.ghReady || promotionDiff.length === 0 || hasUnsavedLiveChanges}
                       onClick={() => void confirmPromotion()}
                     >
                       <GitPullRequest size={13} /> {promotionBusy ? "Promoting…" : "Create branch + PR"}
-                    </MiniButton>
+                    </Button>
                   </div>
                 </>
               )}
             </div>
-          </section>
-        </div>
-      )}
+      </Dialog>
 
-      <footer style={{ ...section, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, position: "sticky", bottom: 0, background: "color-mix(in srgb, var(--sys-chrome) 96%, transparent)", backdropFilter: "blur(18px)" }}>
+      {view === "tune" && <footer style={{ ...section, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, position: "sticky", bottom: 0, background: "color-mix(in srgb, var(--sys-chrome) 96%, transparent)", backdropFilter: "blur(18px)" }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-          <MiniButton disabled={stagingBusy} onClick={resetToStaged}><RotateCcw size={13} /> Reset to staged</MiniButton>
-          <MiniButton disabled={stagingBusy || stagedKeyCount === 0} onClick={() => void resetStaging()}><Trash2 size={13} /> Reset staging</MiniButton>
+          <Button size="sm" disabled={stagingBusy} onClick={resetToStaged}><RotateCcw size={13} /> Reset to staged</Button>
+          <Button size="sm" disabled={stagingBusy || stagedKeyCount === 0} onClick={() => void resetStaging()}><Trash2 size={13} /> Reset staging</Button>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-          <MiniButton onClick={() => void copy("seed")}><Clipboard size={13} /> {copied === "seed" ? "Copied" : "Seed"}</MiniButton>
-          <MiniButton onClick={() => void copy("css")}><Clipboard size={13} /> {copied === "css" ? "Copied" : "CSS"}</MiniButton>
-          <MiniButton primary disabled={stagingBusy} onClick={() => void saveToStaging()}><Save size={13} /> {stagingBusy ? "Saving…" : "Save to staging"}</MiniButton>
+          <Button size="sm" onClick={() => void copy("seed")}><Clipboard size={13} /> {copied === "seed" ? "Copied" : "Seed"}</Button>
+          <Button size="sm" onClick={() => void copy("css")}><Clipboard size={13} /> {copied === "css" ? "Copied" : "CSS"}</Button>
+          <Button size="sm" variant="primary" disabled={stagingBusy} onClick={() => void saveToStaging()}><Save size={13} /> {stagingBusy ? "Saving…" : "Save to staging"}</Button>
         </div>
-      </footer>
-    </aside>
+      </footer>}
+    </Card>
     {collapsed && (
-      <button
-        type="button"
-        data-surface="chrome"
-        data-testid="foundry-reveal"
-        aria-label="Reveal Foundry"
-        title="Reveal Foundry"
-        onClick={() => setCollapsed(false)}
-        style={{
-          position: "fixed",
-          zIndex: 40,
-          top: "calc(50% - (var(--sys-space-1) * 8))",
-          right: 0,
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: "calc(var(--sys-space-1) * 8)",
-          height: "calc(var(--sys-space-1) * 16)",
-          padding: 0,
-          border: "1px solid var(--sys-hair-2)",
-          borderRight: 0,
-          borderRadius: "var(--sys-radius-lg) 0 0 var(--sys-radius-lg)",
-          color: "var(--sys-accent-on-tint)",
-          background: "var(--sys-chrome)",
-          boxShadow: "var(--sys-elev-2)",
-          cursor: "pointer",
-        }}
-      >
-        <ChevronsLeft size={16} />
-      </button>
+      <IconButton
+        ref={revealRef} data-testid="foundry-reveal" label="Reveal Foundry" icon={<ChevronsLeft size={16} />}
+        onClick={() => { setCollapsed(false); requestAnimationFrame(() => collapseRef.current?.focus()); }}
+        style={{ position: "fixed", zIndex: 40, top: "calc(50% - 32px)", right: 0, height: 64 }}
+      />
     )}
-    </>
+    </CaelosProvider>
   );
 }

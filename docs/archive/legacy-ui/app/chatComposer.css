@@ -1,0 +1,65 @@
+.nc-input.nc-chat-composer {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  transition: height 150ms ease, border-radius 200ms ease, padding 200ms ease,
+    --nc-input-fill-a 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    --nc-input-fill-b 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 200ms ease, box-shadow 240ms ease;
+}
+.nc-chat-composer__content { display: flex; align-items: flex-end; gap: 12px; width: 100%; min-width: 0; }
+.nc-chat-composer__text {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  height: 30.4px;
+  flex: 1 1 auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  caret-color: currentColor;
+  font: inherit;
+  font-size: 14px;
+  line-height: 22.4px;
+  padding: 4px 0;
+  resize: none;
+  overflow-x: hidden;
+  overflow-wrap: anywhere;
+  scrollbar-width: thin;
+  scrollbar-color: var(--nc-hair-3) transparent;
+}
+.nc-chat-composer__text:focus-visible, .nc-chat-composer__text:focus { outline: none; }
+.nc-chat-composer__text::placeholder { color: var(--nc-text-dim); }
+.nc-chat-composer__send {
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--nc-text-cream);
+  color: var(--nc-ground, #131221);
+  cursor: pointer;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+.nc-chat-composer__send:hover:not(:disabled) { transform: translateY(-1px); }
+.nc-chat-composer__send:disabled { opacity: 0.25; cursor: default; }
+.nc-chat-preview { display: grid; gap: 24px; padding-block: 4px 8px; }
+.nc-chat-preview__controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; color: var(--nc-text-dim); }
+.nc-chat-preview__controls > span { margin-right: 8px; }
+.nc-chat-preview__controls button { padding: 5px 10px; border-radius: 8px; background: transparent; border: 0; color: var(--nc-text-cream); cursor: pointer; }
+.nc-chat-preview__controls button:hover, .nc-chat-preview__controls button[aria-pressed="true"] { background: var(--nc-hair-2); }
+.nc-chat-preview__stage { width: 100%; margin-inline: auto; }
+.nc-chat-preview__footnote { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--nc-text-dim); }
+@media (prefers-reduced-motion: reduce) {
+  .nc-input.nc-chat-composer, .nc-chat-composer__send { transition: none; }
+}
+@media (forced-colors: active) {
+  .nc-chat-composer:focus-within { outline: 2px solid Highlight; outline-offset: 2px; }
+  .nc-chat-composer__send { background: ButtonFace; color: ButtonText; border: 1px solid ButtonText; }
+}

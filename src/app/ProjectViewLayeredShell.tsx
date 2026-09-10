@@ -1,29 +1,8 @@
-// ═══════════════════════════════════════════════════════════════════════════════
-//  ProjectViewLayeredShell — Design Lab 3 (?lab=3)  ·  v2 (2026-07-31)
-// ───────────────────────────────────────────────────────────────────────────────
-//  Direction v2: tabs OUTSIDE the card (Daniel prefers the bento's on-ground
-//  placement over the previous floating-overhang treatment), positioned
-//  "kind of far up" — at the very top of the ground area with a generous
-//  gap to the card so the tab row doesn't read as a harsh horizontal divider.
-//  Uses actual primitives: <Card variant="glass"> for the card, <Chip
-//  variant="category" interactive> for tabs.
-//
-//  Previous v1 (floating tabs overhanging card top at z=100) had two problems:
-//   (a) parent overflow: hidden clipped the negative-top absolute-position tabs
-//   (b) Daniel: "I don't love the tabs being such a firm divider straight
-//       down the middle" — the overhang still read as a strong horizontal band.
-//
-//  v2 fix: tabs live in the ground padding area, top-aligned (well above card
-//  center), with 40px breathing room before the card. Ground reads generously
-//  around AND faintly through the glass card (Card primitive glass variant).
-// ═══════════════════════════════════════════════════════════════════════════════
-
 import { useState, useEffect } from "react";
-import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { Card, TabsRoot, TabsList, TabsTrigger, TabsContent } from "@nova-caelum/ui";
 import { Folder } from "lucide-react";
 import { NC } from "../design/tokens";
 import { GlassSeparator } from "./components/ui/glass-separator";
-import { Card } from "../primitives";
 import {
   ProjectInfoTab,
   TasksPane,
@@ -61,50 +40,17 @@ export function ProjectViewLayeredShell({
   }, [pendingTab, onClearPendingTab]);
 
   return (
-    <div
+    <TabsRoot
+      value={tab}
+      onValueChange={setTab}
       data-surface="ground"
       className="flex-1 flex flex-col overflow-hidden"
       style={{ padding: "28px 48px 48px 48px", gap: 40 }}
     >
-      {/* ── Tab row — canonical uppercase-tracked treatment (matches App.tsx:2971
-          typography), just moved to the top of ground area and with the active
-          indicator swapped from a bottom-border to a soft pill fill. No icons. ── */}
-      <div className="flex items-center gap-1 flex-shrink-0">
-        {TABS.map((t) => {
-          const active = tab === t.value;
-          return (
-            <button
-              key={t.value}
-              type="button"
-              onClick={() => setTab(t.value)}
-              className="text-xs font-semibold tracking-wide uppercase transition-colors"
-              style={{
-                padding: "8px 20px",
-                borderRadius: 999,
-                background: active
-                  ? "color-mix(in srgb, var(--sys-accent-cool, var(--sys-accent)) 18%, transparent)"
-                  : "transparent",
-                color: active ? NC.cream : NC.stone,
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ── Glass card — tagged data-surface="elevated" so the Foundry's surface
-          character mechanic controls its chemistry (character CSS uses !important
-          and wins over the Card's own nc-card[data-variant="glass"] rules).
-          When Foundry sets elevated=plain/graph/glass, this card follows. ── */}
-      <Card variant="glass" data-surface="elevated" className="flex-1 flex flex-col overflow-hidden">
-        <TabsPrimitive.Root
-          value={tab}
-          onValueChange={setTab}
-          className="flex-1 flex flex-col overflow-hidden"
-        >
+      <TabsList aria-label="Project sections" className="flex-shrink-0">
+        {TABS.map(t => <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>)}
+      </TabsList>
+      <Card variant="glass" className="flex-1 flex flex-col overflow-hidden" style={{ padding: 0, minHeight: 0 }}>
           {/* Header block — verbatim from canonical ProjectView (App.tsx:2948-2960) */}
           <div className="px-7 flex-shrink-0" style={{ paddingTop: 28, paddingBottom: 28 }}>
             <p
@@ -153,13 +99,15 @@ export function ProjectViewLayeredShell({
           <GlassSeparator />
 
           {/* Tab content panes — driven by external Chip row via TabsPrimitive.Root value binding */}
-          <TabsPrimitive.Content
+          <TabsContent
+            style={{ paddingTop: 0, minHeight: 0 }}
             value="info"
             className="flex-1 overflow-auto data-[state=inactive]:hidden"
           >
             <ProjectInfoTab project={project} onSave={onSaveProject} onSwitchTab={setTab} />
-          </TabsPrimitive.Content>
-          <TabsPrimitive.Content
+          </TabsContent>
+          <TabsContent
+            style={{ paddingTop: 0, minHeight: 0 }}
             value="tasks"
             className="flex-1 flex flex-col overflow-hidden data-[state=inactive]:hidden"
           >
@@ -170,21 +118,22 @@ export function ProjectViewLayeredShell({
               onClearPending={onClearPending}
               fixtureMode={foundryMode && project.id === FOUNDRY_DEMO_PROJECT.id}
             />
-          </TabsPrimitive.Content>
-          <TabsPrimitive.Content
+          </TabsContent>
+          <TabsContent
+            style={{ paddingTop: 0, minHeight: 0 }}
             value="cycles"
             className="flex-1 flex flex-col overflow-hidden data-[state=inactive]:hidden"
           >
             <CyclesTab projectId={project.id} />
-          </TabsPrimitive.Content>
-          <TabsPrimitive.Content
+          </TabsContent>
+          <TabsContent
+            style={{ paddingTop: 0, minHeight: 0 }}
             value="team"
             className="flex-1 flex flex-col overflow-hidden data-[state=inactive]:hidden"
           >
             <TeamTab projectId={project.id} />
-          </TabsPrimitive.Content>
-        </TabsPrimitive.Root>
+          </TabsContent>
       </Card>
-    </div>
+    </TabsRoot>
   );
 }

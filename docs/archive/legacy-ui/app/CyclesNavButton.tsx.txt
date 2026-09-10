@@ -1,0 +1,56 @@
+const CYCLE_ACCENT = "#7C6FCD"; // indigo-purple accent
+
+function CyclesNavButton({ projectId, onClick, onNew }: { projectId: string | null; onClick: () => void; onNew: () => void }) {
+  const [activeCycle, setActiveCycle] = useState<Cycle | null>(null);
+
+  useEffect(() => {
+    if (!projectId) { setActiveCycle(null); return; }
+    api<Cycle[]>(`/projects/${projectId}/cycles`).then(cycles => {
+      const now = Date.now();
+      const active = cycles.find(c => {
+        if (!c.start_date || !c.end_date) return false;
+        return now >= new Date(c.start_date).getTime() && now <= new Date(c.end_date).getTime();
+      });
+      setActiveCycle(active ?? null);
+    }).catch(() => setActiveCycle(null));
+  }, [projectId]);
+
+  const isActive = !!activeCycle;
+  const daysLeft = activeCycle ? Math.ceil((new Date(activeCycle.end_date).getTime() - Date.now()) / 86400000) : 0;
+
+  return (
+    <div
+      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all group"
+      style={isActive ? {
+        background: `${CYCLE_ACCENT}33`,
+        border: `1px solid ${CYCLE_ACCENT}88`,
+        boxShadow: `0 0 0 1px ${CYCLE_ACCENT}22, inset 0 1px 0 ${CYCLE_ACCENT}22`,
+      } : {
+        background: "transparent",
+        border: `1px solid ${NC.borderFaint}`,
+      }}
+    >
+      <button className="flex items-center gap-2 flex-1 min-w-0 text-left" onClick={onClick}>
+        <Calendar size={13} style={{ color: isActive ? CYCLE_ACCENT : NC.stone, flexShrink: 0 }} />
+        <span className="flex-1 font-semibold" style={{ color: isActive ? NC.cream : NC.stone }}>Cycles</span>
+        {isActive && (
+          <span
+            className="flex items-center gap-1 text-xs font-medium flex-shrink-0 px-1.5 py-0.5 rounded-full"
+            style={{ background: `${CYCLE_ACCENT}44`, color: CYCLE_ACCENT, border: `1px solid ${CYCLE_ACCENT}66` }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: CYCLE_ACCENT }} />
+            {daysLeft > 0 ? `${daysLeft}d` : "now"}
+          </span>
+        )}
+      </button>
+      <button
+        onClick={e => { e.stopPropagation(); onNew(); }}
+        className="flex-shrink-0 rounded p-0.5 transition-colors hover:bg-white/10"
+        title="New cycle"
+        style={{ color: isActive ? `${CYCLE_ACCENT}cc` : "rgba(138,133,128,0.5)" }}
+      >
+        <Plus size={12} />
+      </button>
+    </div>
+  );
+}

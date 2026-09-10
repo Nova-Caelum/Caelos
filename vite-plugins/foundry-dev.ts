@@ -138,16 +138,63 @@ async function promote(root: string, override: FoundryOverride): Promise<{
 
 export function foundryDevPlugin(): Plugin {
   let config: ResolvedConfig;
+  let rebuildingUi = false;
 
   return {
     name: "caelos-foundry-dev",
     apply: "serve",
+    config() {
+      // A package build cleans and rewrites dist in stages. Let the rebuild
+      // endpoint refresh the module graph only when every artifact is ready.
+      return { server: { watch: { ignored: ["**/packages/ui/dist/**"] } } };
+    },
     configResolved(resolved) {
       config = resolved;
     },
     configureServer(server) {
       server.middlewares.use(async (request, response, next) => {
         const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+        if (pathname === "/__foundry/rebuild-ui") {
+          // Fixed local build only. Cross-origin pages cannot trigger execution.
+          const host = request.headers.host ?? "";
+          const origin = request.headers.origin;
+          let local = false;
+          try {
+            const url = new URL("http://" + host);
+            local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)
+              && (!origin || new URL(origin).host === host);
+          } catch { /* malformed host/origin */ }
+          if (!local || request.headers["x-caelos-foundry"] !== "rebuild-ui") {
+            sendJson(response, 403, { error: "Use the local Foundry to rebuild the library." });
+            return;
+          }
+          if (request.method !== "POST") {
+            response.setHeader("Allow", "POST");
+            sendJson(response, 405, { error: "Use POST to rebuild the library." });
+            return;
+          }
+          if (rebuildingUi) {
+            sendJson(response, 409, { error: "A library build is already running." });
+            return;
+          }
+          rebuildingUi = true;
+          try {
+            await execFileAsync("npm", ["run", "build:ui"], {
+              cwd: config.root, env: process.env, timeout: 120_000, maxBuffer: 2 * 1024 * 1024,
+            });
+            server.moduleGraph.invalidateAll();
+            sendJson(response, 200, { ok: true });
+            // Package artifacts are intentionally unwatched during generation.
+            // Refresh other open previews too, including builds started outside the UI.
+            setTimeout(() => server.ws.send({ type: "full-reload", path: "*" }), 250);
+          } catch (error) {
+            server.config.logger.error("Foundry UI build failed: " + String(error));
+            sendJson(response, 500, { error: "The library did not build. Check the development server output, fix the source, and retry." });
+          } finally {
+            rebuildingUi = false;
+          }
+          return;
+        }
         const isPromote = pathname === "/__foundry/promote";
         if (pathname !== "/__foundry/override" && pathname !== "/__foundry/reset-override" && !isPromote) {
           next();

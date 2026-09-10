@@ -1,5 +1,6 @@
 packages:
   - '.'
+  - 'packages/*'
 
 # Package build-script allowlist (pnpm 10.4+ per-repo policy).
 # These packages need native builds (Rust binary for tailwind oxide, esbuild binary).

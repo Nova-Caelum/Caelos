@@ -2,6 +2,8 @@
 
 Caelos is a console for commanding a fleet of AI agents, from Nova Caelum & Co.
 
+The approved design system lives in [`@nova-caelum/ui`](packages/ui/README.md), our reusable Panda CSS component package. Use it for new interface work. Existing application components are being replaced according to the [migration inventory](packages/ui/MIGRATION.md).
+
 *Pronounced KAL-ohs. See it running at [task.novacaelum.com](https://task.novacaelum.com) — access is invite-only during the current pre-1.0 phase.*
 
 ---
