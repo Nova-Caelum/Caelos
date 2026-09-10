@@ -2,9 +2,11 @@
 
 The shared implementation of Caelos’ approved September 2026 design system. New UI imports `@nova-caelum/ui`. The approved atlas is design evidence; this package is the component implementation.
 
+For the full implemented export list, start with [COMPONENTS.md](COMPONENTS.md). Source ownership (`packages/ui` is the single source) is in [SOURCE-OWNERSHIP.md](SOURCE-OWNERSHIP.md); planned behavior extraction is in [BEHAVIOR-ROADMAP.md](BEHAVIOR-ROADMAP.md).
+
 ## Run and use
 
-From the repository root:
+From the **Caelos repository root** (`packages/ui` is the single source; see [SOURCE-OWNERSHIP.md](SOURCE-OWNERSHIP.md)):
 
 ```sh
 npm install
@@ -60,15 +62,27 @@ The source types document supported props. Avoid speculative prop aliases. `Row`
 
 ## Composer integration
 
+Current composer color trial (September 10, 2026): the live-mode waveform is neutral at rest. On hover-capable pointers, the enabled idle live-mode main button uses an action-blue surface with the same cream foreground as Send. Other enabled composer controls, including the footer live-mode shortcut and output choices, tint only their icons action blue on hover. Model/reasoning text, selected-state colors, the active live-mode stop control, and Send retain their existing treatment. The trial is scoped to the composer; it does not establish a library-wide hover convention.
+
 The application owns the draft, model, reasoning, reply format, live-conversation state, and all effects. Supply `value/onValueChange`, `model/models/onModelChange`, `reasoning/reasoningLevels/onReasoningChange`, `replyFormat/onReplyFormatChange`, and `onSend`.
 
 `onSend` receives `{ text, model, reasoning, replyFormat }`. The package never clears a draft automatically; clear after the application accepts submission. Enter sends; Shift+Enter adds a line; IME composition does not send. Writing grows from one to eight lines, then scrolls. Controls retain their positions as the writing area grows.
+
+Supply `commands` with the application’s installed commands and skills: `{ id, name, description, kind, invocation? }`. Names appear as `/name`; the optional `invocation` overrides inserted text for host-specific skill syntax. IDs and names must be unique. Omit the prop to disable suggestions; an empty array shows “No installed commands or skills.” The package does not discover, install, or execute commands. Preview and Foundry entries are samples.
+
+Supply `agents` with only the current chat’s participants: `{ id, name, description?, mention? }` (`ComposerAgent`). Rows show `@name`; `mention` optionally supplies a unique insertion handle such as `@design-lead`. IDs must be unique. Omit the prop to disable agent suggestions; an empty array shows “No agents in this chat.” Typing `@` opens the same picker, filtering names and handles. Ordinary email addresses do not open it. The host owns roster updates and mention routing; selecting a participant only edits the draft.
+
+To edit each participant’s model and reasoning, supply `activeAgentId` and `onActiveAgentChange` alongside `agents`. The brain hover view shows the selected agent’s shared avatar to the left of model/reasoning; clicking pins the view and reveals the agent name. Clicking that identity opens the chat roster. Optional `avatarSrc` uses a profile image, otherwise the shared agent initials avatar is used. The host supplies `model` and `reasoning` for the selected agent and saves their change callbacks under that agent’s ID. Switching agents must load that participant’s saved values. Without a valid selected participant and change callback, the existing model/reasoning controls remain available. This is configuration selection; it does not route or send a message. Preview and Foundry demonstrate independent settings with sample agents.
+
+Typing `/` at the start of a word opens the autocomplete above the composer, with viewport collision handling. Rows contain names only; hovering or navigating with arrow keys reveals a sage summary tooltip to the right, with collision adjustment. Filtering uses the typed command name. Up/Down navigates and wraps; Enter inserts the invocation and a space without submitting. Escape dismisses while preserving the draft; Tab continues normal focus travel. Shift+Enter and IME retain writing behavior. Selection replaces only the active slash token and preserves surrounding text. URLs and slash-separated paths do not open suggestions. See [the interaction contract](INTERACTION-PATTERNS.md#slash-command-autocomplete).
 
 Optional `onAdd`, `onDictate`, and `onLiveChange` expose the approved actions. Add offers file/folder, agent, goal, and session instruction. These callbacks do not install tools, start recording, change permissions, or invoke a model. Implement those effects in the application. `disabled` prevents writing/submitting and audio actions; settings can still be inspected/adjusted.
 
 Use `context` for reversible pending context, and `header`/`footer` for surrounding content. Place `PermissionControl` and the agent profile in the conversation header during ordinary chat; the launch surface may use the composer header slot. Attachment management and agent-profile content are application compositions.
 
-Model/reasoning and reply pickers prefer below the composer; near the lower viewport edge they flip above while their trigger stays still. Add and permissions menus prefer above. Compact hover views can be pinned by click; labeled selectors support keyboard use. Tooltips describe unlabeled controls, without repeating text already visible in expanded choices.
+Click-opened popups must keep their triggering control visible. Agent/model/reasoning submenus open above the complete settings card, with their bottom edge aligned to its top edge. When viewport space requires a fallback, they open below the card and scroll within the available height. See [popup placement](INTERACTION-PATTERNS.md#click-opened-popup-placement).
+
+Model/reasoning and reply disclosures prefer below the composer; near the lower viewport edge they flip above while their trigger stays still. Add and permissions menus prefer above. Compact hover views can be pinned by click; labeled selectors support keyboard use. Tooltips describe unlabeled controls, without repeating text already visible in expanded choices.
 
 ## Locked design contract
 
@@ -85,7 +99,7 @@ The optional `@nova-caelum/ui/preset` export lets another Panda application shar
 
 ## Scope and migration
 
-This release implements the approved primitive and composer scope. It does **not** mean every live application component has been replaced. See [MIGRATION.md](MIGRATION.md) for the explicit cutover map. Foundry composer callbacks remain demonstration-only; this migration does not create a live chat capability. Remaining application consumers and integration limits are listed in the Level 1 ledger. Whole-product light mode needs review in its real contexts. React 18 is the verified runtime for this release.
+The Level 1 source cutover covers the active product and Foundry administrative controls. This is a local source/integration claim, not a deployment or backend-completion claim. See [MIGRATION.md](MIGRATION.md) for the explicit cutover map. Foundry composer callbacks remain demonstration-only; this migration does not create a live chat capability. Intentional authoring specimens and integration limits are listed in the Level 1 ledger. Whole-product light mode needs review in its real contexts. React 18 is the verified runtime for this release.
 
 Approved evidence is recorded in [DESIGN-REFERENCES.md](DESIGN-REFERENCES.md).
 

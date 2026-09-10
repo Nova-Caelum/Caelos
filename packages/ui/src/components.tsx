@@ -16,6 +16,7 @@ import * as RadixTabs from "@radix-ui/react-tabs";
 import * as RadixSelect from "@radix-ui/react-select";
 import { Search, X, ChevronDown, ChevronRight, Check, KeyRound } from "lucide-react";
 import {
+  foundation,
   avatar,
   identity,
   disclosure,
@@ -307,15 +308,16 @@ export const Chip = forwardRef<HTMLButtonElement, ChipProps>(function Chip(
   );
 });
 export function Badge({
+  variant = "status",
   children,
   tone = "neutral",
   className,
   ...props
-}: HTMLAttributes<HTMLSpanElement> & { tone?: Tone }) {
+}: HTMLAttributes<HTMLSpanElement> & { tone?: Tone; variant?: "status" | "dot" }) {
   return (
     <span
       {...props}
-      className={cx(chip({ variant: "status", tone }), className)}
+      className={cx(variant === "dot" ? foundation({ kind: "dot", tone }) : chip({ variant: "status", tone }), className)}
     >
       {children}
     </span>
@@ -376,6 +378,7 @@ export interface TooltipProps {
   detail?: ReactNode;
   children: ReactElement;
   side?: "top" | "bottom" | "left" | "right";
+  sideOffset?: number;
   disabled?: boolean;
   open?: boolean;
 }
@@ -385,6 +388,7 @@ export function Tooltip({
   detail,
   children,
   side = "top",
+  sideOffset = 8,
   disabled = false,
   open,
 }: TooltipProps) {
@@ -399,7 +403,7 @@ export function Tooltip({
           {...themeAttributes(settings)}
           className={tooltip({ variant })}
           side={side}
-          sideOffset={8}
+          sideOffset={sideOffset}
           collisionPadding={12}
         >
           {label}
@@ -761,6 +765,7 @@ export const TaskRow = forwardRef<HTMLDivElement, TaskRowProps>(function TaskRow
         onClick?.(e);
         if (!e.defaultPrevented && e.currentTarget.contains(e.target as Node) && !(e.target as HTMLElement).closest("button,a,input,select,textarea,[data-task-control]")) onOpen?.();
       }}>
+      <div data-task-content>
       {leading}
       <span aria-hidden style={{ width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0 }} />
       <button type="button" onClick={onOpen} className={button({ variant: "text" })}
@@ -770,6 +775,8 @@ export const TaskRow = forwardRef<HTMLDivElement, TaskRowProps>(function TaskRow
         {title}
       </button>
       {afterTitle}
+      </div>
+      <div data-task-controls>
       {onStatusChange
         ? <StatusSelect value={status} onValueChange={onStatusChange} options={options} />
         : <Badge tone={tone}>{selected?.label || status}</Badge>}
@@ -777,6 +784,7 @@ export const TaskRow = forwardRef<HTMLDivElement, TaskRowProps>(function TaskRow
       {metadata}
       {actions && <span data-row-actions style={{ display: "flex", flexShrink: 0 }}>{actions}</span>}
       {trailing}
+      </div>
     </div>
   );
 });

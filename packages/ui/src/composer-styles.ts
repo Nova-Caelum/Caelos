@@ -1,5 +1,13 @@
 // Approved composer rules expressed as Panda global styles. Preview-only rules are excluded.
 export const composerCss = {
+  ".nc-composer-command-menu": {
+    boxSizing: "border-box",
+    width: "max-content",
+    maxWidth: "calc(100vw - 24px)",
+    overscrollBehavior: "contain",
+    scrollbarWidth: "thin",
+    scrollbarColor: "var(--nc-scroll-rest) transparent",
+  },
   ".nc-composer-context": {
     display: "flex",
     alignItems: "center",
@@ -145,6 +153,19 @@ export const composerCss = {
     marginLeft: "3px",
     transition:
       "background 240ms var(--il-ease),box-shadow 240ms var(--il-ease)",
+  },
+  // Composer color exploration: blue appears on approach, not as a selected state.
+  // The idle live-mode action uses a filled hover; other controls tint only icons.
+  "@media (hover: hover)": {
+    ".nc-composer-workspace .nc-composer-icon:not(:disabled):hover svg, .nc-composer-format-option:not(:disabled):hover svg, .nc-composer-under button:not(:disabled):hover svg":
+      {
+        color: "var(--sys-accent)",
+      },
+    ".nc-composer-main-action[data-ready=false][aria-pressed=false]:not(:disabled):hover":
+      {
+        background: "var(--sys-accent)",
+        color: "var(--sys-text-primary)",
+      },
   },
   ".nc-composer-main-action[data-ready=true]": {
     background: "var(--sys-accent)",
@@ -366,6 +387,38 @@ export const composerCss = {
     position: "relative",
     flexShrink: "0",
   },
+  ".nc-composer-brain .nc-composer-model-settings .nc-composer-agent": {
+    display: "flex",
+    alignItems: "center",
+    gap: "0",
+    padding: "5px",
+    minWidth: "0",
+  },
+  ".nc-composer-agent-name": {
+    display: "block",
+    maxWidth: "0",
+    overflow: "hidden",
+    whiteSpace: "nowrap",
+    textOverflow: "ellipsis",
+    opacity: "0",
+    transition:
+      "max-width 260ms cubic-bezier(.16,1,.3,1),opacity 100ms ease-out,margin 260ms cubic-bezier(.16,1,.3,1)",
+  },
+  ".nc-composer-brain[data-state=pinned] .nc-composer-agent-name": {
+    maxWidth: "100px",
+    marginLeft: "8px",
+    opacity: "1",
+  },
+  ".nc-composer-agent-option": {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    minWidth: "0",
+  },
+  ".nc-composer-agent-option > span:last-child": {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  },
   ".nc-composer-brain-bridge": {
     position: "absolute",
     bottom: "100%",
@@ -375,6 +428,7 @@ export const composerCss = {
   },
   ".nc-composer-brain .nc-composer-model-settings": {
     display: "flex",
+    flexWrap: "wrap",
     gap: "5px",
     width: "max-content",
     maxWidth: "calc(100vw - 48px)",
@@ -465,6 +519,10 @@ export const composerCss = {
   ".nc-composer-emerging-menu[data-state=open]": {
     animation: "nc-composer-menu-emerge 260ms cubic-bezier(.16,1,.3,1) both",
   },
+  // Radix owns this positioning wrapper; freeze only the exiting nested menu.
+  "[data-radix-popper-content-wrapper]:has(> .nc-composer-emerging-menu[data-model-owner][data-state=closed])": {
+    transform: "var(--rc-exit-position) !important",
+  },
   ".nc-composer-emerging-menu[data-state=closed]": {
     pointerEvents: "none",
     animation: "nc-composer-menu-retreat 160ms cubic-bezier(.4,0,.8,.3) both",
@@ -535,8 +593,8 @@ export const composerKeyframes = {
   },
   "nc-composer-menu-retreat": {
     from: {
-      opacity: "1",
-      transform: "translateY(0) scale(1)",
+      opacity: "var(--rc-exit-opacity, 1)",
+      transform: "var(--rc-exit-transform, translateY(0) scale(1))",
     },
     to: {
       opacity: "0",

@@ -72,7 +72,7 @@ try{
  const createTask=page.getByRole('dialog',{name:'New Task',exact:true});await settle(createTask);
  assert.equal(await page.getByRole('dialog').count(),1);
  await page.keyboard.press('Escape');await createTask.waitFor({state:'detached'});
- await moduleHeader.getByRole('button',{name:/Module fixture 0\/2/}).focus();await page.keyboard.press('Shift+F10');
+ await moduleHeader.getByRole('button',{name:'Open Module fixture',exact:true}).focus();await page.keyboard.press('Shift+F10');
  await page.getByRole('menuitem',{name:'Open',exact:true}).waitFor();await settle(page.getByRole('menu'));
  await page.keyboard.press('Escape');await page.getByRole('menu').waitFor({state:'detached'});assert.equal(await page.getByRole('dialog').count(),0);
  await page.getByLabel('Search tasks',{exact:true}).fill('Alpha');await row('task-b').waitFor({state:'detached'});assert.equal(await row('task-a').count(),1);
@@ -139,7 +139,10 @@ try{
  assert(await move.isVisible());assert((await move.getByLabel('Module',{exact:true}).innerText()).includes('Module fixture'));
  await page.setViewportSize({width:390,height:844});await page.screenshot({path:evidence+'/move-task-narrow.png'});
  failSave=false;await move.getByRole('button',{name:'Move',exact:true}).click();await move.waitFor({state:'detached'});assert.equal(tasks[2].module_id,'module-fixture');
- await page.setViewportSize({width:768,height:900});await page.screenshot({path:evidence+'/task-rows-narrow.png'});
+ await page.setViewportSize({width:768,height:900});await page.waitForTimeout(250);
+ const widths=await page.locator('[data-task-content] > button:last-of-type').evaluateAll(els=>els.filter(e=>e.getBoundingClientRect().width>0).map(e=>e.getBoundingClientRect().width));
+ if(!widths.length || widths.some(w=>w<110))throw Error('Task title compressed by action controls: '+widths.join(','));
+ await page.screenshot({path:evidence+'/task-rows-narrow.png'});
  await page.setViewportSize({width:1440,height:1000});await page.screenshot({path:evidence+'/task-rows.png'});
  await row('task-b').getByRole('button',{name:'Archive Task Beta',exact:true}).click();
  const archive=page.getByRole('dialog',{name:'Archive task?',exact:true});await settle(archive);

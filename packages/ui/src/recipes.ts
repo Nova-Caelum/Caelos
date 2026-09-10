@@ -354,6 +354,9 @@ export const row = defineRecipe({
       sidebar: {},
       list: {
         minHeight: "56px",
+        "&[data-task-row]": { flexWrap: "wrap", rowGap: "4px" },
+        "& [data-task-content]": { display: "flex", alignItems: "center", gap: "10px", flex: "1 1 200px", minWidth: 0 },
+        "& [data-task-controls]": { display: "flex", alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", gap: "10px", maxWidth: "100%", marginLeft: "auto" },
         "&[data-task-row]:is(:hover,:focus-within)": {
           "--task-row-title-color": "var(--nc-text-hover)",
           "&::before": {

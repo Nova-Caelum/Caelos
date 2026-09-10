@@ -8,30 +8,22 @@ main {
   padding: 60px 32px 180px;
   min-height: 100vh;
 }
-[data-caelos-theme="light"] {
-  background: #eeebf2;
-}
 header {
   margin-bottom: 60px;
 }
 h1 {
-  font-size: 50px;
-  line-height: 1.1;
+
   margin: 16px 0;
 }
 h2 {
-  font-size: 32px;
-  line-height: 1.1;
+
   margin: 0 0 24px;
 }
 h3 {
-  font-size: 16px;
-  font-weight: 500;
+
   margin: 0 0 12px;
 }
-p {
-  line-height: 1.65;
-}
+
 section {
   margin-top: 60px;
   scroll-margin-top: 30px;
@@ -49,12 +41,6 @@ section {
 }
 .spaced {
   margin: 24px 0;
-}
-.eyebrow {
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  color: var(--il-dim);
 }
 .muted,
 footer {
@@ -80,7 +66,5 @@ footer {
   .grid {
     grid-template-columns: 1fr;
   }
-  h1 {
-    font-size: 38px;
-  }
+
 }
