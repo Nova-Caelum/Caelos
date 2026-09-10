@@ -284,6 +284,20 @@
   min-width: 0;
 }
 
+.nc-breadcrumb__tooltip {
+  z-index: 100;
+  max-width: min(52rem, var(--radix-tooltip-content-available-width));
+  box-sizing: border-box;
+  padding: calc(var(--sys-space-2) * 1.3) calc(var(--sys-space-3) * 1.3);
+  border-radius: calc(var(--sys-radius-md) * 1.3);
+  background: var(--sys-top);
+  color: var(--sys-text-primary);
+  box-shadow: var(--sys-elev-2);
+  font-size: 0.975rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
 .nc-breadcrumb__item {
   background: transparent;
   border: none;
@@ -532,6 +546,16 @@ button.nc-chip:hover,
   min-width: 0;
   outline: none;
   padding: 0;
+}
+
+/* The wrapper owns focus illumination; avoid a second ring on its child. */
+.nc-input-primitive__control:focus-visible { outline: none; }
+
+@media (forced-colors: active) {
+  .nc-input-primitive:focus-within {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
 }
 
 .nc-input-primitive__control::placeholder { color: var(--sys-text-faint); }

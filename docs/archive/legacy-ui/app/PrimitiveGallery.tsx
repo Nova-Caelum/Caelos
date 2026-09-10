@@ -70,7 +70,7 @@ function MatrixSection({
   );
 }
 
-export default function PrimitiveGallery() {
+export default function PrimitiveGallery({ showLegacyInputs = true }: { showLegacyInputs?: boolean }) {
   const [activeView, setActiveView] = useState("Board");
   const [activeFilter, setActiveFilter] = useState("Ready");
   const [query, setQuery] = useState("");
@@ -104,6 +104,7 @@ export default function PrimitiveGallery() {
         </Row.Group>
 
         <div className="primitive-playground__toolbar">
+          {showLegacyInputs ? (
           <Input
             data-testid="primitive-search"
             variant="search"
@@ -112,6 +113,14 @@ export default function PrimitiveGallery() {
             placeholder="Filter foundry specimens"
             aria-label="Filter foundry specimens"
           />
+          ) : (
+            <div style={{ position: "relative", flex: 1 }}>
+              <Search size={14} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--nc-text-dim)" }} />
+              <input className="nc-search w-full pl-9 pr-3 py-2 text-sm" value={query}
+                onChange={event => setQuery(event.target.value)} placeholder="Filter foundry specimens"
+                aria-label="Filter foundry specimens" />
+            </div>
+          )}
           <Button
             data-testid="primitive-action"
             variant="primary"
@@ -165,7 +174,7 @@ export default function PrimitiveGallery() {
 
       <div className="primitive-gallery__divider">
         <span>Review matrices</span>
-        <span>five primitives · authored states</span>
+        <span>{showLegacyInputs ? "five" : "four"} primitives · authored states</span>
       </div>
 
       <MatrixSection title="Button" description="variant × size × state" count={24} defaultOpen>
@@ -237,7 +246,7 @@ export default function PrimitiveGallery() {
         </div>
       </MatrixSection>
 
-      <MatrixSection title="Input" description="kind × rest/focus/disabled" count={6}>
+      {showLegacyInputs && <MatrixSection title="Input" description="kind × rest/focus/disabled" count={6}>
         <div className="foundry-input-matrix">
           {INPUT_VARIANTS.map((variant) => (
             <div key={variant}>
@@ -248,7 +257,7 @@ export default function PrimitiveGallery() {
             </div>
           ))}
         </div>
-      </MatrixSection>
+      </MatrixSection>}
 
       <MatrixSection title="Card" description="surface × rest/hover" count={6}>
         <div className="foundry-card-matrix">

@@ -242,11 +242,170 @@
    Component utility classes (brand-ui recipes)
    ────────────────────────────────────────────────────────────────────────── */
 
+/* Matte primary CTA — accent-carried identity, dulled via overlay (hex token unchanged).
+   Recipe: kill glow, kill gloss, overlay accent, soften text, neutral edge + shadow. */
+.nc-matte-cta {
+  background: linear-gradient(rgba(0,0,0,0.14), rgba(0,0,0,0.14)), var(--nc-accent);
+  color: rgba(244,234,213,0.94);
+  border: 1px solid rgba(0,0,0,0.18);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.30);
+  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 100ms ease;
+}
+.nc-matte-cta:hover:not(:disabled) {
+  background: linear-gradient(rgba(0,0,0,0.06), rgba(0,0,0,0.06)), var(--nc-accent-hover);
+  color: rgba(244,234,213,1);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.40);
+}
+.nc-matte-cta:active:not(:disabled) { transform: translateY(1px); }
+
+/* Ghost search field — hairline at rest, accent-tinted on hover */
+.nc-ghost-search {
+  background: transparent;
+  border: 1px solid var(--nc-hair-2);
+  transition: border-color 160ms ease, background 160ms ease;
+}
+.nc-ghost-search:hover, .nc-ghost-search:focus-within {
+  border-color: var(--nc-accent-line);
+  background: var(--nc-accent-tint);
+}
+
+/* Ghost button — secondary action, hairline border, hover raises weight */
+.nc-btn-ghost {
+  background: transparent;
+  color: var(--nc-text-muted);
+  border: 1px solid var(--nc-hair-2);
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+}
+.nc-btn-ghost:hover:not(:disabled) {
+  border-color: var(--nc-hair-3);
+  background: rgba(255,255,255,0.02);
+  color: var(--nc-text-cream);
+}
+
+/* Accent card — soft callout / tip surface */
+.nc-accent-card {
+  background: rgba(109,90,209,0.06);
+  border: 1px solid rgba(109,90,209,0.22);
+}
+
 /* Active nav item — accent-tint background + inset accent left edge (no layout shift) */
 .nc-nav-active {
   background: var(--nc-accent-tint);
   color: var(--nc-text-cream);
   box-shadow: inset 2px 0 0 var(--nc-accent);
+}
+
+/* Kbd chip — accent-tinted keyboard shortcut indicator */
+.nc-kbd {
+  font-family: var(--nc-font-mono);
+  font-size: 10.5px;
+  color: var(--nc-accent-cream);
+  background: var(--nc-accent-tint);
+  border: 1px solid var(--nc-accent-line);
+  border-radius: 3px;
+  padding: 1px 5px;
+  letter-spacing: 0.03em;
+}
+
+/* Lit surface — implied-volume treatment for large panels/modals that sit on solid
+   ground (SlideOver right rail, Modal center card). No true backdrop-filter blur
+   because there's nothing behind to blur; the "glass" read comes from three cues:
+     • Top inset highlight — 1px lit edge (light hits the top of the surface)
+     • Vertical fill gradient — ~5% white at top, fades to zero mid-height
+     • Ambient drop shadow — deep dominant + tight contact, grounds the panel
+   Small cards/buttons/markers DELIBERATELY do NOT get this treatment; depth
+   reads premium because it's reserved for surfaces that earn it.
+   Consumers should REMOVE inline `background: NC.card` when adopting this class
+   (the class owns background), and keep `border-l` or a border for edge sealing. */
+.nc-lit-surface {
+  background:
+    linear-gradient(180deg,
+      rgba(255, 255, 255, 0.048) 0%,
+      rgba(255, 255, 255, 0.014) 22%,
+      rgba(255, 255, 255, 0.000) 55%),
+    var(--nc-elevated);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.085),
+    0 24px 56px rgba(0, 0, 0, 0.42),
+    0 2px 6px rgba(0, 0, 0, 0.36);
+}
+
+/* Liquid-glass context menu / floating panel — frosted backdrop + accent-tinted edge.
+   Recipe: semi-transparent elevated-2 substrate + heavy blur + subtle saturate for depth,
+   accent-line border carries brand identity, deep shadow + inset highlight for lift. */
+.nc-glass-menu {
+  background: rgba(42, 37, 64, 0.55) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(109, 90, 209, 0.28) !important;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.02),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+}
+.nc-glass-menu [role="menuitem"] {
+  transition: background 120ms ease, color 120ms ease;
+  border-radius: 6px;
+}
+.nc-glass-menu [role="menuitem"]:focus,
+.nc-glass-menu [role="menuitem"][data-highlighted] {
+  background: rgba(109, 90, 209, 0.22) !important;
+  color: var(--nc-text-cream) !important;
+  outline: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Flat status chip — Linear-style. Replaces prior einUI liquid-glass pill.
+   Rationale: glass requires backdrop variance to earn its recipe; a status label
+   sitting on a solid header has nothing to blur behind it, so the depth becomes
+   decoration. Glass reserved for overlays (.nc-glass-menu).
+
+   Recipe:
+     - Opaque-looking tint chip (pill-color @ 14% over ground)
+     - Hairline border (pill-color @ 26%)
+     - Text: lightened pill-color for identity + contrast (WCAG ≥ 4.5:1 on ground)
+     - Leading 6px dot at full pill-color (glanceable identity)
+     - No gradient / no backdrop-filter / no inset highlight / no rim shadow
+
+   Two variants:
+     .nc-glass-pill        — interactive (StatusPill: has hover state + chevron)
+     .nc-glass-pill-static — read-only (StateBadge: no hover)
+   ────────────────────────────────────────────────────────────────────────── */
+.nc-glass-pill,
+.nc-glass-pill-static {
+  background: color-mix(in srgb, var(--pill-color, var(--sys-accent)) 14%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--pill-color, var(--sys-accent)) 26%, transparent) !important;
+  color: color-mix(in srgb, var(--pill-color, var(--sys-accent)) 45%, var(--sys-text-primary)) !important;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+/* Trigger override: force flex-start so [dot][label][chevron] group left-to-right
+   instead of justify-between spreading them apart across a 92px pill. */
+.nc-glass-pill { justify-content: flex-start !important; gap: 4px !important; }
+/* NOTE: Leading state-dot is NOT rendered via ::before here — both consumers
+   (StateBadge markup and NcSelect SelectItem markup) already own their own dot span.
+   Adding ::before would produce a double-dot. */
+.nc-glass-pill:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--pill-color, var(--sys-accent)) 22%, transparent) !important;
+  border-color: color-mix(in srgb, var(--pill-color, var(--sys-accent)) 40%, transparent) !important;
+  color: color-mix(in srgb, var(--pill-color, var(--sys-accent)) 30%, var(--sys-text-primary)) !important;
+}
+.nc-glass-pill:focus-visible {
+  outline: 2px solid var(--nc-accent);
+  outline-offset: 2px;
+}
+
+/* Legacy grid utility (retained for reference imports if any use it — do NOT apply on product surfaces) */
+.nc-grid-bg {
+  background-color: var(--nc-ground);
+  background-image:
+    linear-gradient(rgba(78,76,130,0.10) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(78,76,130,0.10) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-position: -1px -1px;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -344,6 +503,45 @@ textarea:focus:not(:focus-visible),
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   Section shelf — bare row for nav-group headers (PROJECTS / INITIATIVES).
+   No ambient fill at rest OR hover; the label + chevron + `+` sit directly
+   on sidebar chrome with nothing enclosing them. The previous ambient wash
+   was still reading as a boxy container in hover state — Daniel-directive
+   2026-07-28. Keeps the click affordance via cursor only.
+   ────────────────────────────────────────────────────────────────────────── */
+.nc-section-shelf {
+  padding: 6px 8px 6px 12px;
+  cursor: pointer;
+  user-select: none;
+}
+/* .nc-section-group is intentionally a semantic layout wrapper only — no
+   background, no border, no perimeter. Bare labels on chrome. */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Ghost search field v2 — the flagship recipe on the app's most-used input.
+   Rounded-full, subtle inner ambient, hairline border, accent-glow on focus.
+   ────────────────────────────────────────────────────────────────────────── */
+.nc-search {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--nc-hair-2);
+  border-radius: 999px;
+  color: var(--nc-text-cream);
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+.nc-search::placeholder { color: var(--nc-text-dim); }
+.nc-search:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--nc-hair-3);
+}
+.nc-search:focus,
+.nc-search:focus-visible {
+  outline: none;
+  background: rgba(109, 90, 209, 0.06);
+  border-color: var(--nc-accent-line);
+  box-shadow: 0 0 0 3px rgba(109, 90, 209, 0.14);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
    Text input / textarea / select-trigger — einUI-inspired liquid-glass focus.
    Rest: quiet fill + hairline border.
    Focus: diagonal gradient fill (light-indigo → sage, non-accent to avoid
@@ -398,25 +596,225 @@ textarea:focus:not(:focus-visible),
   cursor: not-allowed;
 }
 
-/* Retained for the release multi-state filter until shared checkbox-menu approval. */
-.nc-glass-menu {
-  background: rgba(42, 37, 64, 0.55) !important;
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(109, 90, 209, 0.28) !important;
+/* ═══════════════════════════════════════════════════════════════════════════
+   LOCKED · Canonical components — promoted from LockedStudio 2026-07-30
+   Source: src/app/LockedStudio.tsx
+   Framework: 2×2 matrix (bounded/unbounded × entity/accent)
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* ─── Unbounded Breadcrumb — sign, not action, not accent ─── */
+.locked-bc {
+  position: relative;
+  display: inline-flex;
+  padding: 6px 14px;
+  border-radius: 14px;
+  background: transparent;
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
+  border: none;
+  box-shadow: none;
+}
+.locked-bc::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.020) 0%, rgba(255,255,255,0) 100%),
+    rgba(42, 44, 52, 0.60);
+  filter: blur(6px);
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.55),
-    0 0 0 1px rgba(255, 255, 255, 0.02),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+    0 0 10px rgba(130, 130, 145, 0.205),
+    inset 0 0 8px rgba(130, 130, 145, 0.144);
+  z-index: 0;
+  pointer-events: none;
 }
-.nc-glass-menu [role="menuitem"] {
-  transition: background 120ms ease, color 120ms ease;
+.locked-bc > * { position: relative; z-index: 1; }
+.locked-bc-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+}
+.locked-bc-seg {
+  font-size: 12.5px;
+  letter-spacing: -0.005em;
+  color: rgba(244, 234, 213, 0.62);
+  padding: 3px 8px;
   border-radius: 6px;
+  cursor: pointer;
+  transition: color 240ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.nc-glass-menu [role="menuitem"]:focus,
-.nc-glass-menu [role="menuitem"][data-highlighted] {
-  background: rgba(109, 90, 209, 0.22) !important;
-  color: var(--nc-text-cream) !important;
-  outline: none;
+.locked-bc-seg:hover {
+  color: rgba(244, 234, 213, 0.94);
+}
+.locked-bc-sep {
+  color: rgba(244, 234, 213, 0.24);
+  font-size: 11px;
+  padding: 0 2px;
+  user-select: none;
+}
+
+/* ─── Folder Button — bounded action entity (breadcrumb's neighbor) ─── */
+.locked-folder-btn {
+  padding: 7px 10px;
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.020) 0%, rgba(255,255,255,0) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(244, 234, 213, 0.55);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition:
+    background 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.locked-folder-btn:hover {
+  color: rgba(244, 234, 213, 0.95);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.028) 0%, rgba(255,255,255,0) 100%);
+  border-color: rgba(255, 255, 255, 0.10);
+  box-shadow: 0 0 12px rgba(110, 120, 176, 0.28);
+}
+
+/* ─── 3-Tier Button Ladder — T1 primary / T2 secondary / T3 text ─── */
+/*  Accent volume ladder: T3 none @ rest, T2 hover-only bloom, T1 is-the-entity.
+    Destructive variants: family-swap hue (cool → warm), same tier chemistry.
+    Usage: T1 = commit action, ONE per surface. T2 = frequent CTAs.
+    T3 = escape hatches. Prefer LOWER emphasis when in doubt.                 */
+
+.locked-btn-primary,
+.locked-btn-secondary,
+.locked-btn-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+}
+.locked-btn-primary:disabled,
+.locked-btn-secondary:disabled,
+.locked-btn-text:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* T1 · PRIMARY — matte body + glass character */
+.locked-btn-primary {
+  padding: 8px 16px;
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg,
+      rgba(168, 178, 240, 0.18) 0%,
+      rgba(255, 255, 255, 0)    45%,
+      rgba(91, 125, 115, 0.12) 100%
+    ),
+    linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.08) 100%),
+    rgba(110, 120, 176, 0.90);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+  color: rgba(244, 234, 213, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.28),
+    0 0 12px rgba(110, 120, 176, 0.14);
+  transition:
+    background 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.locked-btn-primary:hover:not(:disabled) {
+  background:
+    linear-gradient(135deg,
+      rgba(168, 178, 240, 0.28) 0%,
+      rgba(255, 255, 255, 0)    45%,
+      rgba(91, 125, 115, 0.18) 100%
+    ),
+    linear-gradient(180deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.04) 100%),
+    rgba(110, 120, 176, 0.95);
+  color: rgba(244, 234, 213, 1);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 3px 10px rgba(0, 0, 0, 0.32),
+    0 0 24px rgba(110, 120, 176, 0.34);
+}
+.locked-btn-primary--danger {
+  background:
+    linear-gradient(135deg,
+      rgba(255, 200, 180, 0.14) 0%,
+      rgba(255, 255, 255, 0)    50%,
+      rgba(120, 40, 45, 0.10)  100%
+    ),
+    linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.08) 100%),
+    rgba(194, 91, 98, 0.90);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.28),
+    0 0 12px rgba(194, 91, 98, 0.16);
+}
+.locked-btn-primary--danger:hover:not(:disabled) {
+  background:
+    linear-gradient(135deg,
+      rgba(255, 200, 180, 0.22) 0%,
+      rgba(255, 255, 255, 0)    50%,
+      rgba(120, 40, 45, 0.16)  100%
+    ),
+    linear-gradient(180deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.04) 100%),
+    rgba(194, 91, 98, 0.95);
+  box-shadow:
+    0 3px 10px rgba(0, 0, 0, 0.32),
+    0 0 24px rgba(194, 91, 98, 0.36);
+}
+
+/* T2 · SECONDARY — nc-input rest DNA */
+.locked-btn-secondary {
+  padding: 7px 14px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.020) 0%, rgba(255,255,255,0) 100%);
+  color: rgba(244, 234, 213, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition:
+    color 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    background 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.locked-btn-secondary:hover:not(:disabled) {
+  color: rgba(244, 234, 213, 0.98);
+  background: linear-gradient(135deg, rgba(255,255,255,0.028) 0%, rgba(255,255,255,0) 100%);
+  border-color: rgba(255, 255, 255, 0.10);
+  box-shadow: 0 0 14px rgba(110, 120, 176, 0.28);
+}
+.locked-btn-secondary--danger { color: rgba(194, 91, 98, 0.82); }
+.locked-btn-secondary--danger:hover:not(:disabled) {
+  color: #C25B62;
+  border-color: rgba(194, 91, 98, 0.22);
+  box-shadow: 0 0 14px rgba(194, 91, 98, 0.24);
+}
+
+/* T3 · TEXT — transparent, no chrome, neutral hover */
+.locked-btn-text {
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(244, 234, 213, 0.62);
+  border: 1px solid transparent;
+  transition:
+    color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    background 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.locked-btn-text:hover:not(:disabled) {
+  color: rgba(244, 234, 213, 0.94);
+  background: rgba(255, 255, 255, 0.04);
+}
+.locked-btn-text--danger { color: rgba(194, 91, 98, 0.72); }
+.locked-btn-text--danger:hover:not(:disabled) {
+  color: #C25B62;
+  background: rgba(194, 91, 98, 0.06);
 }
