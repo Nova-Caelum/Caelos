@@ -1,0 +1,9 @@
+# Composer reply · revision 06
+
+Motion mockup for review. The brain and reply-format trigger icons remain stationary. Only their emerging panels translate (7px) and scale (94% to 100%), settling over 260ms with cubic-bezier(.16,1,.3,1). Opacity enters over 170ms. Dismissal retreats over 160ms with a 130ms fade. No bounce or trigger compression.
+
+The reply-format panel expands from compact icons to labeled choices with the same deceleration. Labels reveal within the expanding panel. Panels stay mounted so an interrupted exit can reverse continuously; closed panels are inert, hidden from accessibility, and noninteractive. Existing hover grace and keyboard/outside dismissal remain. Existing reduced-motion controls disable these transitions.
+
+Below-composer docking remains as approved. Nested choice-menu anchors use untransformed layout measurements so their position is independent of the parent entrance animation. Add placement, surface materials, typography, and tooltip treatment are unchanged. This remains a local prototype; custom panel collision fallback for a tightly constrained production viewport is still outstanding.
+
+Verification: Vite production build passed (2088 modules). Isolated Chromium captured intermediate opening frames while confirming the trigger coordinates did not move. Closing opacity was observed mid-transition, and reopening retained the same panel DOM node. Settled brain/reply panels align exactly with the composer bottom; nested reasoning menu within 0.35px. Hover, click-to-expand, selection, Escape, and inert dismissal exercised. Expanded reply panel fits within the narrow eight-line composer. OS reduced-motion gives immediate opacity 1 with zero transition duration. No page errors. Screenshot visually reviewed. Runtime and durable source copies match byte for byte.

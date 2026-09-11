@@ -1,0 +1,100 @@
+/*
+ * CAELOS CANONICAL PRIMITIVE STYLESHEET
+ *
+ * Draft chemistry in Design Lab, promote locked decisions here, and consume
+ * this file from both Locked Studio and Foundry. Do not duplicate primitive
+ * chemistry in TSX style blocks.
+ */
+
+.nc-icon-slot > svg {
+  display: block;
+  height: 1em;
+  width: 1em;
+}
+
+.nc-primitive__label {
+  line-height: 1;
+  transform: translateY(calc(var(--sys-border-width-1) * -1));
+}
+
+.nc-button,
+.nc-row,
+.nc-chip,
+.nc-input-primitive,
+.nc-card {
+  box-sizing: border-box;
+  font-family: inherit;
+  -webkit-font-smoothing: antialiased;
+}
+
+.nc-button {
+  align-items: center;
+  appearance: none;
+  border: var(--sys-border-width-2) solid transparent;
+  border-radius: var(--sys-radius-md);
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  font-weight: 650;
+  gap: var(--sys-space-2);
+  justify-content: center;
+  letter-spacing: 0.005em;
+  min-width: 0;
+  outline: none;
+  padding: 0 var(--sys-space-4);
+  transition:
+    background var(--sys-motion-base) var(--sys-ease-out),
+    border-color var(--sys-motion-base) var(--sys-ease-out),
+    box-shadow var(--sys-motion-base) var(--sys-ease-out),
+    color var(--sys-motion-fast) var(--sys-ease-out),
+    opacity var(--sys-motion-fast) var(--sys-ease-out),
+    transform var(--sys-motion-fast) var(--sys-ease-snap);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.nc-button[data-size="sm"] {
+  font-size: 0.6875rem;
+  height: var(--sys-space-7);
+  padding-inline: var(--sys-space-3);
+}
+
+.nc-button[data-size="md"] {
+  height: var(--sys-space-8);
+}
+
+.nc-button[data-variant="primary"] {
+  background:
+    linear-gradient(135deg, var(--sys-sem-ready-tint), transparent 48%, var(--sys-sem-sage-tint)),
+    color-mix(in srgb, var(--sys-accent) 90%, var(--sys-ground));
+  border-color: var(--sys-hair-2);
+  box-shadow: var(--sys-elev-1), 0 0 var(--sys-space-4) var(--sys-accent-glow);
+  color: var(--sys-text-primary);
+  backdrop-filter: blur(var(--sys-radius-md)) saturate(140%);
+}
+
+.nc-button[data-variant="primary"]:hover:not(:disabled),
+.nc-button[data-variant="primary"][data-force-state="hover"]:not(:disabled) {
+  background:
+    linear-gradient(135deg, var(--sys-sem-ready-line), transparent 48%, var(--sys-sem-sage-line)),
+    color-mix(in srgb, var(--sys-accent-hover) 94%, var(--sys-ground));
+  border-color: var(--sys-hair-3);
+  box-shadow: var(--sys-elev-2), 0 0 var(--sys-space-6) var(--sys-accent-glow);
+}
+
+.nc-button[data-danger][data-variant="primary"] {
+  background:
+    linear-gradient(135deg, var(--sys-sem-danger-tint), transparent 48%, var(--sys-sem-danger-line)),
+    color-mix(in srgb, var(--sys-sem-danger) 90%, var(--sys-ground));
+  box-shadow: var(--sys-elev-1), 0 0 var(--sys-space-4) var(--sys-sem-danger-glow);
+}
+
+.nc-button[data-danger][data-variant="primary"]:hover:not(:disabled),
+.nc-button[data-danger][data-variant="primary"][data-force-state="hover"]:not(:disabled) {
+  background:
+    linear-gradient(135deg, var(--sys-sem-danger-line), transparent 48%, var(--sys-sem-danger-tint)),
+    color-mix(in srgb, var(--sys-sem-danger-hover) 94%, var(--sys-ground));
+  box-shadow: var(--sys-elev-2), 0 0 var(--sys-space-6) var(--sys-sem-danger-glow);
+}
+
