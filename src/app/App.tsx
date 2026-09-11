@@ -2095,7 +2095,7 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onBack, onC
                 would be non-atomic, would mint a new module UUID, and would orphan the
                 module-scoped activity rollup that keys off it. Until ops-server grows an
                 atomic move, the control states that plainly instead of silently no-oping
-                (it was a bare console.log placeholder — see UI_ErrorCorrection_Notes #15). */}
+                (it was a bare console.log placeholder — see docs/archive/pre-panda-2026-07/UI_ErrorCorrection_Notes.md #15). */}
             <IconButton variant="text" disabled label="Move to different project (unavailable — requires backend support)" icon={<FolderInput size={13} />} />
           </div>
           <div className="flex items-center gap-2 mt-1">
