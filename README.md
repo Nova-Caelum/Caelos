@@ -4,7 +4,7 @@ Caelos is a console for commanding a fleet of AI agents, from Nova Caelum & Co.
 
 The approved design system lives in [`@nova-caelum/ui`](packages/ui/README.md), our reusable Panda CSS component package. Use it for new interface work. Existing application components are being replaced according to the [migration inventory](packages/ui/MIGRATION.md).
 
-*Pronounced KAL-ohs. See it running at [task.novacaelum.com](https://task.novacaelum.com) — access is invite-only during the current pre-1.0 phase.*
+*Pronounced KAL-ohs. See it running at [console.novacaelum.com](https://console.novacaelum.com) — access is invite-only during the current pre-1.0 phase.*
 
 ---
 
@@ -18,7 +18,7 @@ Creator Note: This is an actively developing project, and it is built specifical
 
 ## See it in action
 
-The Task Graph facet has been live at [task.novacaelum.com](https://task.novacaelum.com) since 2026-07-26, running on the current substrate (Vite + React + shadcn, backed by a FastAPI + Supabase stack on Railway). Access is gated by Cloudflare Access during pre-1.0 — email daniel@novacaelum.com for an invite.
+The Task Graph facet has been live at [console.novacaelum.com](https://console.novacaelum.com) since 2026-07-26, running on the current substrate (Vite + React + shadcn, backed by a FastAPI + Supabase stack on Railway). Access is gated by Cloudflare Access during pre-1.0 — email daniel@novacaelum.com for an invite.
 
 A public demo, a self-host path, and a hosted-tier signup will land alongside the cockpit + file editor + fleet manager fusion. See [Status](#status) for the current shipping cadence.
 
@@ -56,7 +56,7 @@ Model access flows through the Anthropic Agent SDK. Agent processes are launched
 
 | Facet | State | Notes |
 |---|---|---|
-| **Task Graph** | ✅ Live | Running at [task.novacaelum.com](https://task.novacaelum.com) since 2026-07-26. Projects, initiatives, cycles, modules, work items, subtasks, and cross-entity linking are all end-to-end functional. React + Vite + shadcn frontend, FastAPI backend on Railway, Supabase persistence. This is the facet you can see today. |
+| **Task Graph** | ✅ Live | Running at [console.novacaelum.com](https://console.novacaelum.com) since 2026-07-26. Projects, initiatives, cycles, modules, work items, subtasks, and cross-entity linking are all end-to-end functional. React + Vite + shadcn frontend, FastAPI backend on Railway, Supabase persistence. This is the facet you can see today. |
 | **Backend substrate** | ✅ Live | 37 MCP tools + 16 REST endpoints, deployed on Railway as `nova-caelum-ops`. Serves both the console and the agent fleet. |
 | **Worklog + task queue** | ✅ Live | Cross-agent persistence for session summaries, decisions, and per-agent task queues. Consumed by every Nova Caelum agent persona. |
 
@@ -87,7 +87,7 @@ Verbal descriptor is *the Caelos console* — a deliberate register borrowed fro
 
 ## Security, privacy, data handling
 
-Caelos runs against your own persistence layer and does not phone home to Nova Caelum by default. This section describes exactly what the hosted deployment at [task.novacaelum.com](https://task.novacaelum.com) collects; a self-host deployment collects only what your own configuration directs.
+Caelos runs against your own persistence layer and does not phone home to Nova Caelum by default. This section describes exactly what the hosted deployment at [console.novacaelum.com](https://console.novacaelum.com) collects; a self-host deployment collects only what your own configuration directs.
 
 ### What Caelos collects
 
