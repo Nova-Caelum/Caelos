@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, ReactElement } from "react";
 import {
   ComposerInternal,
   PermissionControlInternal,
@@ -16,6 +16,8 @@ export interface ComposerMessage {
   replyFormat: ReplyFormat;
   model: string;
   reasoning: string;
+  goal?: string;
+  instruction?: string;
 }
 export interface ComposerProps {
   value: string;
@@ -43,6 +45,13 @@ export interface ComposerProps {
   disabled?: boolean;
   placeholder?: string;
   label?: string;
+  /** Saved conversation context. Supply a change handler to enable its editor. */
+  goal?: string;
+  onGoalChange?: (goal: string) => void;
+  instruction?: string;
+  onInstructionChange?: (instruction: string) => void;
+  /** Used consistently in the add menu and saved goal pill. Defaults to Lucide Goal. */
+  goalIcon?: ReactElement;
   context?: ReactNode;
   header?: ReactNode;
   footer?: ReactNode;
@@ -59,6 +68,8 @@ export function Composer(props: ComposerProps) {
       header={undefined}
       footer={undefined}
       live={false}
+      onGoalChange={undefined}
+      onInstructionChange={undefined}
       onAdd={undefined}
       onDictate={undefined}
       onLiveChange={undefined}

@@ -16,6 +16,18 @@ export const composerCss = {
     scrollbarWidth: "thin",
     scrollbarColor: "var(--nc-scroll-rest) transparent",
   },
+  ".nc-composer-pills": { display: "flex", flexWrap: "wrap", gap: "6px", flex: "1", minWidth: "0" },
+  ".nc-composer-pill": { display: "flex", alignItems: "center", borderRadius: "999px", background: "var(--il-surface)", border: "1px solid var(--il-edge)", color: "var(--il-muted)", overflow: "hidden" },
+  ".nc-composer-pill-label": { display: "flex", alignItems: "center", gap: "6px", padding: "6px 8px 6px 10px", font: "inherit", fontSize: "12px" },
+  ".nc-composer-pill-remove": { display: "grid", placeItems: "center", width: "28px", alignSelf: "stretch" },
+  ".nc-composer-pill button:hover": { color: "var(--il-ink)", background: "var(--il-fill)" },
+  ".nc-composer-pill button:focus-visible": { outline: "2px solid var(--il-muted)", outlineOffset: "-3px" },
+  ".nc-composer-context-editor": { width: "min(360px, calc(100vw - 24px))", boxSizing: "border-box", padding: "16px", background: "var(--nc-glass-bg)", backdropFilter: "blur(var(--nc-glass-blur))", border: "1px solid var(--il-edge)", borderRadius: "16px", color: "var(--il-ink)", boxShadow: "0 12px 32px #0003", zIndex: "80", font: "500 13px/1.5 'IBM Plex Sans',sans-serif" },
+  ".nc-composer-context-editor label": { display: "block", marginBottom: "8px" },
+  ".nc-composer-context-editor textarea": { width: "100%", boxSizing: "border-box", resize: "vertical", minHeight: "90px", maxHeight: "40vh", padding: "10px", background: "var(--il-fill)", border: "1px solid var(--il-edge)", borderRadius: "10px", color: "var(--il-ink)", font: "inherit" },
+  ".nc-composer-context-editor form > div": { display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "12px" },
+  ".nc-composer-context-editor button": { padding: "7px 14px", borderRadius: "999px", background: "var(--il-surface)", color: "var(--il-ink)" },
+  ".nc-composer-context-editor button:disabled": { opacity: ".4", cursor: "not-allowed" },
   ".nc-composer-context": {
     display: "flex",
     alignItems: "center",
@@ -328,6 +340,8 @@ export const composerCss = {
     boxShadow: "0 10px 32px #33283e22",
   },
   "@media (max-width:650px)": {
+    ".nc-composer-controls:has(.nc-composer-pills)": { flexWrap: "wrap" },
+    ".nc-composer-pills": { order: "-1", flexBasis: "100%", marginBottom: "5px" },
     ".nc-composer-controls": {
       flexWrap: "nowrap",
       gap: "12px",

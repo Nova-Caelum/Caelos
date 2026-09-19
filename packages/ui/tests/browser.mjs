@@ -540,11 +540,11 @@ await test("Add menu invokes callback; Escape restores focus", async () => {
   const add = primary.getByRole("button", { name: "Add to this conversation" });
   await add.click();
   await page
-    .getByRole("menuitem", { name: "Session instruction", exact: true })
+    .getByRole("menuitem", { name: "File or folder", exact: true })
     .click();
   assert.equal(
     await primary.locator("output").innerText(),
-    "Add: Session instruction",
+    "Add: File or folder",
   );
   await add.click();
   await page.keyboard.press("Escape");
