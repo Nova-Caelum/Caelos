@@ -1,7 +1,9 @@
 {
-  "name": "@figma/my-make-file",
-  "private": true,
+  "name": "@nova-caelum/caelos",
   "version": "0.0.1",
+  "description": "Caelos — the console and command centre for the Nova Caelum agent system.",
+  "license": "UNLICENSED",
+  "private": true,
   "type": "module",
   "scripts": {
     "build": "npm run build:ui && vite build",
