@@ -52,7 +52,7 @@ function Compose({ id = "primary" }: { id?: string }) {
       [activeAgentId]: { ...current[activeAgentId], reasoning },
     }));
   return (
-    <div data-composer-demo={id}>
+    <div data-composer-demo={id} className="nc-composer-dock-space">
       <Composer
         value={value}
         onValueChange={setValue}

@@ -94,9 +94,14 @@ function useCompactDock(open, root, bridge, rightOffset) {
         surface = shell.getBoundingClientRect();
       const width = bridge.current.offsetWidth,
         height = bridge.current.firstElementChild.offsetHeight;
-      const below = window.innerHeight - surface.bottom - 12,
+      // Include the visible 2px shell gap when deciding whether the picker fits.
+      const edgeGap = parseFloat(getComputedStyle(shell).getPropertyValue("--nc-composer-dock-edge-gap")) || 3;
+      // innerHeight rounds fractional CSS pixels at zoom; use the visible floor.
+      const viewport = window.visualViewport;
+      const floor = viewport ? viewport.offsetTop + viewport.height : window.innerHeight;
+      const below = floor - surface.bottom - edgeGap - 2,
         above = surface.top - 12;
-      const side = below < height && above > below ? "top" : "bottom";
+      const side = below + 0.5 < height && above > below ? "top" : "bottom";
       let right = rightOffset;
       const left = control.right - right - width;
       if (left < 12) right -= 12 - left;

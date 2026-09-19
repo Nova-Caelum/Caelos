@@ -1,5 +1,13 @@
 // Approved composer rules expressed as Panda global styles. Preview-only rules are excluded.
 export const composerCss = {
+  // Approved viewport dock: 42px picker + 2px shell gap + 3px floor cushion.
+  // Opt-in host wrapper reserves the lane while menus are closed as well.
+  ".nc-composer-dock-space": {
+    paddingBottom: "47px",
+  },
+  ".nc-composer-docked-bridge[data-dock=bottom] > .nc-composer-format-menu, .nc-composer-docked-bridge[data-dock=bottom] > .nc-composer-model-settings": {
+    marginTop: "2px",
+  },
   ".nc-composer-command-menu": {
     boxSizing: "border-box",
     width: "max-content",
@@ -187,13 +195,14 @@ export const composerCss = {
     zIndex: "30",
   },
   ".nc-composer-format-menu": {
+    minHeight: "42px",
     maxWidth: "calc(100vw - 24px)",
     display: "flex",
     alignItems: "center",
     gap: "4px",
-    padding: "6px",
-    width: "132px",
-    borderRadius: "16px",
+    padding: "4px",
+    width: "122px",
+    borderRadius: "13px",
     background: "color-mix(in srgb,var(--sys-top) 85%,transparent)",
     backdropFilter: "blur(19px)",
     border: "1px solid #baa6d31c",
@@ -202,17 +211,17 @@ export const composerCss = {
     transition: "width 300ms var(--il-ease)",
   },
   ".nc-composer-format-menu[data-expanded=true]": {
-    width: "308px",
+    width: "286px",
   },
   ".nc-composer-format-option": {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     gap: "0",
-    height: "38px",
-    minWidth: "36px",
+    height: "32px",
+    minWidth: "32px",
     flex: "1",
-    borderRadius: "11px",
+    borderRadius: "9px",
     color: "var(--il-muted)",
     padding: "0",
     transition:
@@ -230,7 +239,7 @@ export const composerCss = {
   },
   ".nc-composer-format-label": {
     display: "none",
-    font: "500 13px/19.5px 'IBM Plex Sans',sans-serif",
+    font: "500 12.5px/19px 'IBM Plex Sans',sans-serif",
     letterSpacing: ".019em",
     wordSpacing: ".055em",
     whiteSpace: "nowrap",
@@ -332,13 +341,13 @@ export const composerCss = {
       paddingLeft: "3px",
     },
     ".nc-composer-format-menu[data-expanded=true]": {
-      width: "280px",
+      width: "286px",
     },
     ".nc-composer-format-bridge": {
       right: "-39px",
     },
     ".nc-composer-format-label": {
-      fontSize: "12px",
+      fontSize: "12.5px",
     },
     ".nc-composer-recipient-detail": {
       display: "none",
@@ -387,13 +396,6 @@ export const composerCss = {
     position: "relative",
     flexShrink: "0",
   },
-  ".nc-composer-brain .nc-composer-model-settings .nc-composer-agent": {
-    display: "flex",
-    alignItems: "center",
-    gap: "0",
-    padding: "5px",
-    minWidth: "0",
-  },
   ".nc-composer-agent-name": {
     display: "block",
     maxWidth: "0",
@@ -427,13 +429,14 @@ export const composerCss = {
     zIndex: "31",
   },
   ".nc-composer-brain .nc-composer-model-settings": {
+    minHeight: "42px",
     display: "flex",
     flexWrap: "wrap",
-    gap: "5px",
+    gap: "3px",
     width: "max-content",
     maxWidth: "calc(100vw - 48px)",
-    padding: "7px",
-    borderRadius: "16px",
+    padding: "4px",
+    borderRadius: "13px",
     background: "color-mix(in srgb,var(--sys-top) 85%,transparent)",
     backdropFilter: "blur(19px)",
     border: "1px solid #baa6d31c",
@@ -443,7 +446,15 @@ export const composerCss = {
   },
   ".nc-composer-brain .nc-composer-model-settings .nc-composer-model": {
     fontSize: "12px",
-    padding: "9px 11px",
+    lineHeight: "20px",
+    padding: "6px 9px",
+  },
+  ".nc-composer-brain .nc-composer-model-settings .nc-composer-agent": {
+    display: "flex",
+    alignItems: "center",
+    gap: "0",
+    padding: "4px",
+    minWidth: "0",
   },
   ".nc-composer-brain .nc-composer-model-settings .nc-composer-reasoning": {
     color: "var(--il-muted)",
@@ -497,6 +508,8 @@ export const composerCss = {
     },
   ".nc-composer-format-option svg": {
     flexShrink: "0",
+    width: "17px",
+    height: "17px",
   },
   ".nc-composer-format-menu .nc-composer-format-label": {
     display: "block",
@@ -507,7 +520,7 @@ export const composerCss = {
       "max-width 260ms cubic-bezier(.16,1,.3,1),opacity 100ms ease-out",
   },
   ".nc-composer-format-menu[data-expanded=true] .nc-composer-format-option": {
-    gap: "8px",
+    gap: "6px",
   },
   ".nc-composer-emerging-menu": {
     transformOrigin: "var(--radix-dropdown-menu-content-transform-origin)",
