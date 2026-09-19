@@ -13,7 +13,8 @@ import {
   Captions,
   Folder,
   Bot,
-  Target,
+  Goal,
+  X,
   FileText,
   AudioLines,
   ArrowUp,
@@ -25,6 +26,7 @@ import {
   Check,
 } from "lucide-react";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import * as Popover from "@radix-ui/react-popover";
 import * as Dropdown from "@radix-ui/react-dropdown-menu";
 import { Avatar, Tooltip as CaelosTooltip } from "./components";
 import { themeAttributes, useCaelosTheme } from "./theme";
@@ -716,12 +718,13 @@ function ModelSettings({
     </div>
   );
 }
-function AddToConversation({ mode, onAdd }) {
+function AddToConversation({ mode, onAdd, goalIcon, disabled }) {
   const { trigger, gap } = useComposerDock();
   const settings = useCaelosTheme();
   const reduced = useContext(ComposerReducedMotion),
     [open, setOpen] = useState(false);
   const content = useRef(null);
+  const openingEditor = useRef(false);
   const changeOpen = (value) => {
     if (!value) captureMenuExit(content);
     setOpen(value);
@@ -739,6 +742,7 @@ function AddToConversation({ mode, onAdd }) {
             onClick={() => changeOpen(!open)}
             className="nc-composer-icon"
             aria-label="Add to this conversation"
+            disabled={disabled}
           >
             <Plus size={19} />
           </button>
@@ -755,25 +759,29 @@ function AddToConversation({ mode, onAdd }) {
           align="start"
           sideOffset={gap + 2}
           collisionPadding={12}
+          onCloseAutoFocus={(event) => {
+            if (openingEditor.current) event.preventDefault();
+            openingEditor.current = false;
+          }}
         >
           {[
             ["File or folder", Folder],
             ["Agent", Bot],
-            ["Goal", Target],
+            ["Goal", Goal],
             ["Session instruction", FileText],
           ].map(([item, Icon]) => (
             <Dropdown.Item
               className="nc-composer-small-item"
               style={{ justifyContent: "flex-start", gap: 10 }}
               key={item}
-              onSelect={() => onAdd(item)}
+              onSelect={() => { openingEditor.current = onAdd(item) === true; }}
             >
-              <Icon
+              {item === "Goal" && goalIcon ? <span aria-hidden="true">{goalIcon}</span> : <Icon
                 size={16}
                 strokeWidth={1.6}
                 aria-hidden="true"
                 style={{ flexShrink: 0 }}
-              />
+              />}
               <span>{item}</span>
             </Dropdown.Item>
           ))}
@@ -822,10 +830,34 @@ export function ComposerInternal({
   placeholder = "What’s on your mind?",
   label = "Message",
   context,
+  goal = "",
+  onGoalChange,
+  instruction = "",
+  onInstructionChange,
+  goalIcon = <Goal size={16} strokeWidth={1.6} aria-hidden="true" />,
   header,
   footer,
 }) {
   const { theme: mode, reducedMotion: reduced } = useCaelosTheme();
+  const settings = useCaelosTheme();
+  const [editing, setEditing] = useState(null), [contextDraft, setContextDraft] = useState("");
+  const contextId = useId();
+  const contextReturnFocus = useRef(null), contextOutside = useRef(false);
+  const editContext = (kind) => {
+    contextReturnFocus.current = document.activeElement?.closest('.nc-composer-pill') ? document.activeElement : null;
+    contextOutside.current = false;
+    setContextDraft(kind === "Goal" ? goal : instruction);
+    setEditing(kind);
+  };
+  const add = (kind) => {
+    if ((kind === "Goal" && onGoalChange) || (kind === "Session instruction" && onInstructionChange)) {
+      editContext(kind);
+      return true;
+    }
+    onAdd?.(kind);
+    return false;
+  };
+  const contextPills = [["Goal", goal, onGoalChange, goalIcon], ["Instruction", instruction, onInstructionChange, <FileText key="instruction" size={16} strokeWidth={1.6} aria-hidden="true" />]];
   const [shell, setShell] = useState(null),
     field = useRef(null),
     [height, setHeight] = useState(24);
@@ -857,7 +889,7 @@ export function ComposerInternal({
   const chosen = formats.find((f) => f.id === replyFormat) || formats[0];
   const send = () => {
     if (!disabled && value.trim()) {
-      onSend({ text: value, replyFormat, model, reasoning });
+      onSend({ text: value, replyFormat, model, reasoning, ...(goal ? { goal } : {}), ...(instruction ? { instruction } : {}) });
       field.current?.focus();
     }
   };
@@ -866,7 +898,8 @@ export function ComposerInternal({
       <ComposerReducedMotion.Provider value={reduced}>
         <div className="nc-composer-workspace">
           {header && <div className="nc-composer-recipient">{header}</div>}
-          <div
+          <Popover.Root open={!!editing} onOpenChange={(open) => { if (!open) setEditing(null); }}>
+          <Popover.Anchor asChild><div
             ref={setShell}
             className="nc-composer-shell"
             style={{ borderRadius: height > 48 ? 22 : 27 }}
@@ -894,7 +927,7 @@ export function ComposerInternal({
             {context && <div className="nc-composer-context">{context}</div>}
             <div className="nc-composer-controls">
               <div className="nc-composer-left">
-                {onAdd && <AddToConversation mode={mode} onAdd={onAdd} />}
+                {(onAdd || onGoalChange || onInstructionChange) && <AddToConversation mode={mode} onAdd={add} goalIcon={goalIcon} disabled={disabled} />}
                 {onDictate && (
                   <Hint label="Dictate a message">
                     <button
@@ -909,6 +942,18 @@ export function ComposerInternal({
                   </Hint>
                 )}
               </div>
+              {(goal || instruction) && <div className="nc-composer-pills" aria-label="Conversation context">
+                {contextPills.filter(([, text]) => text).map(([name, text, change, icon]) => <div className="nc-composer-pill" key={name}>
+                  <Hint label={<span style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{text}</span>} disabled={!!editing}>
+                    <button type="button" className="nc-composer-pill-label" aria-label={`${change ? "Edit" : "View"} ${name.toLowerCase()}`} aria-haspopup={change ? "dialog" : undefined}
+                      disabled={disabled} onClick={() => { if (change) editContext(name === "Goal" ? "Goal" : "Session instruction"); }}>
+                      {icon}<span>{name}</span>
+                    </button>
+                  </Hint>
+                  {change && <button type="button" className="nc-composer-pill-remove" aria-label={`Remove ${name.toLowerCase()}`} disabled={disabled}
+                    onClick={() => { change(""); field.current?.focus(); }}><X size={12} aria-hidden="true" /></button>}
+                </div>)}
+              </div>}
               <div className="nc-composer-right">
                 <ModelSettings
                   agents={agents}
@@ -957,6 +1002,27 @@ export function ComposerInternal({
               </div>
             </div>
           </div>
+          </Popover.Anchor>
+          <Popover.Portal><Popover.Content {...themeAttributes(settings)} className="nc-composer-context-editor" side="top" align="start" sideOffset={10} collisionPadding={12}
+            aria-label={editing === "Goal" ? "Goal details" : "Instruction details"}
+            onInteractOutside={() => { contextOutside.current = true; }}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              if (!contextOutside.current) (contextReturnFocus.current || field.current)?.focus({ preventScroll: true });
+            }}>
+            <form onSubmit={(event) => {
+              event.preventDefault();
+              if (disabled || !contextDraft.trim()) return;
+              (editing === "Goal" ? onGoalChange : onInstructionChange)?.(contextDraft.trim());
+              setEditing(null);
+            }}>
+              <label htmlFor={contextId}>{editing === "Goal" ? "Goal" : "Session instruction"}</label>
+              <textarea id={contextId} value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} rows={3}
+                placeholder={editing === "Goal" ? "What would you like to accomplish?" : "How should I approach this conversation?"} disabled={disabled} />
+              <div><button type="button" onClick={() => setEditing(null)}>Cancel</button><button type="submit" disabled={disabled || !contextDraft.trim()}>Save</button></div>
+            </form>
+          </Popover.Content></Popover.Portal>
+          </Popover.Root>
           <div className="nc-composer-under">
             <span>{chosen.label} replies</span>
             {onLiveChange && (

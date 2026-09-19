@@ -39,7 +39,9 @@ function Compose({ id = "primary" }: { id?: string }) {
     [format, setFormat] = useState<ReplyFormat>("text"),
     [live, setLive] = useState(false),
     [permission, setPermission] = useState("Ask before acting"),
-    [event, setEvent] = useState("");
+    [event, setEvent] = useState(""),
+    [goal, setGoal] = useState(""),
+    [instruction, setInstruction] = useState("");
   const { model, reasoning } = agentSettings[activeAgentId];
   const setModel = (model: string) =>
     setAgentSettings((current) => ({
@@ -157,6 +159,10 @@ function Compose({ id = "primary" }: { id?: string }) {
         live={live}
         onLiveChange={setLive}
         onDictate={() => setEvent("Dictation callback received")}
+        goal={goal}
+        onGoalChange={setGoal}
+        instruction={instruction}
+        onInstructionChange={setInstruction}
         onAdd={(kind) => setEvent(`Add: ${kind}`)}
         onSend={(message) => {
           setEvent(`Sent: ${message.text} · ${message.replyFormat}`);
