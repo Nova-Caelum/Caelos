@@ -1,3 +1,4 @@
+import { chatNavigationControl } from "./chat-navigation-recipe";
 import { definePreset } from "@pandacss/dev";
 import { foundation, typography } from "./foundation-recipes";
 import { surface } from "./surface-recipe";
@@ -172,7 +173,7 @@ export default definePreset({
       // generated --caelos-colors-* / --caelos-fonts-* variables, by name or by token path. Recipes
       // use the --sys-* tokens and the --font-nova-* hooks directly. Audit:
       // AgentSecretBase/workspace/component-foundry/04_build/RedundancyAudit_DaVinci_2026-09-21.md
-      recipes: { spacing, rippleLoader, surface, foundation, typography, avatar, button, card, chip, row, tooltip, inlineSource, controlSkin, headerControl },
+      recipes: { chatNavigationControl, spacing, rippleLoader, surface, foundation, typography, avatar, button, card, chip, row, tooltip, inlineSource, controlSkin, headerControl },
       slotRecipes: {
         agentMessage, overlay, disclosure, identity, field: input, menu, scroll: scrollArea,
         // Approved Atlas 3 chat surfaces, packaged 2026-09-20.

@@ -27,3 +27,5 @@ export * from "./LinkedWork";
 export * from "./WorkingFilesList";
 
 export * from "./header-layout";
+
+export * from "./ChatNavigation";

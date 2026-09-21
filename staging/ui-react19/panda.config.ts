@@ -8,6 +8,7 @@ export default defineConfig({
   outdir: "styled-system",
   staticCss: {
     recipes: {
+      chatNavigationControl: ["*"],
       spacing: ["*"],
       rippleLoader: ["*"],
       agentMessage: ["*"],
