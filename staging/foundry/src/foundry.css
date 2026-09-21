@@ -247,3 +247,7 @@ code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.86em;
 .fd-av-cell { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 56px; }
 .fd-av-cell figcaption { font-size: 11px; color: var(--il-dim); white-space: nowrap; }
 .fd-check { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--il-muted); }
+.fd-slider-head { display: flex; justify-content: space-between; gap: 8px; }
+.fd-slider-head output { color: var(--il-ink); font-variant-numeric: tabular-nums; }
+.fd-slider input[type="range"] { width: 100%; accent-color: var(--sys-sem-ready); }
+.fd-slider input[type="range"]:disabled { opacity: .4; }

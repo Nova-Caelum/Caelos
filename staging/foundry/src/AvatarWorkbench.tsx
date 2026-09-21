@@ -32,14 +32,28 @@ export interface AvatarMaterial {
   /** paired mirrors the Composer's focus fill (--il-focus: two hues at 22% → 16%) with the user's colour as the first hue. */
   fillMode: "paired" | "tonal" | "tint" | "glass";
   pairWith: string;
+  /** Where the blend between the two colours is centred, 50 (even) to 95 (the user's colour dominates). */
+  balance: number;
+  /** Strength of the user's colour and of the second colour, % opacity. The Composer's focus fill is 22 / 16. */
+  primaryStrength: number;
+  secondaryStrength: number;
   overGlass: "yes" | "no";
   edge: string;
+  edgeWidth: number;
+  /** Multiplies the edge token's own opacity: 100 = the token as declared. */
+  edgeIntensity: number;
+  edgeBlur: number;
   elevation: string;
   squareRadius: string;
   font: string;
   weight: "500" | "600" | "700";
   textColour: string;
   textSize: "recipe" | "proportional";
+  /** Letter height as % of the avatar, when proportional. */
+  textScale: number;
+  /** Margin between the frame and a picture, % of the avatar; and how the picture fills what remains. */
+  imageInset: number;
+  imageFit: "cover" | "contain";
   focusEdge: string;
   focusGlow: string;
   focusGlowSize: "12" | "18" | "20";
@@ -56,14 +70,23 @@ export interface AvatarMaterial {
 export const AVATAR_BASELINE: AvatarMaterial = {
   fillMode: "paired",
   pairWith: "--nc-sage",
+  balance: 50,
+  primaryStrength: 22,
+  secondaryStrength: 16,
   overGlass: "yes",
   edge: "--il-edge",
+  edgeWidth: 1,
+  edgeIntensity: 100,
+  edgeBlur: 0,
   elevation: "--sys-elev-1",
   squareRadius: "30%",
   font: "--font-nova-sans",
   weight: "500",
   textColour: "user",
   textSize: "recipe",
+  textScale: 38,
+  imageInset: 0,
+  imageFit: "cover",
   focusEdge: "--nc-focus-edge",
   focusGlow: "--nc-focus-glow",
   focusGlowSize: "18",
@@ -101,17 +124,21 @@ const EASE = "260ms var(--il-ease, ease)";
  */
 export function avatarRecipe(m: AvatarMaterial, focusSelector = "&:focus-visible"): AvatarRecipe {
   let fill: string;
-  if (m.fillMode === "paired") fill = `linear-gradient(135deg, ${mix(USER, 22)}, ${mix(`var(${m.pairWith})`, 16)})`;
-  else if (m.fillMode === "tonal") fill = `linear-gradient(135deg, ${mix(USER, 22)}, ${mix(USER, 10)})`;
-  else if (m.fillMode === "tint") fill = `linear-gradient(${mix(USER, 14)}, ${mix(USER, 14)})`;
+  // The colour hint (`balance%`) moves the blend's midpoint: 50 is even, higher lets the user's colour run further.
+  const second = m.fillMode === "paired" ? `var(${m.pairWith})` : USER;
+  if (m.fillMode === "paired" || m.fillMode === "tonal")
+    fill = `linear-gradient(135deg, ${mix(USER, m.primaryStrength)}, ${m.balance}%, ${mix(second, m.secondaryStrength)})`;
+  else if (m.fillMode === "tint") fill = `linear-gradient(${mix(USER, m.primaryStrength)}, ${mix(USER, m.primaryStrength)})`;
   else fill = "var(--nc-glass-bg)";
   if (m.overGlass === "yes" && m.fillMode !== "glass") fill = `${fill}, var(--nc-glass-bg)`;
 
   const restEdge = m.edge === "none" ? "transparent" : `var(${m.edge})`;
-  const border =
+  const edgeColour =
     m.focusEdge !== "none" && m.focusEdge !== m.edge
-      ? `1px solid color-mix(in srgb, ${restEdge}, var(${m.focusEdge}) calc(var(--av-focus) * 100%))`
-      : m.edge === "none" ? "0" : `1px solid var(${m.edge})`;
+      ? `color-mix(in srgb, ${restEdge}, var(${m.focusEdge}) calc(var(--av-focus) * 100%))`
+      : restEdge;
+  // Intensity scales the token's own alpha (relative colour syntax), so 100 is the token exactly.
+  const edgeStroke = m.edgeIntensity === 100 ? edgeColour : `rgb(from ${edgeColour} r g b / calc(alpha * ${m.edgeIntensity / 100}))`;
 
   const focusState: Style = { "--av-focus": "1" };
   if (m.focusRing === "outline") Object.assign(focusState, { outline: "2px solid var(--il-muted)", outlineOffset: "2px" });
@@ -151,12 +178,11 @@ export function avatarRecipe(m: AvatarMaterial, focusSelector = "&:focus-visible
     placeItems: "center",
     boxSizing: "border-box",
     background: fill,
-    border,
     boxShadow: m.elevation === "none" ? "none" : `var(${m.elevation})`,
     color: m.textColour === "user" ? USER : `var(${m.textColour})`,
     fontFamily: `var(${m.font}, ${FONT_FALLBACK[m.font] ?? "sans-serif"})`,
     fontWeight: m.weight,
-    fontSize: m.textSize === "recipe" ? "var(--av-text)" : "calc(var(--av-size) * .4)",
+    fontSize: m.textSize === "recipe" ? "var(--av-text)" : `calc(var(--av-size) * ${m.textScale / 100})`,
     lineHeight: "1",
     transition: `border-color ${EASE}`,
   };
@@ -171,6 +197,21 @@ export function avatarRecipe(m: AvatarMaterial, focusSelector = "&:focus-visible
       filter: "blur(var(--nc-feather-blur))",
       opacity: "var(--av-focus)",
       transition: `opacity ${EASE}`,
+    };
+  }
+
+  // The edge is its own layer above the picture, so it can be thickened and softened without moving anything.
+  if (m.edge !== "none" && m.edgeWidth > 0) {
+    frame["&::after"] = {
+      content: '""',
+      position: "absolute",
+      inset: "0",
+      zIndex: "2",
+      borderRadius: "inherit",
+      pointerEvents: "none",
+      border: `${m.edgeWidth}px solid ${edgeStroke}`,
+      ...(m.edgeBlur > 0 ? { filter: `blur(${m.edgeBlur}px)` } : {}),
+      transition: `border-color ${EASE}`,
     };
   }
 
@@ -210,7 +251,12 @@ export function avatarRecipe(m: AvatarMaterial, focusSelector = "&:focus-visible
     base: {
       root,
       frame,
-      image: { position: "relative", width: "100%", height: "100%", objectFit: "cover" },
+      image: {
+        position: "relative",
+        width: `calc(100% - var(--av-size) * ${(2 * m.imageInset) / 100})`,
+        height: `calc(100% - var(--av-size) * ${(2 * m.imageInset) / 100})`,
+        objectFit: m.imageFit,
+      },
       fallback: { position: "relative", userSelect: "none" },
       badge,
     },
@@ -306,6 +352,15 @@ function Avatar({ user, size, shape, status = "none", image, focus }: { user: Us
   );
 }
 
+function Slider({ label, value, onChange, min, max, step = 1, unit = "%", disabled, title }: { label: string; value: number; onChange: (v: number) => void; min: number; max: number; step?: number; unit?: string; disabled?: boolean; title?: string }) {
+  return (
+    <label className="fd-field fd-slider" title={title}>
+      <span className="fd-slider-head">{label}<output>{value}{unit}</output></span>
+      <input type="range" min={min} max={max} step={step} value={value} disabled={disabled} onChange={(e) => onChange(Number(e.target.value))} />
+    </label>
+  );
+}
+
 function Select<T extends string>({ label, value, onChange, options, title, disabled }: { label: string; value: T; onChange: (v: T) => void; options: { value: string; label: string }[]; title?: string; disabled?: boolean }) {
   return (
     <label className="fd-field" title={title}>
@@ -337,6 +392,8 @@ export function AvatarWorkbench({ scope, themeKey }: { scope: HTMLElement | null
     const colour = own.filter((t) => t.group === "Colour");
     return {
       colour,
+      // Avatar identity colours — the only choices for a user's colour when they exist.
+      identity: own.filter((t) => /^--avatar-/.test(t.name)),
       edge: colour.filter((t) => /edge|line|hair|border/.test(t.name)),
       glow: own.filter((t) => t.group === "Glow"),
       elevation: tokens.filter((t) => /^--sys-elev-\d/.test(t.name)),
@@ -394,7 +451,7 @@ export function AvatarWorkbench({ scope, themeKey }: { scope: HTMLElement | null
                     {SIZES.map((s) => (
                       <figure key={s.key} className="fd-av-cell">
                         <Avatar user={who} size={s.key} shape={shape} image={image} focus={hold} />
-                        <figcaption>{s.key} · {s.px}{image ? "" : ` · ${m.textSize === "recipe" ? `${s.text}px text` : "40% text"}`}</figcaption>
+                        <figcaption>{s.key} · {s.px}{image ? "" : ` · ${m.textSize === "recipe" ? s.text : Math.round((s.px * m.textScale) / 100)}px text`}</figcaption>
                       </figure>
                     ))}
                   </div>
@@ -442,12 +499,22 @@ export function AvatarWorkbench({ scope, themeKey }: { scope: HTMLElement | null
             { value: "tint", label: "flat tint — today's avatar" },
             { value: "glass", label: "glass — no colour" },
           ]} />
-          <Select label="Paired with" value={m.pairWith} onChange={(v) => set("pairWith", v)} options={tokenOptions(groups.colour)} disabled={m.fillMode !== "paired"} />
+          <Select label="Paired with" value={m.pairWith} onChange={(v) => set("pairWith", v)} options={tokenOptions([...groups.identity, ...groups.colour])} disabled={m.fillMode !== "paired"} />
+          <Slider label="Balance · the user's colour dominates →" value={m.balance} min={50} max={95} onChange={(v) => set("balance", v)} disabled={m.fillMode !== "paired" && m.fillMode !== "tonal"} title="Midpoint of the blend. 50 is the Composer's even split." />
+          <div className="fd-field-row">
+            <Slider label="User colour" value={m.primaryStrength} min={4} max={60} onChange={(v) => set("primaryStrength", v)} disabled={m.fillMode === "glass"} />
+            <Slider label="Second colour" value={m.secondaryStrength} min={0} max={40} onChange={(v) => set("secondaryStrength", v)} disabled={m.fillMode !== "paired" && m.fillMode !== "tonal"} />
+          </div>
           <Select label="Over glass" value={m.overGlass} onChange={(v) => set("overGlass", v)} options={[{ value: "yes", label: "yes — on --nc-glass-bg" }, { value: "no", label: "no — colour alone" }]} disabled={m.fillMode === "glass"} />
 
           <hr className="fd-hr" />
           <div className="fd-eyebrow">Edge and depth</div>
-          <Select label="Edge (1px)" value={m.edge} onChange={(v) => set("edge", v)} options={tokenOptions(groups.edge, [{ value: "none", label: "none" }])} />
+          <Select label="Edge" value={m.edge} onChange={(v) => set("edge", v)} options={tokenOptions(groups.edge, [{ value: "none", label: "none" }])} />
+          <Slider label="Thickness" value={m.edgeWidth} min={0} max={3} step={0.25} unit="px" onChange={(v) => set("edgeWidth", v)} disabled={m.edge === "none"} />
+          <div className="fd-field-row">
+            <Slider label="Intensity" value={m.edgeIntensity} min={0} max={400} step={10} onChange={(v) => set("edgeIntensity", v)} disabled={m.edge === "none"} title="Multiplies the edge token's opacity; 100% is the token as declared" />
+            <Slider label="Blur" value={m.edgeBlur} min={0} max={4} step={0.25} unit="px" onChange={(v) => set("edgeBlur", v)} disabled={m.edge === "none"} />
+          </div>
           <Select label="Elevation" value={m.elevation} onChange={(v) => set("elevation", v)} options={tokenOptions(groups.elevation, [{ value: "none", label: "none" }])} />
           <Select label="Square corner" value={m.squareRadius} onChange={(v) => set("squareRadius", v)} options={[
             { value: "30%", label: "30% — today's agent avatar" }, { value: "25%", label: "25%" }, { value: "20%", label: "20%" },
@@ -459,9 +526,15 @@ export function AvatarWorkbench({ scope, themeKey }: { scope: HTMLElement | null
           <Select label="Font" value={m.font} onChange={(v) => set("font", v)} options={groups.font.map((t) => ({ value: t.name, label: `${t.name} (${(t.resolved || t.fallback || "").replace(/,.*$/, "")})` }))} />
           <div className="fd-field-row">
             <Select label="Weight" value={m.weight} onChange={(v) => set("weight", v)} options={[{ value: "500", label: "500" }, { value: "600", label: "600" }, { value: "700", label: "700" }]} />
-            <Select label="Size" value={m.textSize} onChange={(v) => set("textSize", v)} options={[{ value: "recipe", label: "per size (today)" }, { value: "proportional", label: "40% of avatar" }]} />
+            <Select label="Size" value={m.textSize} onChange={(v) => set("textSize", v)} options={[{ value: "recipe", label: "per size (today)" }, { value: "proportional", label: "proportional" }]} />
           </div>
+          <Slider label="Letter size · % of the avatar" value={m.textScale} min={20} max={70} onChange={(v) => set("textScale", v)} disabled={m.textSize !== "proportional"} />
           <Select label="Colour" value={m.textColour} onChange={(v) => set("textColour", v)} options={tokenOptions(groups.colour, [{ value: "user", label: "the user's colour" }])} />
+
+          <hr className="fd-hr" />
+          <div className="fd-eyebrow">Picture · when there is one</div>
+          <Slider label="Margin inside the frame" value={m.imageInset} min={0} max={25} onChange={(v) => set("imageInset", v)} />
+          <Select label="Fit" value={m.imageFit} onChange={(v) => set("imageFit", v)} options={[{ value: "cover", label: "cover — fills, may crop" }, { value: "contain", label: "contain — whole picture" }]} />
 
           <hr className="fd-hr" />
           <div className="fd-eyebrow">Focus · the only state</div>
@@ -492,7 +565,7 @@ export function AvatarWorkbench({ scope, themeKey }: { scope: HTMLElement | null
           <label className="fd-check"><input type="checkbox" checked={hold} onChange={(e) => setHold(e.target.checked)} /> Hold focus on every avatar</label>
           <div className="fd-eyebrow" style={{ marginTop: 8 }}>User colours</div>
           {users.map((u, i) => (
-            <Select key={u.name} label={u.name} value={u.colour} onChange={(v) => setUsers((p) => p.map((x, j) => (j === i ? { ...x, colour: v } : x)))} options={tokenOptions(groups.colour)} />
+            <Select key={u.name} label={u.name} value={u.colour} onChange={(v) => setUsers((p) => p.map((x, j) => (j === i ? { ...x, colour: v } : x)))} options={tokenOptions(groups.identity.length ? groups.identity : groups.colour)} />
           ))}
         </aside>
       </div>
