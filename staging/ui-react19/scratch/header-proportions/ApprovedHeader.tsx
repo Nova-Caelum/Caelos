@@ -46,7 +46,8 @@ export function ApprovedChatHeader({ material = "chathead", ...props }: Omit<Con
       edge = next;
       io?.disconnect();
       io = new IntersectionObserver(
-        ([entry]) => el.style.setProperty("--nc-occluded", (1 - entry.intersectionRatio).toFixed(3)),
+        // One batch can carry several readings for the sentinel (e.g. a scroll-to-bottom during mount); the last is current.
+        (entries) => el.style.setProperty("--nc-occluded", (1 - entries[entries.length - 1].intersectionRatio).toFixed(3)),
         { root: scroller, rootMargin: `-${edge}px 0px 0px 0px`, threshold: thresholds },
       );
       io.observe(sentinel);

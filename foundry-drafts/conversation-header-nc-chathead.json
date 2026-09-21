@@ -1,0 +1,53 @@
+{
+  "name": "conversation-header nc_chathead",
+  "kind": "recipe",
+  "recipe": "conversationHeader",
+  "slot": "glass",
+  "material": {
+    "fill": "--nc-glass-bg",
+    "edge": "--il-edge",
+    "edgeReveal": "--il-edge",
+    "elevation": "--sys-elev-1",
+    "glow": "--nc-focus-glow",
+    "glowSize": "18",
+    "glowTiming": "reveal",
+    "blur": "--nc-glass-blur",
+    "blurTiming": "behind",
+    "texture": "none",
+    "feather": "reveal",
+    "featherFill": "--nc-feather-fill"
+  },
+  "styles": {
+    "background": "var(--nc-glass-bg)",
+    "border": "1px solid color-mix(in srgb, var(--il-edge), var(--il-edge) calc(var(--reveal, 0) * 100%))",
+    "boxShadow": "var(--sys-elev-1)",
+    "backdropFilter": "blur(calc(var(--nc-glass-blur) * var(--nc-occluded, 1))) saturate(calc(1 + .4 * var(--nc-occluded, 1)))",
+    "&::before": {
+      "content": "\"\"",
+      "position": "absolute",
+      "inset": "0",
+      "borderRadius": "inherit",
+      "pointerEvents": "none",
+      "background": "var(--nc-feather-fill)",
+      "filter": "blur(var(--nc-feather-blur))",
+      "opacity": "var(--reveal, 0)"
+    },
+    "&::after": {
+      "content": "\"\"",
+      "position": "absolute",
+      "inset": "0",
+      "borderRadius": "inherit",
+      "pointerEvents": "none",
+      "boxShadow": "0 0 18px var(--nc-focus-glow)",
+      "opacity": "var(--reveal, 0)"
+    }
+  },
+  "generated": "// Proposed material for the conversation header — staged from the Caelos Foundry, NOT applied.\n// Geometry and motion are the approved 2026-09-20 baseline and are not touched here.\n// Add under `variants.material` in staging/ui-react19/src/conversation-header-recipe.ts,\n// then render the header with material=\"nc-chathead\".\n// --reveal (0..1) is driven by the header's own disclosure motion; nothing to wire.\n// HOST CONTRACT --nc-occluded (0..1): 0 when nothing is under the header, 1 when content is behind it.\n// The header must float over the transcript. Drive the value from the transcript scroller\n// (IntersectionObserver on a sentinel at the top of the content) and register it so changes ease:\n//   @property --nc-occluded { syntax: \"<number>\"; inherits: true; initial-value: 1; }\n// Undriven, it reads as 1: fully blurred.\nmaterial: {\n  \"nc-chathead\": {\n    glass: {\n      background: \"var(--nc-glass-bg)\",\n      border: \"1px solid color-mix(in srgb, var(--il-edge), var(--il-edge) calc(var(--reveal, 0) * 100%))\",\n      boxShadow: \"var(--sys-elev-1)\",\n      backdropFilter: \"blur(calc(var(--nc-glass-blur) * var(--nc-occluded, 1))) saturate(calc(1 + .4 * var(--nc-occluded, 1)))\",\n      \"&::before\": {\n        content: \"\\\"\\\"\",\n        position: \"absolute\",\n        inset: \"0\",\n        borderRadius: \"inherit\",\n        pointerEvents: \"none\",\n        background: \"var(--nc-feather-fill)\",\n        filter: \"blur(var(--nc-feather-blur))\",\n        opacity: \"var(--reveal, 0)\",\n      },\n      \"&::after\": {\n        content: \"\\\"\\\"\",\n        position: \"absolute\",\n        inset: \"0\",\n        borderRadius: \"inherit\",\n        pointerEvents: \"none\",\n        boxShadow: \"0 0 18px var(--nc-focus-glow)\",\n        opacity: \"var(--reveal, 0)\",\n      },\n    },\n  },\n},",
+  "backdrop": {
+    "layer": "ground",
+    "texture": "auto"
+  },
+  "elements": [],
+  "slug": "conversation-header-nc-chathead",
+  "savedAt": "2026-09-21T15:13:05.532Z"
+}
