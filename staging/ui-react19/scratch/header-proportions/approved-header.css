@@ -1,3 +1,6 @@
+/* --nc-occluded is registered in the preset; easing it smooths a jump (a scroll-to-bottom, a resize). */
+[data-staging-header] { transition: --nc-occluded 160ms linear; }
+
 /* Host metadata and controls that are absent from the proportions study. */
 [data-staging-header] .caelos-conversation-header__subtitleRow {
   padding-right: calc(36px * var(--split));

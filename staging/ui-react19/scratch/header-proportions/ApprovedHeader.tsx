@@ -8,13 +8,55 @@ import "./approved-header.css";
  * The approved header (geometry and motion locked 2026-09-20, 23:19 screenshot), following the
  * actual Composer in its pane. Ported from the staging adapter so the package owns it.
  *
- * `material` selects the painted layer: "composer" is the approved study's Composer-material
+ * `material` selects the painted layer. "chathead" (nc-chathead, the default) is a
+ * `conversationHeader` recipe variant. "composer" is the approved study's Composer-material
  * proposal; any other value leaves the glass layer to a host-supplied rule scoped by
  * `[data-material=<value>]` — which is how the Foundry's Create tab previews new materials
  * without touching the approved geometry.
+ *
+ * Content behind the header: when the pane holds a `[data-conversation-scroll]` scroller with a
+ * `[data-occlusion-sentinel]` spanning the top of its content, the header drives
+ * `--nc-occluded` from 0 (nothing behind) to 1 (content behind). Without them it stays
+ * undriven, which the material reads as 1.
  */
-export function ApprovedChatHeader({ material = "composer", ...props }: ConversationHeaderProps & { material?: string }) {
+export function ApprovedChatHeader({ material = "chathead", ...props }: Omit<ConversationHeaderProps, "material"> & { material?: string }) {
   const slot = useRef<HTMLDivElement>(null);
+  const recipeMaterial = (conversationHeader.variantMap.material as string[]).includes(material)
+    ? (material as ConversationHeaderProps["material"])
+    : undefined;
+
+  useLayoutEffect(() => {
+    const el = slot.current;
+    const pane = el?.closest<HTMLElement>("[data-conversation-pane]");
+    const scroller = pane?.querySelector<HTMLElement>("[data-conversation-scroll]");
+    const sentinel = pane?.querySelector<HTMLElement>("[data-occlusion-sentinel]");
+    if (!el || !scroller || !sentinel) return;
+    const thresholds = Array.from({ length: 21 }, (_, i) => i / 20);
+    let io: IntersectionObserver | undefined;
+    let edge = -1;
+    // The observer's root is the scroller with its top cut back to the glass's resting bottom edge,
+    // so the sentinel's visible fraction falls from 1 to 0 exactly as content slides behind the glass.
+    const connect = () => {
+      const card = el.querySelector(".caelos-conversation-header__card");
+      const rest = parseFloat(getComputedStyle(el).getPropertyValue("--hp-height"));
+      if (!card || !rest) return;
+      // Measured from the card's top, so a reveal in progress never moves the edge.
+      const next = Math.max(0, Math.round(card.getBoundingClientRect().top + rest - scroller.getBoundingClientRect().top));
+      if (next === edge) return;
+      edge = next;
+      io?.disconnect();
+      io = new IntersectionObserver(
+        ([entry]) => el.style.setProperty("--nc-occluded", (1 - entry.intersectionRatio).toFixed(3)),
+        { root: scroller, rootMargin: `-${edge}px 0px 0px 0px`, threshold: thresholds },
+      );
+      io.observe(sentinel);
+    };
+    const resize = new ResizeObserver(connect);
+    resize.observe(scroller);
+    resize.observe(el);
+    connect();
+    return () => { io?.disconnect(); resize.disconnect(); el.style.removeProperty("--nc-occluded"); };
+  }, []);
   const titleProbe = useRef<HTMLSpanElement>(null);
   const subtitleProbe = useRef<HTMLSpanElement>(null);
   const spaceProbe = useRef<HTMLSpanElement>(null);
@@ -94,7 +136,7 @@ export function ApprovedChatHeader({ material = "composer", ...props }: Conversa
       <span ref={subtitleProbe} className={typography({ role: "small" })}>Linked work</span>
       <span ref={spaceProbe}>{[1, 2, 3, 4, 5, 6, 7, 8].map(n => <span key={n} style={{ display: "inline-block", width: `var(--sys-space-${n})` }} />)}</span>
     </div>
-    <ConversationHeader {...props} className={`hp-header ${props.className ?? ""}`}
+    <ConversationHeader {...props} material={recipeMaterial} className={`hp-header ${props.className ?? ""}`}
       restAvatarHeight={restAvatar} expandedAvatarSize={expandedAvatar}
       splitGap={approved.split.gap} splitCushion={approved.split.cushion}
       splitMin={approved.split.minText} splitMax={approved.split.maxText}

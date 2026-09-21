@@ -81,6 +81,8 @@ export interface ConversationHeaderProps {
   splitCushion?: number;
   splitMin?: number;
   splitMax?: number;
+  /** A `conversationHeader` material variant. When set, the glass slot is painted by it alone. */
+  material?: "chathead";
 }
 
 /**
@@ -178,8 +180,9 @@ export function ConversationHeader({
   splitCushion = 24,
   splitMin = 180,
   splitMax = 560,
+  material,
 }: ConversationHeaderProps) {
-  const styles = conversationHeader({ width: constrained ? "constrained" : "full" });
+  const styles = conversationHeader({ width: constrained ? "constrained" : "full", material });
   const count = Math.min(6, Math.max(1, participants.length));
 
   const [narrowViewport, setNarrowViewport] = useState(
@@ -532,7 +535,7 @@ export function ConversationHeader({
         }}
       >
         <div className={styles.surface} aria-hidden="true">
-          <Card variant="glass" className={styles.glass} />
+          {material ? <div className={styles.glass} /> : <Card variant="glass" className={styles.glass} />}
         </div>
         <button
           ref={trigger}

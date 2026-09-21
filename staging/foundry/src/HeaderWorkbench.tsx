@@ -36,25 +36,28 @@ export interface HeaderMaterial {
   featherFill?: string;
 }
 
-/** The approved study's Composer-material proposal, expressed in the same terms. */
-export const COMPOSER_MATERIAL: HeaderMaterial = {
-  fill: "--il-fill",
-  // Verified in the render: the approved glass carries a 1px --il-edge border.
+/**
+ * The approved material: "nc-chathead", authored here on 2026-09-21 and now the `chathead` variant of
+ * the conversationHeader recipe. The Approved pane renders the recipe itself; the Draft pane renders
+ * these values through `glassStyles`, so an unchanged draft is a live parity check of the recipe.
+ */
+export const APPROVED_MATERIAL: HeaderMaterial = {
+  fill: "--nc-glass-bg",
   edge: "--il-edge",
   edgeReveal: "none",
-  elevation: "literal:card-lifted",
-  glow: "none",
+  elevation: "--sys-elev-1",
+  glow: "--nc-focus-glow",
   glowSize: "18",
-  glowTiming: "always",
-  blur: "none",
-  blurTiming: "always",
+  glowTiming: "reveal",
+  blur: "--nc-glass-blur",
+  blurTiming: "behind",
   texture: "none",
-  feather: "off",
+  feather: "reveal",
   featherFill: "--nc-feather-fill",
 };
 
 /** Materials saved before a field existed load with that field's approved default. */
-export const withDefaults = (m: Partial<HeaderMaterial>): HeaderMaterial => ({ ...COMPOSER_MATERIAL, ...m });
+export const withDefaults = (m: Partial<HeaderMaterial>): HeaderMaterial => ({ ...APPROVED_MATERIAL, ...m });
 
 /** The one value in the current material that is not a token — kept so the baseline reproduces exactly. */
 const LITERALS: Record<string, { label: string; value: string }> = {
@@ -71,7 +74,7 @@ export function glassStyles(m: HeaderMaterial): Styles {
   const fill = m.fill === "none" ? "transparent" : `var(${m.fill})`;
   out.background = m.texture === "graph" ? `${graph},${fill}` : fill;
   if (m.texture === "graph") out.backgroundSize = "var(--nc-graph-size) var(--nc-graph-size),var(--nc-graph-size) var(--nc-graph-size),auto";
-  const edgeReveals = !!m.edgeReveal && m.edgeReveal !== "none";
+  const edgeReveals = !!m.edgeReveal && m.edgeReveal !== "none" && m.edgeReveal !== m.edge;
   const restEdge = m.edge === "none" ? "transparent" : `var(${m.edge})`;
   out.border = edgeReveals
     ? `1px solid color-mix(in srgb, ${restEdge}, var(${m.edgeReveal}) calc(var(--reveal, 0) * 100%))`
@@ -141,7 +144,7 @@ function toRecipe(name: string, m: HeaderMaterial): string {
       })
       .join("\n");
   const literal = Object.values(m).filter((v) => String(v).startsWith("literal:"));
-  const usesReveal = m.feather === "reveal" || (m.glow !== "none" && m.glowTiming === "reveal") || (!!m.edgeReveal && m.edgeReveal !== "none");
+  const usesReveal = m.feather === "reveal" || (m.glow !== "none" && m.glowTiming === "reveal") || (!!m.edgeReveal && m.edgeReveal !== "none" && m.edgeReveal !== m.edge);
   const usesOcclusion = m.blur !== "none" && m.blurTiming === "behind";
   return [
     `// Proposed material for the conversation header — staged from the Caelos Foundry, NOT applied.`,
@@ -185,49 +188,11 @@ const TRANSCRIPT: { who: "user" | "agent"; text: string }[] = [
 ];
 const AGENT = { id: "caelos", name: "Caelos" };
 
-/**
- * Preview scaffold for the `--nc-occluded` host contract. A sentinel spans the top of the transcript;
- * the observer's root is the scroller with its top cut back to the header glass's resting bottom edge,
- * so the sentinel's visible fraction falls from 1 to 0 exactly as content slides behind the glass.
- */
-function useOcclusion(pane: React.RefObject<HTMLDivElement | null>) {
-  useEffect(() => {
-    const root = pane.current;
-    const scroller = root?.querySelector<HTMLElement>("[data-conversation-scroll]");
-    const sentinel = root?.querySelector<HTMLElement>("[data-occlusion-sentinel]");
-    const slot = root?.querySelector<HTMLElement>(".hp-header-slot");
-    if (!root || !scroller || !sentinel || !slot) return;
-    const thresholds = Array.from({ length: 21 }, (_, i) => i / 20);
-    let io: IntersectionObserver | undefined;
-    let edge = -1;
-    const connect = () => {
-      const card = root.querySelector(".caelos-conversation-header__card");
-      const rest = parseFloat(getComputedStyle(slot).getPropertyValue("--hp-height"));
-      if (!card || !rest) return;
-      // The glass's resting bottom edge, measured from the card's top so a reveal in progress never moves it.
-      const next = Math.max(0, Math.round(card.getBoundingClientRect().top + rest - scroller.getBoundingClientRect().top));
-      if (next === edge) return;
-      edge = next;
-      io?.disconnect();
-      io = new IntersectionObserver(
-        ([entry]) => root.style.setProperty("--nc-occluded", (1 - entry.intersectionRatio).toFixed(3)),
-        { root: scroller, rootMargin: `-${edge}px 0px 0px 0px`, threshold: thresholds },
-      );
-      io.observe(sentinel);
-    };
-    const ro = new ResizeObserver(connect);
-    ro.observe(scroller);
-    ro.observe(slot);
-    connect();
-    return () => { io?.disconnect(); ro.disconnect(); };
-  }, [pane]);
-}
-
 function PreviewPane({ label, children }: { label: string; children: React.ReactNode }) {
-  const pane = useRef<HTMLDivElement>(null);
-  useOcclusion(pane);
+  // The header drives --nc-occluded from the scroller and sentinel below ([data-conversation-scroll],
+  // [data-occlusion-sentinel]) — the same markup contract the chat app follows.
   return (
-    <div ref={pane} className="fd-create-pane" data-conversation-pane>
+    <div className="fd-create-pane" data-conversation-pane>
       <div className="fd-create-pane-label">{label}</div>
       {children}
     </div>
@@ -252,7 +217,7 @@ export function HeaderWorkbench({ scope, themeKey }: { scope: HTMLElement | null
   const [tokens, setTokens] = useState<Token[]>([]);
   useEffect(() => { if (scope) setTokens(readTokens(scope)); }, [scope, themeKey]);
 
-  const [material, setMaterial] = useState<HeaderMaterial>(COMPOSER_MATERIAL);
+  const [material, setMaterial] = useState<HeaderMaterial>(APPROVED_MATERIAL);
   const [mode, setMode] = useState<"draft" | "approved" | "compare">("compare");
   const [count, setCount] = useState(3);
   const [title, setTitle] = useState("Turning the Foundry into a design partner");
@@ -281,7 +246,7 @@ export function HeaderWorkbench({ scope, themeKey }: { scope: HTMLElement | null
 
   const css = toCss(`.fd-create [data-material="draft"] .caelos-conversation-header__glass`, glassStyles(material));
   const recipe = toRecipe(name || "draft", material);
-  const changed = JSON.stringify(withDefaults(material)) !== JSON.stringify(COMPOSER_MATERIAL);
+  const changed = JSON.stringify(withDefaults(material)) !== JSON.stringify(APPROVED_MATERIAL);
 
   const save = async () => {
     if (!name.trim()) { setStatus("Name the material first."); return; }
@@ -351,7 +316,7 @@ export function HeaderWorkbench({ scope, themeKey }: { scope: HTMLElement | null
       <div className="fd-create-grid">
         <div className="fd-create-stages">
           {mode !== "approved" && pane("draft", changed ? "Draft material" : "Draft (unchanged — matches approved)")}
-          {mode !== "draft" && pane("composer", "Approved · Composer material")}
+          {mode !== "draft" && pane("chathead", "Approved · nc-chathead (the recipe)")}
         </div>
 
         <aside className="fd-create-panel">
@@ -398,7 +363,7 @@ export function HeaderWorkbench({ scope, themeKey }: { scope: HTMLElement | null
             </select>
           </label>
           <TokenSelect label="Feather fill" value={material.featherFill ?? "--nc-feather-fill"} onChange={(v) => set("featherFill", v)} options={groups.fill} disabled={material.feather === "off"} />
-          <button type="button" className="fd-link" onClick={() => setMaterial(COMPOSER_MATERIAL)} disabled={!changed}>Reset to approved material</button>
+          <button type="button" className="fd-link" onClick={() => setMaterial(APPROVED_MATERIAL)} disabled={!changed}>Reset to approved material</button>
 
           <hr className="fd-hr" />
           <div className="fd-eyebrow">Preview</div>

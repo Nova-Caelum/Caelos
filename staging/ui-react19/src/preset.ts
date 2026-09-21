@@ -131,6 +131,11 @@ export const materialPresets = {
 } as const;
 export default definePreset({
   name: "caelos",
+  // 0 with nothing under the conversation header, 1 with content behind it (see the
+  // conversationHeader `material` variant). Registered so the header can transition it.
+  globalVars: {
+    "--nc-occluded": { syntax: "<number>", inherits: true, initialValue: "1" },
+  },
   theme: {
     extend: {
       // Panda `theme.tokens` (fonts.body/heading/mono, colors.accent/sage/cream/atmospheric) removed

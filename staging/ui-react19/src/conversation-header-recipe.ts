@@ -369,6 +369,49 @@ export const conversationHeader = defineSlotRecipe({
         canvas: { "--card-rest-width": "320px", "--card-open-width": "368px" },
       },
     },
+    /**
+     * The painted glass layer. `chathead` is "nc-chathead", authored by Daniel in the Caelos
+     * Foundry's Create tab on 2026-09-21 (foundry-drafts/conversation-header-nc-chathead.json).
+     * A header given a material renders its glass slot on its own — not as a glass Card — so this
+     * variant is the only thing painting it.
+     *
+     * Two inputs are driven, not set: `--reveal` (0..1) comes from the header's own disclosure
+     * motion; `--nc-occluded` (0..1) is 0 with nothing under the header and 1 with content behind
+     * it, driven by the approved header element and registered in the preset. Undriven it reads
+     * as 1 — fully blurred, the legible default.
+     */
+    material: {
+      chathead: {
+        glass: {
+          background: "var(--nc-glass-bg)",
+          border: "1px solid var(--il-edge)",
+          boxShadow: "var(--sys-elev-1)",
+          backdropFilter:
+            "blur(calc(var(--nc-glass-blur) * var(--nc-occluded, 1))) saturate(calc(1 + .4 * var(--nc-occluded, 1)))",
+          // Feather: the indigo/sage wash, present only while the header is revealed.
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            inset: 0,
+            borderRadius: "inherit",
+            pointerEvents: "none",
+            background: "var(--nc-feather-fill)",
+            filter: "blur(var(--nc-feather-blur))",
+            opacity: "var(--reveal, 0)",
+          },
+          // Glow: the Composer's focus glow, on its own layer so it fades with the reveal.
+          "&::after": {
+            content: '""',
+            position: "absolute",
+            inset: 0,
+            borderRadius: "inherit",
+            pointerEvents: "none",
+            boxShadow: "0 0 18px var(--nc-focus-glow)",
+            opacity: "var(--reveal, 0)",
+          },
+        },
+      },
+    },
   },
   defaultVariants: { width: "full" },
 });
