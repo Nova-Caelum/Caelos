@@ -129,19 +129,11 @@ export default definePreset({
   name: "caelos",
   theme: {
     extend: {
-      tokens: {
-        fonts: {
-          body: { value: "var(--font-nova-sans, 'IBM Plex Sans'), sans-serif" },
-          heading: { value: "var(--font-nova-heading, 'Yrsa'), serif" },
-          mono: { value: "var(--font-nova-mono, 'IBM Plex Mono'), monospace" },
-        },
-        colors: {
-          accent: { value: approvedTokens["--sys-accent"] },
-          sage: { value: approvedTokens["--sys-sem-sage"] },
-          cream: { value: approvedTokens["--sys-text-primary"] },
-          atmospheric: { value: approvedTokens["--sys-sem-atmospheric"] },
-        },
-      },
+      // Panda `theme.tokens` (fonts.body/heading/mono, colors.accent/sage/cream/atmospheric) removed
+      // 2026-09-21: each duplicated a --sys-* or --font-nova-* property, and nothing referenced the
+      // generated --caelos-colors-* / --caelos-fonts-* variables, by name or by token path. Recipes
+      // use the --sys-* tokens and the --font-nova-* hooks directly. Audit:
+      // AgentSecretBase/workspace/component-foundry/04_build/RedundancyAudit_DaVinci_2026-09-21.md
       recipes: { spacing, rippleLoader, surface, foundation, typography, avatar, button, card, chip, row, tooltip, inlineSource, controlSkin, headerControl },
       slotRecipes: {
         agentMessage, overlay, disclosure, identity, field: input, menu, scroll: scrollArea,
