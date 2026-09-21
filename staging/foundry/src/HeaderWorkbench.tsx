@@ -23,6 +23,8 @@ type BlurTiming = "always" | "behind";
 export interface HeaderMaterial {
   fill: string;
   edge: string;
+  /** The edge the border blends to as the header reveals; "none" keeps the resting edge. */
+  edgeReveal?: string;
   elevation: string;
   glow: string;
   glowSize: "12" | "18" | "20";
@@ -31,6 +33,7 @@ export interface HeaderMaterial {
   blurTiming?: BlurTiming;
   texture: "none" | "graph";
   feather: Feather;
+  featherFill?: string;
 }
 
 /** The approved study's Composer-material proposal, expressed in the same terms. */
@@ -38,6 +41,7 @@ export const COMPOSER_MATERIAL: HeaderMaterial = {
   fill: "--il-fill",
   // Verified in the render: the approved glass carries a 1px --il-edge border.
   edge: "--il-edge",
+  edgeReveal: "none",
   elevation: "literal:card-lifted",
   glow: "none",
   glowSize: "18",
@@ -46,6 +50,7 @@ export const COMPOSER_MATERIAL: HeaderMaterial = {
   blurTiming: "always",
   texture: "none",
   feather: "off",
+  featherFill: "--nc-feather-fill",
 };
 
 /** Materials saved before a field existed load with that field's approved default. */
@@ -66,7 +71,11 @@ export function glassStyles(m: HeaderMaterial): Styles {
   const fill = m.fill === "none" ? "transparent" : `var(${m.fill})`;
   out.background = m.texture === "graph" ? `${graph},${fill}` : fill;
   if (m.texture === "graph") out.backgroundSize = "var(--nc-graph-size) var(--nc-graph-size),var(--nc-graph-size) var(--nc-graph-size),auto";
-  out.border = m.edge === "none" ? "0" : `1px solid var(${m.edge})`;
+  const edgeReveals = !!m.edgeReveal && m.edgeReveal !== "none";
+  const restEdge = m.edge === "none" ? "transparent" : `var(${m.edge})`;
+  out.border = edgeReveals
+    ? `1px solid color-mix(in srgb, ${restEdge}, var(${m.edgeReveal}) calc(var(--reveal, 0) * 100%))`
+    : m.edge === "none" ? "0" : `1px solid var(${m.edge})`;
   const shadows: string[] = [];
   const glowReveals = m.glow !== "none" && m.glowTiming === "reveal";
   if (m.elevation !== "none") shadows.push(LITERALS[m.elevation]?.value ?? `var(${m.elevation})`);
@@ -87,7 +96,7 @@ export function glassStyles(m: HeaderMaterial): Styles {
       inset: "0",
       borderRadius: "inherit",
       pointerEvents: "none",
-      background: "var(--nc-feather-fill)",
+      background: `var(${m.featherFill ?? "--nc-feather-fill"})`,
       filter: "blur(var(--nc-feather-blur))",
       // `--reveal` is driven by the approved header motion; the feather follows it, never re-times it.
       opacity: m.feather === "reveal" ? "var(--reveal, 0)" : "1",
@@ -132,7 +141,7 @@ function toRecipe(name: string, m: HeaderMaterial): string {
       })
       .join("\n");
   const literal = Object.values(m).filter((v) => String(v).startsWith("literal:"));
-  const usesReveal = m.feather === "reveal" || (m.glow !== "none" && m.glowTiming === "reveal");
+  const usesReveal = m.feather === "reveal" || (m.glow !== "none" && m.glowTiming === "reveal") || (!!m.edgeReveal && m.edgeReveal !== "none");
   const usesOcclusion = m.blur !== "none" && m.blurTiming === "behind";
   return [
     `// Proposed material for the conversation header — staged from the Caelos Foundry, NOT applied.`,
@@ -225,11 +234,11 @@ function PreviewPane({ label, children }: { label: string; children: React.React
   );
 }
 
-function TokenSelect({ label, value, onChange, options, extra = [] }: { label: string; value: string; onChange: (v: string) => void; options: Token[]; extra?: { value: string; label: string }[] }) {
+function TokenSelect({ label, value, onChange, options, extra = [], disabled }: { label: string; value: string; onChange: (v: string) => void; options: Token[]; extra?: { value: string; label: string }[]; disabled?: boolean }) {
   return (
     <label className="fd-field">
       {label}
-      <select className="fd-input" value={value} onChange={(e) => onChange(e.target.value)}>
+      <select className="fd-input" value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
         {extra.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         {options.map((t) => <option key={t.name} value={t.name}>{t.name}</option>)}
       </select>
@@ -349,6 +358,7 @@ export function HeaderWorkbench({ scope, themeKey }: { scope: HTMLElement | null
           <div className="fd-eyebrow">Material · glass layer</div>
           <TokenSelect label="Fill" value={material.fill} onChange={(v) => set("fill", v)} options={groups.fill} extra={[{ value: "none", label: "none" }]} />
           <TokenSelect label="Edge (1px)" value={material.edge} onChange={(v) => set("edge", v)} options={groups.edge} extra={[{ value: "none", label: "none" }]} />
+          <TokenSelect label="Edge on reveal" value={material.edgeReveal ?? "none"} onChange={(v) => set("edgeReveal", v)} options={groups.edge} extra={[{ value: "none", label: "none — keeps the resting edge" }]} />
           <TokenSelect label="Elevation" value={material.elevation} onChange={(v) => set("elevation", v)} options={groups.elevation}
             extra={[{ value: "none", label: "none" }, ...Object.entries(LITERALS).map(([value, l]) => ({ value, label: l.label }))]} />
           <div className="fd-field-row">
@@ -380,13 +390,14 @@ export function HeaderWorkbench({ scope, themeKey }: { scope: HTMLElement | null
               <option value="graph">graph paper</option>
             </select>
           </label>
-          <label className="fd-field">Feather · --nc-feather-fill
+          <label className="fd-field">Feather
             <select className="fd-input" value={material.feather} onChange={(e) => set("feather", e.target.value as Feather)}>
               <option value="off">off</option>
               <option value="reveal">follows the reveal motion</option>
               <option value="always">always on</option>
             </select>
           </label>
+          <TokenSelect label="Feather fill" value={material.featherFill ?? "--nc-feather-fill"} onChange={(v) => set("featherFill", v)} options={groups.fill} disabled={material.feather === "off"} />
           <button type="button" className="fd-link" onClick={() => setMaterial(COMPOSER_MATERIAL)} disabled={!changed}>Reset to approved material</button>
 
           <hr className="fd-hr" />

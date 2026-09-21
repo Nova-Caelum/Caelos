@@ -64,9 +64,10 @@ const dark = {
   // overrides `background` outright — `button.text` and the selected `row` both do.
   "--nc-feather-fill": "linear-gradient(105deg,#8e9de027,#9190c817)",
   "--nc-feather-blur": ".75px",
-  // The Composer's focus glow — lavender, deliberately quieter than the semantic `-glow` tones.
-  // On `dark` only, so every theme shares the value it had as a literal.
+  // The Composer's focus state — a lavender glow and edge, deliberately quieter than the semantic
+  // `-glow` tones. On `dark` only, so every theme shares the value each had as a literal.
   "--nc-focus-glow": "#a896f024",
+  "--nc-focus-edge": "#a896f028",
   "--il-placeholder": "#aaa0b9",
   "--il-ease": "cubic-bezier(.4,0,.2,1)",
   "--nc-text-hover": "#e4d1f2",

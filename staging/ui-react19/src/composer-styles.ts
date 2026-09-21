@@ -97,7 +97,7 @@ export const composerCss = {
     opacity: ".8",
   },
   ".nc-composer-shell:focus-within": {
-    borderColor: "#a896f028",
+    borderColor: "var(--nc-focus-edge)",
     boxShadow: "0 0 20px var(--nc-focus-glow),0 12px 30px #00000015",
   },
   ".nc-composer-shell textarea": {

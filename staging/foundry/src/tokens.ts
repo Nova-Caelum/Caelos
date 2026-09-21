@@ -67,6 +67,7 @@ function groupOf(name: string, value: string): TokenGroup {
   const n = name.toLowerCase();
   const v = value.toLowerCase();
   if (n.includes("glow")) return "Glow";
+  if (/edge|border|hair/.test(n) && v && CSS.supports("color", v)) return "Colour";
   if (v.includes("gradient") || /fill|focus|feather|wash|tint/.test(n)) return "Fill & gradient";
   if (/font|lettering|leading|tracking|weight|text-size|type-|family/.test(n)) return "Typography";
   if (/elev|shadow/.test(n)) return "Elevation";
