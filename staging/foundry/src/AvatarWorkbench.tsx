@@ -115,7 +115,7 @@ const FONT_FALLBACK: Record<string, string> = {
   "--font-nova-mono": "'IBM Plex Mono', monospace",
 };
 const mix = (colour: string, pct: number) => `color-mix(in srgb, ${colour} ${pct}%, transparent)`;
-const USER = "var(--av-color, var(--nc-sage))";
+const USER = "var(--av-color, var(--avatar-green))";
 const EASE = "260ms var(--il-ease, ease)";
 
 /**
@@ -329,12 +329,16 @@ function toRecipe(name: string, r: AvatarRecipe): string {
 
 const SAMPLE = "/samples/claude-code.png";
 type User = { name: string; colour: string; image?: boolean };
+/** One sample user per avatar identity colour (--avatar-*, Claude Code's eight subagent colours). */
 const USERS: User[] = [
-  { name: "Caelos", colour: "--nc-sage", image: true },
-  { name: "Daniel Eghdami", colour: "--sys-accent" },
-  { name: "Athena", colour: "--nc-ready" },
-  { name: "Hermes", colour: "--nc-progress" },
-  { name: "Iris", colour: "--sys-sem-atmospheric" },
+  { name: "Caelos", colour: "--avatar-orange", image: true },
+  { name: "Daniel Eghdami", colour: "--avatar-blue" },
+  { name: "Athena", colour: "--avatar-purple" },
+  { name: "Hermes", colour: "--avatar-green" },
+  { name: "Iris", colour: "--avatar-pink" },
+  { name: "Nova", colour: "--avatar-cyan" },
+  { name: "Apollo", colour: "--avatar-yellow" },
+  { name: "Ares", colour: "--avatar-red" },
 ];
 const initials = (name: string) =>
   name.trim().split(/[\s-]+/).filter(Boolean).slice(0, 2).map((p) => Array.from(p)[0]).join("").toUpperCase() || "?";
@@ -389,7 +393,8 @@ export function AvatarWorkbench({ scope, themeKey }: { scope: HTMLElement | null
 
   const groups = useMemo(() => {
     const own = tokens.filter((t) => !t.hostSupplied);
-    const colour = own.filter((t) => t.group === "Colour");
+    // Identity colours (--avatar-*) are for who someone is, never for status or chrome — kept apart.
+    const colour = own.filter((t) => t.group === "Colour" && !/^--avatar-/.test(t.name));
     return {
       colour,
       // Avatar identity colours — the only choices for a user's colour when they exist.
