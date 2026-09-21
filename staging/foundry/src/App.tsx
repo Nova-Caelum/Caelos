@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { CaelosProvider, Surface } from "@caelos/ui";
 import {
   inventory,
@@ -11,6 +11,7 @@ import {
 } from "./inventory";
 import { readTokens, TOKEN_GROUPS, tokensForClasses, type Token } from "./tokens";
 import { HeaderWorkbench } from "./HeaderWorkbench";
+import { childMarkup, duplicateOf, fingerprint, FingerprintScope, useDistinctCount, useFingerprintRegistry } from "./fidelity";
 
 type View = "create" | "components" | "tokens" | "drafts" | "proposals";
 type Variants = Record<string, string>;
@@ -150,6 +151,9 @@ function StandardElement({ info, variants, className, label }: { info: RecipeInf
   if (info.name === "typography") return <span className={className}>The quick brown fox</span>;
   if (info.name === "avatar") return <span className={className}>DE</span>;
   if (info.name === "chip") return <span className={className}>{label}</span>;
+  // Recipes that paint required children (rippleLoader: nine `> i` cells) get them, read from their CSS.
+  const kids = childMarkup(className.split(/\s+/)[0]);
+  if (kids) return <div className={className} aria-label={label}>{Array.from({ length: kids.count }, (_, i) => React.createElement(kids.tag, { key: i }))}</div>;
   return <div className={className}>{label}</div>;
 }
 
@@ -314,37 +318,23 @@ function ComponentView({ info, onPick }: { info: RecipeInfo; onPick: (p: Pick) =
       {info.kind === "slot" ? (
         <SlotAnatomy info={info} onPick={onPick} />
       ) : (
-        <>
-          <div className="fd-axis">
-            <div className="fd-axis-name">Defaults</div>
-            <div className="fd-tiles">
-              <Tile info={info} variants={info.defaults} caption="default" onPick={onPick} />
-            </div>
-          </div>
-          {info.axes.map((axis) => (
-            <div key={axis.name} className="fd-axis">
-              <div className="fd-axis-name"><NameEditor nameKey={`axis:${info.name}.${axis.name}`} kind="axis" current={axis.name} recipe={info.name} mono /> <span className="fd-muted">· {axis.values.length}</span></div>
-              <div className="fd-tiles">
-                {axis.values.map((v) => (
-                  <Tile key={v} info={info} variants={{ ...info.defaults, [axis.name]: v }} caption={v} onPick={onPick} rename={{ key: `value:${info.name}.${axis.name}.${v}`, kind: "value" }} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </>
+        <StandardVariants info={info} onPick={onPick} />
       )}
 
-      {canAll && (
+      {canAll && !(info.axes.length === 2) && (
         <div className="fd-axis">
           <button type="button" className="fd-link" onClick={() => setAll((x) => !x)}>
             {all ? "Hide" : "Show"} all {info.combinations} combinations
           </button>
           {all && (
-            <div className="fd-tiles" style={{ marginTop: 12 }}>
-              {combos.map((c) => (
-                <Tile key={JSON.stringify(c)} info={info} variants={c} caption={Object.values(c).join(" · ")} onPick={onPick} />
-              ))}
-            </div>
+            <FingerprintScope defaultKey={JSON.stringify(info.defaults)}>
+              <div style={{ marginTop: 12 }}><DistinctNote /></div>
+              <div className="fd-tiles">
+                {combos.map((c) => (
+                  <Tile key={JSON.stringify(c)} info={info} variants={c} tileKey={JSON.stringify(c)} caption={Object.values(c).join(" · ")} onPick={onPick} />
+                ))}
+              </div>
+            </FingerprintScope>
           )}
         </div>
       )}
@@ -353,6 +343,67 @@ function ComponentView({ info, onPick }: { info: RecipeInfo; onPick: (p: Pick) =
 }
 
 /** A slot recipe is an anatomy, not one element: each slot is rendered alone so none overlaps another. */
+/** Interacting axes are shown together: two axes become a grid, so a value that only matters in combination is visible. */
+function StandardVariants({ info, onPick }: { info: RecipeInfo; onPick: (p: Pick) => void }) {
+  if (info.axes.length === 2 && info.combinations <= 64) {
+    const [a, b] = info.axes;
+    const defaultKey = JSON.stringify({ ...info.defaults });
+    return (
+      <FingerprintScope defaultKey={defaultKey}>
+        <DistinctNote />
+        <div className="fd-grid2" style={{ gridTemplateColumns: `120px repeat(${b.values.length}, minmax(112px, 1fr))` }}>
+          <div className="fd-grid2-corner"><code>{a.name}</code> ↓ · <code>{b.name}</code> →</div>
+          {b.values.map((bv) => (
+            <div key={bv} className="fd-grid2-col"><NameEditor nameKey={`value:${info.name}.${b.name}.${bv}`} kind="value" current={bv} recipe={info.name} mono /></div>
+          ))}
+          {a.values.map((av) => (
+            <React.Fragment key={av}>
+              <div className="fd-grid2-row"><NameEditor nameKey={`value:${info.name}.${a.name}.${av}`} kind="value" current={av} recipe={info.name} mono /></div>
+              {b.values.map((bv) => {
+                const v = { ...info.defaults, [a.name]: av, [b.name]: bv };
+                return <Tile key={bv} info={info} variants={v} tileKey={JSON.stringify(v)} caption={`${av} · ${bv}`} onPick={onPick} />;
+              })}
+            </React.Fragment>
+          ))}
+        </div>
+      </FingerprintScope>
+    );
+  }
+  return (
+    <>
+      <div className="fd-axis">
+        <div className="fd-axis-name">Defaults</div>
+        <div className="fd-tiles">
+          <FingerprintScope><Tile info={info} variants={info.defaults} caption="default" onPick={onPick} /></FingerprintScope>
+        </div>
+      </div>
+      {info.axes.map((axis) => (
+        <FingerprintScope key={axis.name} defaultKey={JSON.stringify({ ...info.defaults, [axis.name]: info.defaults[axis.name] ?? axis.values[0] })}>
+          <div className="fd-axis">
+            <div className="fd-axis-name"><NameEditor nameKey={`axis:${info.name}.${axis.name}`} kind="axis" current={axis.name} recipe={info.name} mono /> <span className="fd-muted">· {axis.values.length}</span> <DistinctNote inline /></div>
+            <div className="fd-tiles">
+              {axis.values.map((v) => {
+                const vs = { ...info.defaults, [axis.name]: v };
+                return <Tile key={v} info={info} variants={vs} tileKey={JSON.stringify(vs)} caption={v} onPick={onPick} rename={{ key: `value:${info.name}.${axis.name}.${v}`, kind: "value" }} />;
+              })}
+            </div>
+          </div>
+        </FingerprintScope>
+      ))}
+    </>
+  );
+}
+
+function DistinctNote({ inline = false }: { inline?: boolean }) {
+  const n = useDistinctCount();
+  if (!n || n.total < 2) return null;
+  const all = n.distinct === n.total;
+  const text = all ? `all ${n.total} distinct` : `${n.distinct} distinct of ${n.total}`;
+  return inline
+    ? <span className={`fd-distinct ${all ? "" : "is-redundant"}`}>{text}</span>
+    : <p className={`fd-distinct-banner ${all ? "" : "is-redundant"}`}>{all ? `All ${n.total} combinations look different at rest.` : `${n.distinct} visually distinct looks across ${n.total} combinations at rest — the rest are identical to one another.`}</p>;
+}
+
 function SlotAnatomy({ info, onPick }: { info: RecipeInfo; onPick: (p: Pick) => void }) {
   const [variants, setVariants] = useState<Variants>(info.defaults);
   const out = info.fn(toCallProps(variants)) as Record<string, string>;
@@ -379,9 +430,11 @@ function SlotAnatomy({ info, onPick }: { info: RecipeInfo; onPick: (p: Pick) => 
         <div className="fd-tiles">
           {info.slots.map((slot) => (
             <div key={slot} className="fd-tile">
-              <button type="button" className="fd-tile-stage" onClick={() => onPick({ recipe: info.name, variants: { ...variants, __slot: slot } })} title="Show provenance">
+              <div role="button" tabIndex={0} className="fd-tile-stage" title="Show provenance"
+                onClick={() => onPick({ recipe: info.name, variants: { ...variants, __slot: slot } })}
+                onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onPick({ recipe: info.name, variants: { ...variants, __slot: slot } }); } }}>
                 <div className={out[slot]} data-slot={slot}>{slot}</div>
-              </button>
+              </div>
               <div className="fd-tile-caption"><NameEditor nameKey={`slot:${info.name}.${slot}`} kind="slot" current={slot} recipe={info.name} mono /></div>
             </div>
           ))}
@@ -391,12 +444,27 @@ function SlotAnatomy({ info, onPick }: { info: RecipeInfo; onPick: (p: Pick) => 
   );
 }
 
-function Tile({ info, variants, caption, onPick, rename }: { info: RecipeInfo; variants: Variants; caption: string; onPick: (p: Pick) => void; rename?: { key: string; kind: string } }) {
+function Tile({ info, variants, caption, onPick, rename, tileKey }: { info: RecipeInfo; variants: Variants; caption: string; onPick: (p: Pick) => void; rename?: { key: string; kind: string }; tileKey?: string }) {
+  const stage = useRef<HTMLDivElement>(null);
+  const reg = useFingerprintRegistry();
+  const key = tileKey ?? JSON.stringify(variants);
+  useLayoutEffect(() => {
+    const el = stage.current?.firstElementChild;
+    if (!el || !reg) return;
+    const measure = () => reg.set(key, fingerprint(el), caption);
+    measure();
+    void document.fonts?.ready.then(measure);
+  });
+  const same = duplicateOf(reg, key);
   return (
-    <div className="fd-tile">
-      <button type="button" className="fd-tile-stage" onClick={() => onPick({ recipe: info.name, variants })} title="Show provenance">
+    <div className={`fd-tile ${same ? "is-duplicate" : ""}`}>
+      {same && <div className="fd-dup" title={`Computed styles at rest are identical to ${same}`}>= {same}</div>}
+      {/* A div, not a button: specimens are often buttons themselves, and buttons cannot nest. */}
+      <div ref={stage} role="button" tabIndex={0} className="fd-tile-stage" title="Show provenance"
+        onClick={() => onPick({ recipe: info.name, variants })}
+        onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onPick({ recipe: info.name, variants }); } }}>
         <Specimen info={info} variants={variants} />
-      </button>
+      </div>
       <div className="fd-tile-caption">
         {rename ? <NameEditor nameKey={rename.key} kind={rename.kind} current={caption} recipe={info.name} mono /> : caption}
       </div>

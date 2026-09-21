@@ -161,8 +161,8 @@ code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.86em;
 
 /* Tiles: the stage is the click target for provenance; the caption can hold a rename control. */
 .fd-tile { display: flex; flex-direction: column; }
-button.fd-tile-stage { appearance: none; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; width: 100%; }
-button.fd-tile-stage:focus-visible { outline: 2px solid var(--nc-ready); outline-offset: -2px; }
+.fd-tile-stage[role=button] { cursor: pointer; width: 100%; box-sizing: border-box; }
+.fd-tile-stage[role=button]:focus-visible { outline: 2px solid var(--nc-ready); outline-offset: -2px; }
 
 /* Rename proposals */
 .fd-name { display: inline-flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
@@ -211,3 +211,24 @@ button.fd-tile-stage:focus-visible { outline: 2px solid var(--nc-ready); outline
 .fd-create-panel .fd-field { min-width: 0; }
 .fd-create-panel .fd-input { width: 100%; box-sizing: border-box; }
 .fd-create-panel .fd-field-row { min-width: 0; }
+
+/* Fidelity: identical-look labels and the two-axis grid */
+.fd-tile { position: relative; }
+.fd-tile.is-duplicate { opacity: .55; }
+.fd-tile.is-duplicate:hover { opacity: 1; }
+.fd-dup {
+  position: absolute; top: 6px; left: 6px; right: 6px; z-index: 2; pointer-events: none;
+  font-size: 10.5px; line-height: 1.3; padding: 2px 6px; border-radius: 6px; width: fit-content; max-width: calc(100% - 12px);
+  background: color-mix(in srgb, var(--sys-ground) 80%, transparent); color: var(--il-muted); border: 1px solid var(--il-edge);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fd-distinct { font-size: 11.5px; margin-left: 8px; color: var(--il-dim); }
+.fd-distinct.is-redundant { color: var(--sys-sem-progress, var(--il-ink)); }
+.fd-distinct-banner { font-size: 13px; margin: 0 0 14px; color: var(--il-muted); }
+.fd-distinct-banner.is-redundant { color: var(--il-ink); padding: 10px 14px; border-radius: 12px; border: 1px solid var(--il-edge); background: var(--il-surface); }
+.fd-grid2 { display: grid; gap: 8px; margin-bottom: 24px; align-items: stretch; }
+.fd-grid2-corner { font-size: 11px; color: var(--il-dim); align-self: end; padding-bottom: 6px; }
+.fd-grid2-col { font-size: 12px; align-self: end; padding: 0 2px 6px; }
+.fd-grid2-row { font-size: 12px; display: flex; align-items: center; }
+.fd-grid2 .fd-tile-stage { min-height: 76px; padding: 14px; }
+.fd-grid2 .fd-tile-caption { display: none; }
