@@ -33,6 +33,9 @@ export interface Token {
   resolved: string;
   group: TokenGroup;
   consumers: string[];
+  /** Referenced by the package but never declared by it — a hook the host app supplies, or a recipe-local variable. */
+  hostSupplied?: boolean;
+  fallback?: string;
 }
 
 const THEME_SCOPES = new Set(["[data-caelos-theme]", "[data-caelos-theme=light]", '[data-caelos-theme="light"]']);
@@ -65,7 +68,7 @@ function groupOf(name: string, value: string): TokenGroup {
   const v = value.toLowerCase();
   if (n.includes("glow")) return "Glow";
   if (v.includes("gradient") || /fill|focus|feather|wash|tint/.test(n)) return "Fill & gradient";
-  if (/font|lettering|leading|tracking|weight|text-size|type-/.test(n)) return "Typography";
+  if (/font|lettering|leading|tracking|weight|text-size|type-|family/.test(n)) return "Typography";
   if (/elev|shadow/.test(n)) return "Elevation";
   if (/radius/.test(n)) return "Radius";
   if (/space|gap|pad|inset|cushion/.test(n)) return "Space";
@@ -103,6 +106,35 @@ export function readTokens(scope: Element): Token[] {
   }
   const computed = getComputedStyle(scope);
   const consumers = consumerMap();
+
+  // Hooks: names the package references with var() but never declares — the fonts are the main case
+  // (--font-nova-sans → 'IBM Plex Sans'). Their fallback is what renders when the host sets nothing.
+  const fallbacks = new Map<string, string>();
+  const referenced = new Set<string>();
+  const WITH_FALLBACK = /var\(\s*(--[a-zA-Z0-9-_]+)\s*,\s*([^()]*(?:\([^()]*\)[^()]*)*)\)/g;
+  for (const rule of styleRules()) {
+    // Only the package's own rules — never the Foundry's chrome, which is not part of the design system.
+    if (!/caelos|\.nc-/.test(rule.selectorText)) continue;
+    const text = rule.style.cssText;
+    for (const m of text.matchAll(VAR_REF)) referenced.add(m[1]);
+    for (const m of text.matchAll(WITH_FALLBACK)) if (!fallbacks.has(m[1])) fallbacks.set(m[1], m[2].trim());
+  }
+  const hooks: Token[] = [...referenced]
+    .filter((n) => !declared.has(n))
+    .map((name) => {
+      const fallback = fallbacks.get(name);
+      const resolved = computed.getPropertyValue(name).trim();
+      return {
+        name,
+        declared: "",
+        resolved: resolved || fallback || "",
+        group: groupOf(name, resolved || fallback || ""),
+        consumers: [...(consumers.get(name) ?? [])].sort(),
+        hostSupplied: true,
+        fallback,
+      };
+    });
+
   return [...declared.entries()]
     .map(([name, value]) => {
       const resolved = computed.getPropertyValue(name).trim() || value;
@@ -114,6 +146,7 @@ export function readTokens(scope: Element): Token[] {
         consumers: [...(consumers.get(name) ?? [])].sort(),
       };
     })
+    .concat(hooks)
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 

@@ -418,7 +418,7 @@ function TokenView({ scope, themeKey }: { scope: HTMLElement | null; themeKey: s
         <div>
           <div className="fd-eyebrow">Tokens</div>
           <h1 className="fd-h1">{tokens.length} design tokens</h1>
-          <p className="fd-muted">Read from the live stylesheet and resolved against the current theme. Consumers are the recipes whose rules reference each token.</p>
+          <p className="fd-muted">Read from the live stylesheet and resolved against the current theme. Consumers are the recipes whose rules reference each token. <span className="fd-badge">host-supplied</span> marks a hook the package references but never declares — the fonts are the main case; what renders is its fallback unless the host sets it.</p>
         </div>
         <input className="fd-input" placeholder="Filter tokens or recipes…" value={q} onChange={(e) => setQ(e.target.value)} />
       </header>
@@ -432,12 +432,14 @@ function TokenView({ scope, themeKey }: { scope: HTMLElement | null; themeKey: s
               {rows.map((t) => (
                 <div key={t.name} className="fd-token-row">
                   {g === "Typography" && t.resolved && !t.resolved.match(/^[\d.]/) ? (
-                    <span className="fd-font-sample" style={{ fontFamily: `var(${t.name})` }}>Aa</span>
+                    <span className="fd-font-sample" style={{ fontFamily: t.fallback ? `var(${t.name}, ${t.fallback})` : `var(${t.name})` }}>Aa</span>
                   ) : (
                     <Swatch name={t.name} resolved={t.resolved} />
                   )}
                   <span className="fd-token-name"><NameEditor nameKey={`token:${t.name}`} kind="token" current={t.name} mono /></span>
-                  <span className="fd-muted fd-trunc" title={t.resolved}>{t.resolved}</span>
+                  <span className="fd-muted fd-trunc" title={t.resolved}>
+                    {t.hostSupplied ? <><span className="fd-badge">host-supplied</span> {t.fallback ? `fallback ${t.fallback}` : "no fallback"}</> : t.resolved}
+                  </span>
                   <span className="fd-consumers" title={t.consumers.join(", ")}>
                     {t.consumers.length ? `${t.consumers.length} · ${t.consumers.slice(0, 4).join(", ")}${t.consumers.length > 4 ? "…" : ""}` : <span className="fd-muted">unused by recipes</span>}
                   </span>
