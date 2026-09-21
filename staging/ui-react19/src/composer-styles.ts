@@ -98,7 +98,7 @@ export const composerCss = {
   },
   ".nc-composer-shell:focus-within": {
     borderColor: "#a896f028",
-    boxShadow: "0 0 20px #a896f024,0 12px 30px #00000015",
+    boxShadow: "0 0 20px var(--nc-focus-glow),0 12px 30px #00000015",
   },
   ".nc-composer-shell textarea": {
     display: "block",

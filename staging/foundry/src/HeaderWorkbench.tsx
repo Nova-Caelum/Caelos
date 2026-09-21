@@ -25,7 +25,7 @@ export interface HeaderMaterial {
   edge: string;
   elevation: string;
   glow: string;
-  glowSize: "12" | "18";
+  glowSize: "12" | "18" | "20";
   glowTiming?: GlowTiming;
   blur: string;
   blurTiming?: BlurTiming;
@@ -354,9 +354,10 @@ export function HeaderWorkbench({ scope, themeKey }: { scope: HTMLElement | null
           <div className="fd-field-row">
             <TokenSelect label="Glow" value={material.glow} onChange={(v) => set("glow", v)} options={groups.glow} extra={[{ value: "none", label: "none" }]} />
             <label className="fd-field">Spread
-              <select className="fd-input" value={material.glowSize} onChange={(e) => set("glowSize", e.target.value as "12" | "18")} disabled={material.glow === "none"}>
+              <select className="fd-input" value={material.glowSize} onChange={(e) => set("glowSize", e.target.value as HeaderMaterial["glowSize"])} disabled={material.glow === "none"}>
                 <option value="12">12px</option>
                 <option value="18">18px</option>
+                <option value="20">20px · Composer</option>
               </select>
             </label>
           </div>
