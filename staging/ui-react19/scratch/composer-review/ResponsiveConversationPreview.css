@@ -1,0 +1,61 @@
+/* Gallery host composition only. Production Composer recipes remain unchanged. */
+.nc-conversation-width-review {
+  width: 100%;
+  min-width: 0;
+  color: var(--il-ink);
+  font: 500 13px/1.5 var(--font-nova-sans, "IBM Plex Sans"), sans-serif;
+}
+.nc-conversation-width-review-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sys-space-3, 9px) var(--sys-space-4, 12px);
+  margin-bottom: var(--sys-space-6, 18px);
+}
+.nc-conversation-width-review-tools select {
+  font: inherit;
+  color: var(--il-ink);
+  background: var(--il-surface);
+  border: 1px solid var(--il-edge);
+  border-radius: var(--sys-radius-field, 8px);
+  padding: var(--sys-space-2, 6px) var(--sys-space-3, 9px);
+  max-width: 100%;
+}
+.nc-conversation-width-review-tools select:focus-visible {
+  outline: 2px solid var(--il-muted);
+  outline-offset: 3px;
+}
+.nc-conversation-width-review-measure,
+.nc-conversation-width-review-note { color: var(--il-muted); font-size: 12px; }
+.nc-conversation-width-review-note { flex-basis: 100%; }
+.nc-conversation-width-review-pane {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+  padding-block: var(--sys-space-8, 30px);
+  outline: 1px dashed var(--il-edge);
+  outline-offset: -1px;
+}
+.nc-conversation-width-review-chat {
+  box-sizing: border-box;
+  width: var(--review-chat-width);
+  min-width: 0;
+  margin-inline: auto;
+  margin-bottom: var(--sys-space-6, 18px);
+}
+.nc-conversation-width-review-composer {
+  box-sizing: border-box;
+  width: var(--review-composer-width);
+  min-width: 0;
+  margin-inline: auto;
+}
+/* Override only the legacy host measure inside this pending review specimen. */
+.nc-conversation-width-review-composer .nc-composer-workspace,
+.nc-conversation-width-review-composer .alert__stage,
+.nc-conversation-width-review-composer [data-scope="alert"][data-part="stage"] {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  transition: none;
+}

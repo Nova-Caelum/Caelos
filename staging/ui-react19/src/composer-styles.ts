@@ -1,0 +1,646 @@
+// Approved Composer rules plus explicitly scoped, opt-in Gallery review rules.
+export const composerCss = {
+  // Approved viewport dock: 42px picker + 2px shell gap + 3px floor cushion.
+  // Opt-in host wrapper reserves the lane while menus are closed as well.
+  ".nc-composer-dock-space": {
+    paddingBottom: "47px",
+  },
+  ".nc-composer-docked-bridge[data-dock=bottom] > .nc-composer-format-menu, .nc-composer-docked-bridge[data-dock=bottom] > .nc-composer-model-settings": {
+    marginTop: "2px",
+  },
+  ".nc-composer-command-menu": {
+    boxSizing: "border-box",
+    width: "max-content",
+    maxWidth: "calc(100vw - 24px)",
+    overscrollBehavior: "contain",
+    scrollbarWidth: "thin",
+    scrollbarColor: "var(--nc-scroll-rest) transparent",
+  },
+  ".nc-composer-pills": { display: "flex", flexWrap: "wrap", gap: "6px", flex: "1", minWidth: "0" },
+  ".nc-composer-pill": { display: "flex", alignItems: "center", borderRadius: "999px", background: "var(--il-surface)", border: "1px solid var(--il-edge)", color: "var(--il-muted)", overflow: "hidden" },
+  ".nc-composer-pill-label": { display: "flex", alignItems: "center", gap: "6px", padding: "6px 8px 6px 10px", font: "inherit", fontSize: "12px" },
+  ".nc-composer-pill-remove": { display: "grid", placeItems: "center", width: "28px", alignSelf: "stretch" },
+  ".nc-composer-pill button:hover": { color: "var(--il-ink)", background: "var(--il-fill)" },
+  ".nc-composer-pill button:focus-visible": { outline: "2px solid var(--il-muted)", outlineOffset: "-3px" },
+  ".nc-composer-context-editor": { width: "min(360px, calc(100vw - 24px))", boxSizing: "border-box", padding: "16px", background: "var(--nc-glass-bg)", backdropFilter: "blur(var(--nc-glass-blur))", border: "1px solid var(--il-edge)", borderRadius: "16px", color: "var(--il-ink)", boxShadow: "0 12px 32px #0003", zIndex: "80", font: "500 13px/1.5 var(--font-nova-sans, 'IBM Plex Sans'),sans-serif" },
+  ".nc-composer-context-actions": { display: "flex", justifyContent: "flex-end", gap: "var(--sys-space-3)", marginTop: "var(--sys-space-4)" },
+  ".nc-composer-context-editor button": { padding: "7px 14px", borderRadius: "999px", background: "var(--il-surface)", color: "var(--il-ink)" },
+  ".nc-composer-context-editor button:disabled": { opacity: ".4", cursor: "not-allowed" },
+  ".nc-composer-context": {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    flexWrap: "wrap",
+    marginBlock: "10px",
+  },
+  ".nc-composer-docked-bridge[data-dock=top] > *": {
+    transformOrigin: "center bottom",
+  },
+  ".nc-composer-docked-bridge[data-dock=top][data-open=false] > *": {
+    transform: "translateY(7px) scale(.94)",
+  },
+
+  ".nc-composer-workspace": {
+    width: "100%",
+    maxWidth: "780px",
+    margin: "auto",
+    transition: "max-width 360ms var(--il-ease)",
+    font: "500 13px/19.5px var(--font-nova-sans, 'IBM Plex Sans'),sans-serif",
+    letterSpacing: ".019em",
+    wordSpacing: ".055em",
+  },
+  ".nc-composer-recipient": {
+    display: "flex",
+    alignItems: "center",
+    gap: "9px",
+    padding: "0 18px",
+    marginBottom: "12px",
+    color: "var(--il-ink)",
+  },
+  ".nc-composer-avatar": {
+    display: "grid",
+    placeItems: "center",
+    width: "23px",
+    height: "23px",
+    borderRadius: "8px",
+    background: "#a1b5a421",
+    color: "var(--sys-sem-sage)",
+    fontSize: "9px",
+  },
+  ".nc-composer-recipient-detail": {
+    color: "var(--il-dim)",
+    fontSize: "11px",
+    marginLeft: "auto",
+  },
+  ".nc-composer-shell": {
+    position: "relative",
+    isolation: "isolate",
+    background: "var(--il-fill)",
+    border: "1px solid var(--il-edge)",
+    padding: "18px 14px 10px",
+    boxShadow: "0 12px 30px #00000015",
+    transition:
+      "border-radius 340ms var(--il-ease),box-shadow 320ms var(--il-ease),border-color 320ms var(--il-ease)",
+  },
+  ".nc-composer-shell:before": {
+    content: "''",
+    position: "absolute",
+    inset: "0",
+    zIndex: "-1",
+    borderRadius: "inherit",
+    background: "var(--il-focus)",
+    opacity: "0",
+    transition: "opacity 320ms var(--il-ease)",
+    pointerEvents: "none",
+  },
+  ".nc-composer-shell:focus-within:before": {
+    opacity: ".8",
+  },
+  ".nc-composer-shell:focus-within": {
+    borderColor: "#a896f028",
+    boxShadow: "0 0 20px #a896f024,0 12px 30px #00000015",
+  },
+  ".nc-composer-shell textarea": {
+    display: "block",
+    resize: "none",
+    width: "100%",
+    boxSizing: "border-box",
+    minHeight: "24px",
+    border: "0",
+    background: "transparent",
+    outline: "none !important",
+    boxShadow: "none !important",
+    color: "var(--il-ink)",
+    font: "500 14px/24px var(--font-nova-sans, 'IBM Plex Sans'),sans-serif",
+    letterSpacing: ".019em",
+    wordSpacing: ".055em",
+    padding: "0 7px",
+    scrollbarWidth: "thin",
+    scrollbarColor: "var(--nc-scroll-rest) transparent",
+  },
+  ".nc-composer-shell textarea::placeholder": {
+    color: "var(--il-muted)",
+    opacity: ".85",
+  },
+  ".nc-composer-controls, .nc-composer-left, .nc-composer-right": {
+    display: "flex",
+    alignItems: "center",
+    gap: "5px",
+  },
+  ".nc-composer-controls": {
+    justifyContent: "space-between",
+    marginTop: "20px",
+    gap: "12px",
+  },
+  ".nc-composer-icon": {
+    display: "grid",
+    placeItems: "center",
+    width: "34px",
+    height: "34px",
+    borderRadius: "12px",
+    color: "var(--il-muted)",
+    flexShrink: "0",
+    transition: "background 240ms var(--il-ease),color 240ms var(--il-ease)",
+  },
+  ".nc-composer-icon:hover, .nc-composer-icon[aria-expanded=true]": {
+    background: "#b09dd517",
+    color: "var(--il-ink)",
+  },
+  ".nc-composer-model": {
+    display: "flex",
+    alignItems: "center",
+    gap: "7px",
+    font: "inherit",
+    fontSize: "12px",
+    color: "var(--il-muted)",
+    padding: "7px 10px",
+    borderRadius: "12px",
+    whiteSpace: "nowrap",
+  },
+  ".nc-composer-model:hover": {
+    background: "#b09dd511",
+    color: "var(--il-ink)",
+  },
+  ".nc-composer-main-action": {
+    width: "34px",
+    height: "34px",
+    display: "grid",
+    placeItems: "center",
+    borderRadius: "50%",
+    color: "var(--il-ink)",
+    background: "#aca2cc22",
+    marginLeft: "3px",
+    transition:
+      "background 240ms var(--il-ease),box-shadow 240ms var(--il-ease)",
+  },
+  // Composer color exploration: blue appears on approach, not as a selected state.
+  // The idle live-mode action uses a filled hover; other controls tint only icons.
+  "@media (hover: hover)": {
+    ".nc-composer-workspace .nc-composer-icon:not(:disabled):hover svg, .nc-composer-format-option:not(:disabled):hover svg":
+      {
+        color: "var(--sys-accent)",
+      },
+    ".nc-composer-main-action[data-ready=false][aria-pressed=false]:not(:disabled):hover":
+      {
+        background: "var(--sys-accent)",
+        color: "var(--sys-text-primary)",
+      },
+  },
+  ".nc-composer-main-action[data-ready=true]": {
+    background: "var(--sys-accent)",
+    color: "var(--sys-text-primary)",
+    boxShadow: "0 0 16px var(--sys-accent-glow)",
+  },
+  ".nc-composer-main-action[data-ready=true]:hover": {
+    background: "var(--sys-accent-hover)",
+    boxShadow: "0 0 24px var(--sys-accent-glow)",
+  },
+  ".nc-composer-reply": {
+    position: "relative",
+  },
+  ".nc-composer-format-bridge": {
+    position: "absolute",
+    bottom: "100%",
+    right: "-39px",
+    paddingBottom: "12px",
+    zIndex: "30",
+  },
+  ".nc-composer-format-menu": {
+    minHeight: "42px",
+    maxWidth: "calc(100vw - 24px)",
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    padding: "4px",
+    width: "122px",
+    borderRadius: "13px",
+    background: "color-mix(in srgb,var(--sys-top) 85%,transparent)",
+    backdropFilter: "blur(19px)",
+    border: "1px solid #baa6d31c",
+    boxShadow: "0 10px 32px #0005",
+    animation: "nc-composer-reveal 220ms var(--il-ease)",
+    transition: "width 300ms var(--il-ease)",
+  },
+  ".nc-composer-format-menu[data-expanded=true]": {
+    width: "286px",
+  },
+  ".nc-composer-format-option": {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "0",
+    height: "32px",
+    minWidth: "32px",
+    flex: "1",
+    borderRadius: "9px",
+    color: "var(--il-muted)",
+    padding: "0",
+    transition:
+      "background 220ms var(--il-ease),color 220ms var(--il-ease),gap 260ms cubic-bezier(.16,1,.3,1),flex-grow 260ms cubic-bezier(.16,1,.3,1)",
+  },
+  ".nc-composer-format-option:hover": {
+    background: "#b7a8cb18",
+    color: "var(--il-ink)",
+    boxShadow: "0 0 9px #b7a8cb09",
+  },
+  ".nc-composer-format-option[aria-checked=true], .nc-composer-review-row .nc-composer-format-option[aria-pressed=true]": {
+    background: "linear-gradient(120deg,#b09dd52e,#abbfb81a)",
+    color: "var(--il-ink)",
+    boxShadow: "0 0 10px #b09dd510",
+  },
+  ".nc-composer-format-label": {
+    display: "none",
+    font: "500 12.5px/19px var(--font-nova-sans, 'IBM Plex Sans'),sans-serif",
+    letterSpacing: ".019em",
+    wordSpacing: ".055em",
+    whiteSpace: "nowrap",
+  },
+  ".nc-composer-format-menu[data-expanded=true] .nc-composer-format-label": {
+    display: "block",
+    maxWidth: "90px",
+    opacity: "1",
+    transition:
+      "max-width 260ms cubic-bezier(.16,1,.3,1),opacity 160ms ease-out 50ms",
+  },
+  ".nc-composer-format-menu[data-expanded=true] .nc-composer-format-option:last-child":
+    {
+      flex: "1.45",
+    },
+  ".nc-composer-live": {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    padding: "12px 18px",
+    marginBottom: "12px",
+    borderRadius: "14px",
+    background: "#a1b5a418",
+    color: "var(--il-ink)",
+    fontSize: "12px",
+  },
+  ".nc-composer-live button": {
+    marginLeft: "auto",
+    color: "var(--il-muted)",
+  },
+  ".nc-composer-small-menu": {
+    zIndex: "100",
+    minWidth: "215px",
+    padding: "7px",
+    borderRadius: "15px",
+    background: "var(--nc-glass-bg)",
+    border: "1px solid #baa6d31c",
+    boxShadow: "0 12px 32px #0005",
+    backdropFilter: "blur(var(--nc-glass-blur)) saturate(135%)",
+    color: "var(--il-ink)",
+    font: "500 13px/19.5px var(--font-nova-sans, 'IBM Plex Sans'),sans-serif",
+    letterSpacing: ".019em",
+    wordSpacing: ".055em",
+    borderColor: "var(--nc-glass-edge)",
+  },
+  ".nc-composer-small-item": {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "16px",
+    padding: "10px 12px",
+    borderRadius: "10px",
+    outline: "none",
+    cursor: "pointer",
+    position: "relative",
+    isolation: "isolate",
+    color: "var(--il-muted)",
+  },
+  ".nc-composer-small-item[data-highlighted], .nc-composer-small-item[data-state=checked]":
+    {
+      background: "transparent",
+    },
+  ".nc-composer-small-menu[data-mode=light]": {
+    background: "var(--nc-glass-bg)",
+    color: "var(--il-ink)",
+  },
+  "[data-caelos-theme=light] .nc-composer-format-menu": {
+    background: "#f3eef6ed",
+    borderColor: "#775e921c",
+    boxShadow: "0 10px 32px #33283e22",
+  },
+  "@media (max-width:650px)": {
+    // Keep saved context beside Add/Dictate, including in narrow Foundry frames.
+    // The pill group may wrap internally; it must not become a separate top row.
+    ".nc-composer-controls": {
+      flexWrap: "nowrap",
+      gap: "12px",
+    },
+    ".nc-composer-right": {
+      width: "auto",
+      justifyContent: "flex-end",
+    },
+    ".nc-composer-model": {
+      fontSize: "11px",
+      paddingLeft: "3px",
+    },
+    ".nc-composer-format-menu[data-expanded=true]": {
+      width: "286px",
+    },
+    ".nc-composer-format-bridge": {
+      right: "-39px",
+    },
+    ".nc-composer-format-label": {
+      fontSize: "12.5px",
+    },
+    ".nc-composer-recipient-detail": {
+      display: "none",
+    },
+    ".nc-composer-model-settings": {
+      marginRight: "auto",
+    },
+    ".nc-composer-model-settings .nc-composer-model": {
+      padding: "7px 4px",
+    },
+  },
+  "@media (prefers-reduced-motion:reduce)": {
+    ".nc-composer-emerging-menu": {
+      animation: "none !important",
+    },
+  },
+  ".nc-composer-model-settings": {
+    display: "flex",
+    alignItems: "center",
+    gap: "0",
+    minWidth: "0",
+  },
+  // Gallery-only proposed agent settings. No effect without explicit opt-in.
+  ".nc-composer-review-table": {
+    width: "max-content", maxWidth: "calc(100vw - 24px)", overflow: "auto", boxSizing: "border-box",
+    padding: "var(--sys-space-2)",
+  },
+  ".nc-composer-review-table > [role=table]": { display: "grid", gridTemplateColumns: "auto minmax(0, 1fr) auto auto", gap: "var(--sys-space-1)" },
+  ".nc-composer-review-row": {
+    display: "grid", gridTemplateColumns: "subgrid", gridColumn: "1 / -1",
+    alignItems: "center", gap: "var(--sys-space-1)",
+  },
+  ".nc-composer-review-row .nc-composer-model": {
+    fontSize: "12px", lineHeight: "20px", padding: "6px", whiteSpace: "nowrap",
+  },
+  ".nc-composer-review-identity, .nc-composer-review-agent": {
+    display: "flex", alignItems: "center", gap: "var(--sys-space-2)",
+  },
+  ".nc-composer-review-name": {
+    display: "block", maxWidth: "0", opacity: "0", overflow: "hidden",
+    transition: "max-width 260ms cubic-bezier(.16,1,.3,1), opacity 170ms ease-out",
+  },
+  ".nc-composer-review-table[data-expanded=true] .nc-composer-review-name": {
+    maxWidth: "96px", opacity: "1",
+  },
+  ".nc-composer-review-table[data-reduced=true] .nc-composer-review-name": {
+    transition: "none",
+  },
+  ".nc-composer-format-menu[data-agent-review=true], .nc-composer-format-menu[data-agent-review=true][data-expanded=true]": { width: "max-content", overflowX: "auto", boxSizing: "border-box" },
+  ".nc-composer-format-menu[data-agent-review=true] .nc-composer-format-option, .nc-composer-format-menu[data-agent-review=true] .nc-composer-format-option:last-child": { flex: "0 0 auto", paddingInline: "var(--sys-space-2)" },
+  ".nc-composer-format-menu[data-agent-review=true] .nc-composer-review-agent": { flexShrink: "0" },
+  ".nc-composer-review-table > [data-context=reply]": { gridTemplateColumns: "auto repeat(3, max-content)" },
+  ".nc-composer-review-table[data-expanded=true] .nc-composer-format-label": { display: "block" },
+  ".nc-composer-review-row .nc-composer-format-option": { gap: "var(--sys-space-1)", padding: "var(--sys-space-1)" },
+  ".nc-composer-model-settings .nc-composer-model": {
+    padding: "7px 6px",
+  },
+  ".nc-composer-model-settings .nc-composer-reasoning": {
+    color: "var(--il-dim)",
+  },
+  ".nc-composer-model-settings .nc-composer-model:hover, .nc-composer-model-settings .nc-composer-model[aria-expanded=true]":
+    {
+      color: "var(--il-ink)",
+      background: "#b09dd511",
+    },
+  ".nc-composer-recipient>.nc-composer-icon": {
+    width: "30px",
+    height: "30px",
+    marginLeft: "-3px",
+    color: "var(--il-dim)",
+    borderRadius: "10px",
+  },
+  ".nc-composer-recipient>.nc-composer-icon:hover, .nc-composer-recipient>.nc-composer-icon[aria-expanded=true]":
+    {
+      color: "var(--il-ink)",
+    },
+  ".nc-composer-brain": {
+    position: "relative",
+    flexShrink: "0",
+  },
+  ".nc-composer-agent-name": {
+    display: "block",
+    maxWidth: "0",
+    overflow: "hidden",
+    whiteSpace: "nowrap",
+    textOverflow: "ellipsis",
+    opacity: "0",
+    transition:
+      "max-width 260ms cubic-bezier(.16,1,.3,1),opacity 100ms ease-out,margin 260ms cubic-bezier(.16,1,.3,1)",
+  },
+  ".nc-composer-brain[data-state=pinned] .nc-composer-agent-name": {
+    maxWidth: "100px",
+    marginLeft: "8px",
+    opacity: "1",
+  },
+  ".nc-composer-agent-option": {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    minWidth: "0",
+  },
+  ".nc-composer-agent-option > span:last-child": {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  },
+  ".nc-composer-brain-bridge": {
+    position: "absolute",
+    bottom: "100%",
+    right: "-78px",
+    paddingBottom: "12px",
+    zIndex: "31",
+  },
+  ".nc-composer-brain .nc-composer-model-settings": {
+    minHeight: "42px",
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "3px",
+    width: "max-content",
+    maxWidth: "calc(100vw - 48px)",
+    padding: "4px",
+    borderRadius: "13px",
+    background: "color-mix(in srgb,var(--sys-top) 85%,transparent)",
+    backdropFilter: "blur(19px)",
+    border: "1px solid #baa6d31c",
+    boxShadow: "0 10px 32px #0005",
+    animation: "nc-composer-reveal 220ms var(--il-ease)",
+    margin: "0",
+  },
+  ".nc-composer-brain .nc-composer-model-settings .nc-composer-model": {
+    fontSize: "12px",
+    lineHeight: "20px",
+    padding: "6px 9px",
+  },
+  ".nc-composer-brain .nc-composer-model-settings .nc-composer-agent": {
+    display: "flex",
+    alignItems: "center",
+    gap: "0",
+    padding: "4px",
+    minWidth: "0",
+  },
+  ".nc-composer-brain .nc-composer-model-settings .nc-composer-reasoning": {
+    color: "var(--il-muted)",
+  },
+  ".nc-composer-brain .nc-composer-model:focus-visible, .nc-composer-brain>.nc-composer-icon:focus-visible":
+    {
+      outline: "none",
+      boxShadow: "inset 0 0 0 1px #abb9f04d,0 0 9px #91a7ef20",
+    },
+  "[data-caelos-theme=light] .nc-composer-brain .nc-composer-model-settings": {
+    background: "#f3eef6ed",
+    borderColor: "#775e921c",
+    boxShadow: "0 10px 32px #33283e22",
+  },
+  ".nc-composer-brain-bridge.nc-composer-docked-bridge, .nc-composer-format-bridge.nc-composer-docked-bridge":
+    {
+      top: "100%",
+      bottom: "auto",
+      paddingBottom: "0",
+    },
+  ".nc-composer-docked-bridge": {
+    visibility: "hidden",
+    pointerEvents: "none",
+    transition: "visibility 0s 160ms",
+  },
+  ".nc-composer-docked-bridge[data-open=true]": {
+    visibility: "visible",
+    pointerEvents: "auto",
+    transitionDelay: "0s",
+  },
+  ".nc-composer-docked-bridge>.nc-composer-format-menu, .nc-composer-docked-bridge>.nc-composer-model-settings":
+    {
+      animation: "none",
+      opacity: "0",
+      transform: "translateY(-7px) scale(.94)",
+      transition:
+        "transform 160ms cubic-bezier(.4,0,.8,.3),opacity 130ms ease-out,width 260ms cubic-bezier(.16,1,.3,1)",
+    },
+  ".nc-composer-docked-bridge>.nc-composer-format-menu": {
+    transformOrigin: "calc(100% - 56px) -12px",
+  },
+  ".nc-composer-docked-bridge>.nc-composer-model-settings": {
+    transformOrigin: "calc(100% - 95px) -12px",
+  },
+  ".nc-composer-docked-bridge[data-open=true]>.nc-composer-format-menu, .nc-composer-docked-bridge[data-open=true]>.nc-composer-model-settings":
+    {
+      opacity: "1",
+      transform: "translateY(0) scale(1)",
+      transition:
+        "transform 260ms cubic-bezier(.16,1,.3,1),opacity 170ms ease-out,width 260ms cubic-bezier(.16,1,.3,1)",
+    },
+  ".nc-composer-format-option svg": {
+    flexShrink: "0",
+    width: "17px",
+    height: "17px",
+  },
+  ".nc-composer-format-menu .nc-composer-format-label": {
+    display: "block",
+    maxWidth: "0",
+    overflow: "hidden",
+    opacity: "0",
+    transition:
+      "max-width 260ms cubic-bezier(.16,1,.3,1),opacity 100ms ease-out",
+  },
+  ".nc-composer-format-menu[data-expanded=true] .nc-composer-format-option": {
+    gap: "6px",
+  },
+  ".nc-composer-emerging-menu": {
+    transformOrigin: "var(--radix-dropdown-menu-content-transform-origin)",
+    "--rc-emerge-y": "7px",
+  },
+  ".nc-composer-emerging-menu[data-side=bottom]": {
+    "--rc-emerge-y": "-7px",
+  },
+  ".nc-composer-emerging-menu[data-state=open]": {
+    animation: "nc-composer-menu-emerge 260ms cubic-bezier(.16,1,.3,1) both",
+  },
+  // Radix owns this positioning wrapper; freeze only the exiting nested menu.
+  "[data-radix-popper-content-wrapper]:has(> .nc-composer-emerging-menu[data-model-owner][data-state=closed])": {
+    transform: "var(--rc-exit-position) !important",
+  },
+  ".nc-composer-emerging-menu[data-state=closed]": {
+    pointerEvents: "none",
+    animation: "nc-composer-menu-retreat 160ms cubic-bezier(.4,0,.8,.3) both",
+  },
+  ".nc-composer-emerging-menu[data-reduced=true]": {
+    animation: "none !important",
+  },
+  ":where(.nc-composer-workspace, .nc-composer-recipient, .nc-composer-review-table) button": {
+    appearance: "none",
+    border: 0,
+    cursor: "pointer",
+    font: "inherit",
+    backgroundColor: "transparent",
+  },
+  ".nc-composer-workspace button:focus-visible, .nc-composer-recipient button:focus-visible, .nc-composer-review-table button:focus-visible":
+    {
+      outline: "none",
+      boxShadow: "inset 0 0 0 1px #abb9f04d,0 0 9px #91a7ef20",
+    },
+  ".nc-composer-small-item::before": {
+    content: '""',
+    position: "absolute",
+    inset: "1px 0",
+    borderRadius: "9px",
+    filter: "blur(.7px)",
+    zIndex: -1,
+    opacity: 0,
+    background: "linear-gradient(100deg,#8099e83b,#9690d124)",
+  },
+  ".nc-composer-small-item[data-highlighted]": {
+    color: "var(--il-ink)",
+  },
+  ".nc-composer-small-item[data-highlighted]::before": {
+    opacity: 1,
+  },
+  ".nc-composer-workspace button:disabled": {
+    opacity: 0.5,
+    cursor: "not-allowed",
+  },
+  "@media (prefers-reduced-transparency: reduce)": {
+    ".nc-composer-small-menu, .nc-composer-format-menu, .nc-composer-brain .nc-composer-model-settings":
+      {
+        background: "var(--nc-opaque)",
+        backdropFilter: "none",
+      },
+  },
+} as const;
+export const composerKeyframes = {
+  "nc-composer-reveal": {
+    from: {
+      opacity: "0",
+      transform: "translateY(5px)",
+    },
+    to: {
+      opacity: "1",
+      transform: "translateY(0)",
+    },
+  },
+  "nc-composer-menu-emerge": {
+    from: {
+      opacity: "0",
+      transform: "translateY(var(--rc-emerge-y)) scale(.94)",
+    },
+    to: {
+      opacity: "1",
+      transform: "translateY(0) scale(1)",
+    },
+  },
+  "nc-composer-menu-retreat": {
+    from: {
+      opacity: "var(--rc-exit-opacity, 1)",
+      transform: "var(--rc-exit-transform, translateY(0) scale(1))",
+    },
+    to: {
+      opacity: "0",
+      transform: "translateY(var(--rc-emerge-y)) scale(.94)",
+    },
+  },
+} as const;

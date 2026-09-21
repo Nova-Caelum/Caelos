@@ -1,0 +1,28 @@
+/* Iter 5 · scratch-only comparison chrome. Every rule is scoped under .iter5 so Iter 1–4
+   render exactly as before. The pair columns reuse Iter 2's own `.i2-option` / `.i2-specimen`
+   stage, so both sides of every pair sit on the identical ground at the identical width. */
+/* `.iter2` is applied per-block (page chrome and the specimen stage) rather than on a common
+   ancestor, so the packaged column stays free of Atlas CSS. These two rules undo the two things
+   `.iter2` does as a page root — its 27px top margin — wherever it is used as a local scope. */
+.iter5 .i5-heading { margin-top: 0; }
+.iter5 .i2-specimen.iter2 { margin-top: 0; }
+.iter5 .i5-note { color: var(--il-muted); font-size: 12px; margin-top: 9px; }
+.iter5 .i5-side { display: flex; align-items: baseline; gap: 9px; }
+.iter5 .i5-side-tag { font-size: 11px; line-height: 18px; padding: 1px 8px; border-radius: 999px; white-space: nowrap; color: var(--il-muted); background: var(--nc-elevated); }
+.iter5 .i5-side-tag[data-side=packaged] { color: var(--sys-sem-sage-on-tint); background: var(--sys-sem-sage-tint); }
+.iter5 .i5-delta { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--il-muted); }
+
+/* Atlas 2 conversation header family. The frame reproduces the study's own two-column
+   comparison so the packaged capsule and rounded cards sit side by side at the same widths
+   the study gives them; nothing here touches a component's own material or geometry. */
+.iter5 .i5-header-stage { padding-top: 0; padding-bottom: 0; }
+.iter5 .i5-header-frame { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; width: 100%; }
+.iter5 .i5-header-candidate { min-width: 0; }
+.iter5 .i5-header-label { display: block; text-align: center; }
+.iter5 .i5-card-wall { flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 24px; }
+/* The agent card's own host. Reproduces the popover host's box so the card measures the same
+   376px it does inside the header, without a portal. */
+.iter5 .i5-card-host { width: 376px; box-sizing: border-box; border-radius: var(--sys-radius-xl);
+  background: var(--nc-glass-bg); border: 1px solid var(--nc-glass-edge);
+  backdrop-filter: blur(var(--nc-glass-blur)) saturate(120%); box-shadow: 0 18px 44px var(--nc-glass-shadow); }
+.iter5 .i2-comparison[data-solo="true"] { grid-template-columns: minmax(0, 1fr); }

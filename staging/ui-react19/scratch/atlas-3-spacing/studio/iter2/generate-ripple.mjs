@@ -1,0 +1,10 @@
+import { execFileSync } from 'node:child_process';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+const root = fileURLToPath(new URL('../../', import.meta.url));
+execFileSync(`${root}/../../node_modules/.bin/panda`, ['cssgen', '--config', 'studio/iter2/ripple.panda.config.ts', '--outfile', 'studio/iter2/ripple.generated.css'], { cwd: root, stdio: 'inherit' });
+const output = new URL('ripple.generated.css', import.meta.url);
+const css = readFileSync(output, 'utf8');
+const rules = css.slice(css.indexOf('@layer tokens'));
+if (!rules.includes('.caelos-ripple-loader') || !rules.includes('@keyframes nc-ripple')) throw new Error('Ripple recipe or keyframes missing');
+writeFileSync(output, `/* Generated from the shared RippleLoader recipe. Base resets omitted to isolate this scratch study. */\n${rules}`);

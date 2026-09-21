@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "vite/client"
+    ],
+    "baseUrl": "../../../..",
+    "paths": {
+      "@/*": [
+        "./*"
+      ],
+      "@/hooks/use-active-chat": [
+        "packages/ui/scratch/atlas-3-spacing/studio/context-adapter.tsx"
+      ]
+    }
+  },
+  "include": [
+    "*.tsx",
+    "studio",
+    "chat-ui-lab",
+    "styled-system"
+  ]
+}
