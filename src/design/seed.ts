@@ -144,7 +144,7 @@ const authoredCharacter: CharacterSeed = {
     "elevated-2": "glass",
     "top": "glass"
   },
-  "graphIntensity": 0.07,
+  "graphIntensity": 0.04,
   "glassIntensity": 0.52
 };
 
