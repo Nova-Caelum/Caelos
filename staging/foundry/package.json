@@ -1,0 +1,17 @@
+{
+  "name": "caelos-foundry",
+  "private": true,
+  "type": "module",
+  "description": "Caelos Foundry — generated browser for every Panda recipe, variant and token in the Caelos design system, with durable drafts.",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5199 --strictPort"
+  },
+  "dependencies": {
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^6.3.5"
+  }
+}

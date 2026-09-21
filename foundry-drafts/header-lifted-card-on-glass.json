@@ -1,0 +1,34 @@
+{
+  "name": "Header — lifted card on glass",
+  "backdrop": {
+    "layer": "elevated",
+    "texture": "glass"
+  },
+  "elements": [
+    {
+      "recipe": "card",
+      "variants": {
+        "variant": "lifted"
+      },
+      "text": "Conversation header"
+    },
+    {
+      "recipe": "button",
+      "variants": {
+        "variant": "primary",
+        "size": "md"
+      },
+      "text": "New chat"
+    },
+    {
+      "recipe": "chip",
+      "variants": {
+        "variant": "status",
+        "tone": "ready"
+      },
+      "text": "Ready"
+    }
+  ],
+  "slug": "header-lifted-card-on-glass",
+  "savedAt": "2026-09-21T04:02:09.674Z"
+}
