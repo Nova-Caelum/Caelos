@@ -167,7 +167,7 @@ code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.86em;
 /* Rename proposals */
 .fd-name { display: inline-flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
 .fd-name-old { color: var(--il-muted); text-decoration: line-through; text-decoration-color: var(--il-dim); }
-.fd-name-new { color: var(--sys-sem-sage-hover, var(--il-ink)); }
+.fd-name-new { color: var(--sys-sem-sage-on-tint, var(--il-ink)); }
 .fd-arrow { color: var(--il-dim); }
 .fd-pencil {
   appearance: none; border: 0; background: transparent; color: var(--il-dim); cursor: pointer;
