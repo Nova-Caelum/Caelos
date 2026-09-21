@@ -55,7 +55,12 @@ export const artifactWorkspace = defineSlotRecipe({
       alignItems: "start",
       padding: `${space21} var(--sys-space-5) 0`,
     },
-    tools: { minWidth: 0 },
+    tools: {
+      minWidth: 0,
+      position: "sticky",
+      top: space21,
+      alignSelf: "start",
+    },
     toolbar: {
       display: "flex",
       flexDirection: "column",
