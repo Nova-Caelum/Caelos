@@ -248,6 +248,7 @@ function liveLibrary(): Plugin {
       };
       const watched = [
         { dir: path.join(UI19, "src"), job: chat },
+        { dir: path.join(UI19, "scratch/header-proportions"), job: chat },
         { dir: path.join(UI18, "src"), job: taskgraph },
       ];
       for (const { dir } of watched) server.watcher.add(dir);
@@ -268,6 +269,11 @@ export default defineConfig({
       { find: /^@caelos\/ui$/, replacement: path.join(UI19, "dist/index.js") },
       { find: /^@caelos\/recipes$/, replacement: path.join(UI19, "styled-system/recipes/index.mjs") },
       { find: /^@caelos\/styles\.css$/, replacement: path.join(UI19, "dist/styles.css") },
+      // The approved header and its locked baseline, straight from the package source.
+      { find: /^@caelos\/header$/, replacement: path.join(UI19, "scratch/header-proportions/ApprovedHeader.tsx") },
+      { find: /^@caelos\/header-layout$/, replacement: path.join(UI19, "src/header-layout.ts") },
+      // The study header imports the package by its published name.
+      { find: /^@nova-caelum\/ui$/, replacement: path.join(UI19, "dist/index.js") },
     ],
     // The package and the Foundry must share one React; two copies break every hook.
     dedupe: ["react", "react-dom"],

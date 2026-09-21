@@ -10,8 +10,9 @@ import {
   type RecipeInfo,
 } from "./inventory";
 import { readTokens, TOKEN_GROUPS, tokensForClasses, type Token } from "./tokens";
+import { HeaderWorkbench } from "./HeaderWorkbench";
 
-type View = "components" | "tokens" | "drafts" | "proposals";
+type View = "create" | "components" | "tokens" | "drafts" | "proposals";
 type Variants = Record<string, string>;
 type Pick = { recipe: string; variants: Variants };
 
@@ -456,7 +457,7 @@ function TokenView({ scope, themeKey }: { scope: HTMLElement | null; themeKey: s
 /* ─── Drafts: durable prototypes, saved as files ─── */
 
 type DraftElement = { recipe: string; variants: Variants; text: string };
-type Draft = { name: string; slug?: string; savedAt?: string; backdrop: { layer: string; texture: string }; elements: DraftElement[] };
+type Draft = { name: string; slug?: string; savedAt?: string; kind?: string; recipe?: string; backdrop: { layer: string; texture: string }; elements: DraftElement[] };
 
 function DraftsView() {
   const [saved, setSaved] = useState<Draft[]>([]);
@@ -562,7 +563,7 @@ function DraftsView() {
         {saved.map((d) => (
           <button type="button" key={d.slug} className="fd-saved-item" onClick={() => setDraft({ name: d.name, backdrop: d.backdrop, elements: d.elements })}>
             <div className="fd-saved-name">{d.name}</div>
-            <div className="fd-muted">{d.elements.length} elements · {d.backdrop.layer} / {d.backdrop.texture}</div>
+            <div className="fd-muted">{d.kind === "recipe" ? `recipe material · ${d.recipe}` : `${d.elements.length} elements · ${d.backdrop.layer} / ${d.backdrop.texture}`}</div>
             <div className="fd-muted"><code>foundry-drafts/{d.slug}.json</code></div>
           </button>
         ))}
@@ -578,7 +579,7 @@ export function App() {
   const params = new URLSearchParams(location.search);
   const [theme, setTheme] = useState<"dark" | "light">((params.get("theme") as "light") ?? "dark");
   const [glass, setGlass] = useState(true);
-  const [view, setView] = useState<View>((params.get("view") as View) ?? "components");
+  const [view, setView] = useState<View>((params.get("view") as View) ?? "create");
   const [selected, setSelected] = useState<string>(params.get("recipe") ?? "conversationHeader");
   const [q, setQ] = useState("");
   const [pick, setPick] = useState<Pick | null>(null);
@@ -605,7 +606,7 @@ export function App() {
               </span>
             </div>
             <nav className="fd-tabs" aria-label="Foundry sections">
-              {(["components", "tokens", "drafts", "proposals"] as View[]).map((v) => (
+              {(["create", "components", "tokens", "drafts", "proposals"] as View[]).map((v) => (
                 <button key={v} type="button" className={`fd-tab ${view === v ? "is-on" : ""}`} onClick={() => setView(v)}>{v[0].toUpperCase() + v.slice(1)}</button>
               ))}
             </nav>
@@ -631,6 +632,7 @@ export function App() {
             <main className="fd-main">
               {view === "components" && info && <ComponentView key={info.name} info={info} onPick={setPick} />}
               {view === "tokens" && <TokenView scope={scope} themeKey={`${theme}-${glass}`} />}
+              {view === "create" && <HeaderWorkbench scope={scope} themeKey={`${theme}-${glass}`} />}
               {view === "drafts" && <DraftsView />}
               {view === "proposals" && <ProposalsView />}
             </main>
