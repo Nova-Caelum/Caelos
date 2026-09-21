@@ -1,3 +1,26 @@
+# Caelos Foundry — the component foundry
+
+**Launch:** double-click `Foundry.command` at the repository root. No agent session needed. It opens `http://127.0.0.1:5199/`; close its Terminal window to stop it. If it is already running, double-clicking just opens it.
+
+The Foundry is a full-page browser for every primitive, variant and token in the Caelos design system, and a place to prototype with them. Source: `staging/foundry/`.
+
+**Generated, not hand-authored.** Every recipe Panda emits carries `__name__` and `variantMap`. The Foundry reads those and nothing else, so a recipe or variant added to either package appears on screen with no Foundry edit — verified by adding a throwaway variant to `card` and watching it appear, then reverting it. Slot recipes are shown as an anatomy, each slot rendered on its own, because a slot recipe's layout depends on the real component's nesting and a flat render of its classes is misleading.
+
+**Both tracks — the chat interface and the taskgraph interface.** The chat track is `staging/ui-react19` (`@nova-caelum/ui-react19`, React 19). The task-graph track is `packages/ui` (`@nova-caelum/ui`, React 18). The two are different React majors and cannot share a React root, so live specimens render from the chat package — which contains every task-graph recipe by name — while the task-graph package's recipe metadata is read separately and compared. Each recipe is labelled with the tracks it belongs to, and where the two definitions differ the difference is listed (`avatar` gains a `shape` axis in chat; `foundation`'s `surface` kind exists only in the task graph, where Surface had not yet become its own recipe).
+
+**Sections:**
+
+- **Components** — every recipe, grouped *shared* and *chat only*; each variant rendered; click any specimen for its provenance (recipe, variant values, generated classes, and every token it resolves, with current values). *See it on every surface* renders the selection on all five surface layers × paper, glass, plain and auto.
+- **Tokens** — every custom property the package declares on its theme scope, read from the live stylesheet, resolved against the current theme, grouped (colour, glow, fill and gradient, typography, space, radius, elevation, motion), with the recipes that consume each.
+- **Drafts** — compose from existing recipes and variants on any backdrop, and save. Drafts are JSON files in `foundry-drafts/` at the repository root: durable across restarts and committable.
+- **Proposals** — the ✎ beside any recipe, axis, variant, slot or token name stages a rename to `foundry-proposals/names.json`. **Nothing is applied to source.** An agent reads that file and implements renames as a reviewed change.
+
+**Live.** Each launch rebuilds both packages first. While the Foundry runs, editing either package's `src/` rebuilds it and reloads the page once the build finishes.
+
+**Local only.** The draft and proposal endpoints accept requests from this machine only; any other origin is refused.
+
+---
+
 # Shared UI in the Foundry
 
 The Foundry Components view renders `@nova-caelum/ui` and its compiled stylesheet. It uses local demonstration state; sending, permissions and voice controls do not call real services.
