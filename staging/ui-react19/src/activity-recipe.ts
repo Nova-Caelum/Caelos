@@ -73,7 +73,7 @@ export const activity = defineSlotRecipe({
       },
       "[data-activity-step][data-active=true] &": { color: "var(--il-ink)" },
     },
-    // A leading dot anchor stands in for the count summary on a single row.
+    // A leading chevron anchors each disclosure row.
     stepAnchor: {
       display: "inline-flex",
       alignItems: "center",
@@ -140,7 +140,7 @@ export const activity = defineSlotRecipe({
       true: { chain: { marginLeft: "27px", paddingTop: "var(--sys-space-3)" } },
       false: { chain: { marginLeft: 0, paddingTop: 0 } },
     },
-    // With the dot anchor in front of the label, the rail and every detail shift by it.
+    // With the disclosure anchor in front of the label, the rail and every detail shift by it.
     anchored: {
       true: {
         step: { "&:not(:last-child)::before": { left: "32px" } },

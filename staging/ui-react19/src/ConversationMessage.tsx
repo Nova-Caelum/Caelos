@@ -21,7 +21,7 @@ export interface ConversationMessageProps extends HTMLAttributes<HTMLElement> {
   agent?: AgentIdentity;
   /** Hide the repeated avatar while keeping subsequent prose aligned. */
   continued?: boolean;
-  /** Group renderers show the avatar only beside the final visible prose block. */
+  /** Group renderers show the avatar only beside the latest visible message or activity. */
   avatarVisible?: boolean;
   /** One accent per speaker so two agents in a turn stay distinguishable. */
   speaker?: MessageSpeaker;

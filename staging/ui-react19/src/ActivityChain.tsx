@@ -1,5 +1,5 @@
 import { useId, useState, type ReactNode } from "react";
-import { Bot, Check, ChevronDown, ChevronRight, Dot, Flame, Wrench, Zap } from "lucide-react";
+import { Bot, Check, ChevronDown, ChevronRight, Flame, Wrench, Zap } from "lucide-react";
 import { activity } from "../styled-system/recipes/index.mjs";
 import { Surface } from "./foundation";
 import { RippleLoader } from "./RippleLoader";
@@ -80,8 +80,8 @@ export function ActivityChain({
   const complete = activeIndex < 0;
   // Collapsed, only the newest row stands in for the history behind it.
   const visible = isOpen || !hasSummary ? steps : steps.slice(-1);
-  // A single row with no count summary carries a leading dot instead.
-  const anchored = !hasSummary;
+  // Every row uses a leading disclosure control, including summarized history.
+  const anchored = true;
   const styles = activity({ summary: hasSummary, anchored, speaker });
 
   return (
@@ -90,12 +90,11 @@ export function ActivityChain({
       {hasSummary && (
         <button type="button" className={styles.summary} aria-expanded={isOpen} aria-controls={id}
           onClick={() => setOpen(!isOpen)}>
-          <Dot size={18} aria-hidden="true" />
+          <ChevronDown size={18} className={styles.summaryChevron} data-open={isOpen} aria-hidden="true" />
           <span>
             {steps.length} {steps.length === 1 ? "step" : "steps"}
             {complete ? " completed" : ""}
           </span>
-          <ChevronDown size={14} className={styles.summaryChevron} data-open={isOpen} />
         </button>
       )}
       <div id={id} className={styles.chain} data-summary={hasSummary}>
@@ -109,11 +108,9 @@ export function ActivityChain({
               <div className={styles.stepBody}>
                 <button type="button" className={styles.stepTrigger} aria-expanded={detailOpen}
                   onClick={() => setStep(detailOpen ? null : step.id)}>
-                  {anchored && (
-                    <span className={styles.stepAnchor} aria-hidden="true">
-                      {index === 0 && <Dot size={18} />}
-                    </span>
-                  )}
+                  <span className={styles.stepAnchor} aria-hidden="true">
+                    <ChevronRight size={14} className={styles.stepChevron} data-open={detailOpen} />
+                  </span>
                   <span className={styles.stepLabel}>
                     <Icon size={18} aria-hidden="true" />
                     <span>{step.title}</span>
@@ -123,7 +120,6 @@ export function ActivityChain({
                       ? <RippleLoader paused={reducedMotion} label={statusLabel} />
                       : <Check size={12} aria-label="Completed" />}
                   </span>
-                  <ChevronRight size={12} className={styles.stepChevron} data-open={detailOpen} />
                 </button>
                 {detailOpen && step.detail != null && (
                   step.detailKind === "code"

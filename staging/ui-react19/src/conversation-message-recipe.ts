@@ -37,6 +37,7 @@ export const conversationMessage = defineSlotRecipe({
       gridTemplateColumns: "32px minmax(0, 1fr)",
       columnGap: "var(--sys-space-4)",
       alignItems: "end",
+      minHeight: "32px",
     },
     avatar: { display: "flex", alignItems: "center" },
     body: { minWidth: 0 },
