@@ -196,7 +196,14 @@ code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.86em;
   display: flex; flex-direction: column; align-items: center;
 }
 .fd-create-pane-label { align-self: flex-start; margin: 0 18px 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--il-dim); }
-.fd-create-spacer { height: 84px; display: grid; place-items: center; font-size: 12px; color: var(--il-dim); }
+/* Content behind the header. The header floats (sticky) over a real transcript; --nc-occluded is driven
+   per pane by the preview's IntersectionObserver and registered here so a jump eases instead of snapping. */
+@property --nc-occluded { syntax: "<number>"; inherits: true; initial-value: 1; }
+.fd-create-pane { --nc-occluded: 0; transition: --nc-occluded 160ms linear; }
+.fd-create-scroll { width: 100%; height: 380px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.fd-create-float { position: sticky; top: 0; z-index: 2; }
+.fd-create-transcript { position: relative; width: min(780px, calc(100% - 30px)); margin: 0 auto; padding: 0 var(--sys-space-5) var(--sys-space-7); box-sizing: border-box; }
+.fd-occlusion-sentinel { position: absolute; top: 0; left: 0; right: 0; height: var(--sys-space-8); pointer-events: none; }
 .fd-create-composer { width: min(780px, calc(100% - 30px)); }
 .fd-create-panel {
   position: sticky; top: 0; display: flex; flex-direction: column; gap: 12px; padding: 18px;

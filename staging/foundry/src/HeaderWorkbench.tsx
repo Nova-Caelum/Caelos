@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Composer } from "@caelos/ui";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AgentMessage, Composer, ConversationColumn, UserMessage } from "@caelos/ui";
 import { ApprovedChatHeader } from "@caelos/header";
 import { agentAvatarSizes, approvedHeaderLayout, approvedHeaderMotion } from "@caelos/header-layout";
 import { readTokens, type Token } from "./tokens";
@@ -17,13 +17,18 @@ import { readTokens, type Token } from "./tokens";
  */
 
 type Feather = "off" | "reveal" | "always";
+/** When a layer is present: always, only while the header is revealed, or only while content is behind it. */
+type GlowTiming = "always" | "reveal";
+type BlurTiming = "always" | "behind";
 export interface HeaderMaterial {
   fill: string;
   edge: string;
   elevation: string;
   glow: string;
   glowSize: "12" | "18";
+  glowTiming?: GlowTiming;
   blur: string;
+  blurTiming?: BlurTiming;
   texture: "none" | "graph";
   feather: Feather;
 }
@@ -36,10 +41,15 @@ export const COMPOSER_MATERIAL: HeaderMaterial = {
   elevation: "literal:card-lifted",
   glow: "none",
   glowSize: "18",
+  glowTiming: "always",
   blur: "none",
+  blurTiming: "always",
   texture: "none",
   feather: "off",
 };
+
+/** Materials saved before a field existed load with that field's approved default. */
+export const withDefaults = (m: Partial<HeaderMaterial>): HeaderMaterial => ({ ...COMPOSER_MATERIAL, ...m });
 
 /** The one value in the current material that is not a token — kept so the baseline reproduces exactly. */
 const LITERALS: Record<string, { label: string; value: string }> = {
@@ -58,10 +68,18 @@ export function glassStyles(m: HeaderMaterial): Styles {
   if (m.texture === "graph") out.backgroundSize = "var(--nc-graph-size) var(--nc-graph-size),var(--nc-graph-size) var(--nc-graph-size),auto";
   out.border = m.edge === "none" ? "0" : `1px solid var(${m.edge})`;
   const shadows: string[] = [];
+  const glowReveals = m.glow !== "none" && m.glowTiming === "reveal";
   if (m.elevation !== "none") shadows.push(LITERALS[m.elevation]?.value ?? `var(${m.elevation})`);
-  if (m.glow !== "none") shadows.push(`0 0 ${m.glowSize}px var(${m.glow})`);
+  if (m.glow !== "none" && !glowReveals) shadows.push(`0 0 ${m.glowSize}px var(${m.glow})`);
   out.boxShadow = shadows.length ? shadows.join(",") : "none";
-  out.backdropFilter = m.blur === "none" ? "none" : `blur(var(${m.blur})) saturate(140%)`;
+  // `--nc-occluded` is 0 when nothing is under the header and 1 when content is behind it. The blur
+  // (and its saturation lift) scale with it; undriven it reads as 1 — fully blurred, the legible default.
+  out.backdropFilter =
+    m.blur === "none"
+      ? "none"
+      : m.blurTiming === "behind"
+        ? `blur(calc(var(${m.blur}) * var(--nc-occluded, 1))) saturate(calc(1 + .4 * var(--nc-occluded, 1)))`
+        : `blur(var(${m.blur})) saturate(140%)`;
   if (m.feather !== "off") {
     out["&::before"] = {
       content: '""',
@@ -73,6 +91,18 @@ export function glassStyles(m: HeaderMaterial): Styles {
       filter: "blur(var(--nc-feather-blur))",
       // `--reveal` is driven by the approved header motion; the feather follows it, never re-times it.
       opacity: m.feather === "reveal" ? "var(--reveal, 0)" : "1",
+    };
+  }
+  if (glowReveals) {
+    // Its own layer, so it fades with the reveal without touching the elevation shadow.
+    out["&::after"] = {
+      content: '""',
+      position: "absolute",
+      inset: "0",
+      borderRadius: "inherit",
+      pointerEvents: "none",
+      boxShadow: `0 0 ${m.glowSize}px var(${m.glow})`,
+      opacity: "var(--reveal, 0)",
     };
   }
   return out;
@@ -102,12 +132,24 @@ function toRecipe(name: string, m: HeaderMaterial): string {
       })
       .join("\n");
   const literal = Object.values(m).filter((v) => String(v).startsWith("literal:"));
+  const usesReveal = m.feather === "reveal" || (m.glow !== "none" && m.glowTiming === "reveal");
+  const usesOcclusion = m.blur !== "none" && m.blurTiming === "behind";
   return [
     `// Proposed material for the conversation header — staged from the Caelos Foundry, NOT applied.`,
     `// Geometry and motion are the approved 2026-09-20 baseline and are not touched here.`,
     `// Add under \`variants.material\` in staging/ui-react19/src/conversation-header-recipe.ts,`,
     `// then render the header with material="${slug}".`,
     ...(literal.length ? [`// NOTE: uses a literal that is not a token (${literal.join(", ")}). Consider tokenising it.`] : []),
+    ...(usesReveal ? [`// --reveal (0..1) is driven by the header's own disclosure motion; nothing to wire.`] : []),
+    ...(usesOcclusion
+      ? [
+          `// HOST CONTRACT --nc-occluded (0..1): 0 when nothing is under the header, 1 when content is behind it.`,
+          `// The header must float over the transcript. Drive the value from the transcript scroller`,
+          `// (IntersectionObserver on a sentinel at the top of the content) and register it so changes ease:`,
+          `//   @property --nc-occluded { syntax: "<number>"; inherits: true; initial-value: 1; }`,
+          `// Undriven, it reads as 1: fully blurred.`,
+        ]
+      : []),
     `material: {`,
     `  ${JSON.stringify(slug)}: {`,
     `    glass: {`,
@@ -121,6 +163,67 @@ function toRecipe(name: string, m: HeaderMaterial): string {
 /* ─── UI ─── */
 
 const PARTICIPANTS = ["Caelos", "Athena", "Hermes", "Nova", "Apollo", "Iris"];
+
+/** Enough conversation to scroll under the header — the legibility test the material has to pass. */
+const TRANSCRIPT: { who: "user" | "agent"; text: string }[] = [
+  { who: "user", text: "Can the header stay readable when the conversation scrolls underneath it?" },
+  { who: "agent", text: "Yes. The header floats over the transcript, so anything scrolled past its edge passes behind the glass. The material decides what that looks like: how much of the text behind shows through, how soft it becomes, and whether the title stays crisp against it." },
+  { who: "user", text: "What happens at the top of the conversation, when nothing is behind it?" },
+  { who: "agent", text: "Then there is nothing to blur. An adaptive material can rest clear and only thicken once content crosses under the edge. The blur rises over a short distance, so it arrives as the text does rather than switching on." },
+  { who: "user", text: "And the glow — can it only appear while the header is open?" },
+  { who: "agent", text: "It can follow the same reveal motion the feather does: absent at rest, rising as the header opens, gone as it closes. Its timing is borrowed from the approved motion, never re-timed." },
+  { who: "user", text: "Scroll this pane and watch the header while the text passes behind it." },
+];
+const AGENT = { id: "caelos", name: "Caelos" };
+
+/**
+ * Preview scaffold for the `--nc-occluded` host contract. A sentinel spans the top of the transcript;
+ * the observer's root is the scroller with its top cut back to the header glass's resting bottom edge,
+ * so the sentinel's visible fraction falls from 1 to 0 exactly as content slides behind the glass.
+ */
+function useOcclusion(pane: React.RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    const root = pane.current;
+    const scroller = root?.querySelector<HTMLElement>("[data-conversation-scroll]");
+    const sentinel = root?.querySelector<HTMLElement>("[data-occlusion-sentinel]");
+    const slot = root?.querySelector<HTMLElement>(".hp-header-slot");
+    if (!root || !scroller || !sentinel || !slot) return;
+    const thresholds = Array.from({ length: 21 }, (_, i) => i / 20);
+    let io: IntersectionObserver | undefined;
+    let edge = -1;
+    const connect = () => {
+      const card = root.querySelector(".caelos-conversation-header__card");
+      const rest = parseFloat(getComputedStyle(slot).getPropertyValue("--hp-height"));
+      if (!card || !rest) return;
+      // The glass's resting bottom edge, measured from the card's top so a reveal in progress never moves it.
+      const next = Math.max(0, Math.round(card.getBoundingClientRect().top + rest - scroller.getBoundingClientRect().top));
+      if (next === edge) return;
+      edge = next;
+      io?.disconnect();
+      io = new IntersectionObserver(
+        ([entry]) => root.style.setProperty("--nc-occluded", (1 - entry.intersectionRatio).toFixed(3)),
+        { root: scroller, rootMargin: `-${edge}px 0px 0px 0px`, threshold: thresholds },
+      );
+      io.observe(sentinel);
+    };
+    const ro = new ResizeObserver(connect);
+    ro.observe(scroller);
+    ro.observe(slot);
+    connect();
+    return () => { io?.disconnect(); ro.disconnect(); };
+  }, [pane]);
+}
+
+function PreviewPane({ label, children }: { label: string; children: React.ReactNode }) {
+  const pane = useRef<HTMLDivElement>(null);
+  useOcclusion(pane);
+  return (
+    <div ref={pane} className="fd-create-pane" data-conversation-pane>
+      <div className="fd-create-pane-label">{label}</div>
+      {children}
+    </div>
+  );
+}
 
 function TokenSelect({ label, value, onChange, options, extra = [] }: { label: string; value: string; onChange: (v: string) => void; options: Token[]; extra?: { value: string; label: string }[] }) {
   return (
@@ -169,7 +272,7 @@ export function HeaderWorkbench({ scope, themeKey }: { scope: HTMLElement | null
 
   const css = toCss(`.fd-create [data-material="draft"] .caelos-conversation-header__glass`, glassStyles(material));
   const recipe = toRecipe(name || "draft", material);
-  const changed = JSON.stringify(material) !== JSON.stringify(COMPOSER_MATERIAL);
+  const changed = JSON.stringify(withDefaults(material)) !== JSON.stringify(COMPOSER_MATERIAL);
 
   const save = async () => {
     if (!name.trim()) { setStatus("Name the material first."); return; }
@@ -182,23 +285,40 @@ export function HeaderWorkbench({ scope, themeKey }: { scope: HTMLElement | null
   };
 
   const participants = PARTICIPANTS.slice(0, count).map((n) => ({ name: n, contextPercent: 42, status: "Ready" }));
+  // Compare mode scrolls both panes together, so both headers always have the same text behind them.
+  const scrollers = useRef<Record<string, HTMLDivElement | null>>({});
+  const syncScroll = useCallback((which: string, top: number) => {
+    for (const [k, el] of Object.entries(scrollers.current)) if (k !== which && el && Math.abs(el.scrollTop - top) > 1) el.scrollTop = top;
+  }, []);
   const pane = (which: "draft" | "composer", label: string) => (
-    <div className="fd-create-pane" data-conversation-pane>
-      <div className="fd-create-pane-label">{label}</div>
-      <ApprovedChatHeader
-        material={which}
-        title={title}
-        shape="capsule"
-        owner={`foundry-create-${which}`}
-        participants={participants}
-        linkedWork={<span>No linked project · No work item</span>}
-        chatId="Foundry conversation"
-      />
-      <div className="fd-create-spacer">Conversation space</div>
+    <PreviewPane key={which} label={label}>
+      <div className="fd-create-scroll" data-conversation-scroll ref={(el) => { scrollers.current[which] = el; }} onScroll={(e) => syncScroll(which, e.currentTarget.scrollTop)}>
+        <div className="fd-create-float">
+          <ApprovedChatHeader
+            material={which}
+            title={title}
+            shape="capsule"
+            owner={`foundry-create-${which}`}
+            participants={participants}
+            linkedWork={<span>No linked project · No work item</span>}
+            chatId="Foundry conversation"
+          />
+        </div>
+        <div className="fd-create-transcript">
+          <div className="fd-occlusion-sentinel" data-occlusion-sentinel aria-hidden="true" />
+          <ConversationColumn>
+            {TRANSCRIPT.map((m, i) =>
+              m.who === "user"
+                ? <UserMessage key={i} value={m.text} />
+                : <AgentMessage key={i} agent={AGENT}><p>{m.text}</p></AgentMessage>,
+            )}
+          </ConversationColumn>
+        </div>
+      </div>
       <div className="nova-chat-composer fd-create-composer">
         <Composer value="" onValueChange={() => {}} onSend={() => {}} label={`${label} composer`} model="Fixture model" models={["Fixture model"]} onModelChange={() => {}} reasoning="Medium" reasoningLevels={["Low", "Medium", "High"]} onReasoningChange={() => {}} replyFormat="text" onReplyFormatChange={() => {}} />
       </div>
-    </div>
+    </PreviewPane>
   );
 
   return (
@@ -240,7 +360,19 @@ export function HeaderWorkbench({ scope, themeKey }: { scope: HTMLElement | null
               </select>
             </label>
           </div>
+          <label className="fd-field">Glow timing
+            <select className="fd-input" value={material.glowTiming ?? "always"} onChange={(e) => set("glowTiming", e.target.value as GlowTiming)} disabled={material.glow === "none"}>
+              <option value="always">always on</option>
+              <option value="reveal">follows the reveal motion</option>
+            </select>
+          </label>
           <TokenSelect label="Backdrop blur" value={material.blur} onChange={(v) => set("blur", v)} options={groups.blur} extra={[{ value: "none", label: "none" }]} />
+          <label className="fd-field" title="--nc-occluded: 0 with nothing behind the header, 1 with content behind it">Blur timing
+            <select className="fd-input" value={material.blurTiming ?? "always"} onChange={(e) => set("blurTiming", e.target.value as BlurTiming)} disabled={material.blur === "none"}>
+              <option value="always">always on</option>
+              <option value="behind">rises when content is behind</option>
+            </select>
+          </label>
           <label className="fd-field" title="--nc-graph-line / --nc-graph-size">Texture
             <select className="fd-input" value={material.texture} onChange={(e) => set("texture", e.target.value as "none" | "graph")}>
               <option value="none">none</option>
@@ -304,7 +436,7 @@ export function HeaderWorkbench({ scope, themeKey }: { scope: HTMLElement | null
             <div className="fd-eyebrow" style={{ marginTop: 16 }}>Saved materials · {saved.length}</div>
             <div className="fd-saved">
               {saved.map((d) => (
-                <button type="button" key={d.slug} className="fd-saved-item" onClick={() => { if (d.material) { setMaterial(d.material); setName(d.name.replace(/^conversation-header /, "")); } }}>
+                <button type="button" key={d.slug} className="fd-saved-item" onClick={() => { if (d.material) { setMaterial(withDefaults(d.material)); setName(d.name.replace(/^conversation-header /, "")); } }}>
                   <div className="fd-saved-name">{d.name.replace(/^conversation-header /, "")}</div>
                   <div className="fd-muted"><code>foundry-drafts/{d.slug}.json</code></div>
                 </button>
