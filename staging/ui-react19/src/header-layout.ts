@@ -1,7 +1,7 @@
 /** Approved geometry and motion, 2026-09-20. Material/color remain open for review.
  * The Atlas study implementation is also used by staging; full Panda conversion is pending.
  */
-export const agentAvatarSizes = { xl: 48, xxl: 52 } as const;
+export const agentAvatarSizes = { xl: 48, xxl: 54 } as const;
 
 export const approvedHeaderLayout = {
   restPercent: 45,
@@ -10,7 +10,7 @@ export const approvedHeaderLayout = {
   matchComposerHeight: false,
   split: { gap: 30, cushion: 60, minText: 280, maxText: 460 },
   // Indices into the existing --sys-space-N scale, not a replacement scale.
-  spacing: { block: 4, leading: 7, trailing: 4, gap: 7 },
+  spacing: { block: 5, leading: 7, trailing: 4, gap: 7 },
   curveCompensation: 10,
   avatarTiers: [
     { rest: 'xxl', expanded: 'xl' },

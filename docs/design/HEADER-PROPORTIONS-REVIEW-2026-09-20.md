@@ -10,6 +10,7 @@ The user approved spacing, proportions, motion and avatar sizing. This supersede
 - Object insets: vertical **space-4 / 12px**, leading **space-7 / 24px**, trailing **space-4 / 12px**, content gap **space-7 / 24px**; curved-cap compensation **10%**.
 - Title: existing Yrsa 21px header recipe; secondary: small.
 - **Agent XL = 48px** (formerly Header Roster), **Agent XXL = 52px** (formerly Header Solo). Shared Avatar now accepts `xl` and `xxl` sizes.
+- **Revised 2026-09-21 (Atlas 2):** vertical inset → **space-5 / 15px**; **Agent XXL → 54px**. Resting height is therefore 86px, not 78px. Values above are the 2026-09-20 record.
 - Rest cluster: XXL for every participant tier. Clicked avatars: XL for one agent, lg / 40px for 2–3, md / 32px for 4–6.
 - Motion preserved: split spring stiffness 280 / damping 34 / mass 1; disclosure 260ms; title reveal 340ms; collapse 130ms. Reduced-motion behavior preserved.
 - Screenshot study context: 888px pane, three participants. These are preview defaults, not production viewport constraints.
