@@ -25,3 +25,5 @@ export * from "./ConversationHeader";
 export * from "./AgentDetailCard";
 export * from "./LinkedWork";
 export * from "./WorkingFilesList";
+
+export * from "./header-layout";

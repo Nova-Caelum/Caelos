@@ -876,7 +876,7 @@ export function BreadcrumbSeparator() {
 export interface AvatarProps extends HTMLAttributes<HTMLSpanElement> {
   name: string;
   src?: string;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl" | "xxl";
   kind?: "person" | "agent";
   shape?: "circle";
 }

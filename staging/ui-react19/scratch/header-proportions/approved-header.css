@@ -1,0 +1,12 @@
+/* Host metadata and controls that are absent from the proportions study. */
+[data-staging-header] .caelos-conversation-header__subtitleRow {
+  padding-right: calc(36px * var(--split));
+}
+[data-staging-header] .caelos-conversation-header__subtitleRow > .caelos-linked-work__links {
+  display: flex;
+}
+[data-staging-header] .caelos-conversation-header__chatId {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

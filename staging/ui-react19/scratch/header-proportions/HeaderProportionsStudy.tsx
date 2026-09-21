@@ -4,6 +4,7 @@ import { ConversationHeader } from './StudyHeader';
 import { getConversationWidths } from '../composer-review/ResponsiveConversationPreview';
 import { conversationHeader, spacing, typography } from '../../styled-system/recipes/index.mjs';
 import './study.css';
+import { approvedHeaderLayout as approved, agentAvatarSizes } from '../../src/header-layout';
 
 const typeOptions = ['body', 'small', 'label', 'mono', 'display', 'page', 'section', 'title'] as const;
 type TypeRole = typeof typeOptions[number];
@@ -11,29 +12,29 @@ const tiers = ['1 agent', '2–3 agents', '4–6 agents'] as const;
 const insetRoles = [['block', 'Vertical inset'], ['leading', 'Leading text inset'], ['trailing', 'Trailing avatar inset'], ['gap', 'Text–avatar gap']] as const;
 type InsetRole = typeof insetRoles[number][0];
 
-type AvatarChoice = 24 | 32 | 40 | 'roster' | 'solo';
+type AvatarChoice = 24 | 32 | 40 | 'xl' | 'xxl';
 
 /** Review only: the pane, rather than the browser, owns every measurement. */
 export function HeaderProportionsStudy() {
-  const [restPercent, setRestPercent] = useState(80);
-  const [openPercent, setOpenPercent] = useState(90);
-  const [splitGap, setSplitGap] = useState(24);
-  const [splitCushion, setSplitCushion] = useState(24);
-  const [splitMin, setSplitMin] = useState(180);
-  const [splitMax, setSplitMax] = useState(560);
-  const [density, setDensity] = useState<'comfortable' | 'default' | 'compact'>('default');
+  const [restPercent, setRestPercent] = useState<number>(approved.restPercent);
+  const [openPercent, setOpenPercent] = useState<number>(approved.expandedPercent);
+  const [splitGap, setSplitGap] = useState<number>(approved.split.gap);
+  const [splitCushion, setSplitCushion] = useState<number>(approved.split.cushion);
+  const [splitMin, setSplitMin] = useState<number>(approved.split.minText);
+  const [splitMax, setSplitMax] = useState<number>(approved.split.maxText);
+  const [density, setDensity] = useState<'comfortable' | 'default' | 'compact'>(approved.density);
   const [titleType, setTitleType] = useState<TypeRole | 'header'>('header');
   const [secondaryType, setSecondaryType] = useState<TypeRole>('small');
-  const [objectSpace, setObjectSpace] = useState<Record<InsetRole, number | null>>({block:null, leading:null, trailing:null, gap:null});
-  const [curveCompensation, setCurveCompensation] = useState(0);
+  const [objectSpace, setObjectSpace] = useState<Record<InsetRole, number | null>>({...approved.spacing});
+  const [curveCompensation, setCurveCompensation] = useState<number>(approved.curveCompensation);
   const scaleProbe = useRef<HTMLSpanElement>(null);
   const [spaceScale, setSpaceScale] = useState([0,3,6,9,12,15,18,24,30]);
-  const [matchComposer, setMatchComposer] = useState(false);
-  const [rosterSize, setRosterSize] = useState(48);
-  const [soloSize, setSoloSize] = useState(64);
-  const [avatarTiers, setAvatarTiers] = useState<{rest:AvatarChoice; expanded:AvatarChoice}[]>([{rest:40, expanded:'roster'}, {rest:40, expanded:40}, {rest:'roster', expanded:32}]);
-  const avatarOptions = [[24, 'Avatar sm · 24px'], [32, 'Avatar md · 32px'], [40, 'Avatar lg · 40px'], ['roster', `Header Roster · ${rosterSize}px`], ['solo', `Header Solo · ${soloSize}px`]] as const;
-  const resolveAvatar = (choice:AvatarChoice) => choice === 'roster' ? rosterSize : choice === 'solo' ? soloSize : choice;
+  const [matchComposer, setMatchComposer] = useState<boolean>(approved.matchComposerHeight);
+  const [rosterSize, setRosterSize] = useState<number>(agentAvatarSizes.xl);
+  const [soloSize, setSoloSize] = useState<number>(agentAvatarSizes.xxl);
+  const [avatarTiers, setAvatarTiers] = useState<{rest:AvatarChoice; expanded:AvatarChoice}[]>(approved.avatarTiers.map(tier => ({...tier})));
+  const avatarOptions = [[24, 'Avatar sm · 24px'], [32, 'Avatar md · 32px'], [40, 'Avatar lg · 40px'], ['xl', `Agent XL · ${rosterSize}px`], ['xxl', `Agent XXL · ${soloSize}px`]] as const;
+  const resolveAvatar = (choice:AvatarChoice) => choice === 'xl' ? rosterSize : choice === 'xxl' ? soloSize : choice;
   const titleProbe = useRef<HTMLSpanElement>(null);
   const subtitleProbe = useRef<HTMLSpanElement>(null);
   const insetProbe = useRef<HTMLSpanElement>(null);
@@ -51,8 +52,8 @@ export function HeaderProportionsStudy() {
     document.fonts.addEventListener('loadingdone', update);
     return () => document.fonts.removeEventListener('loadingdone', update);
   }, [titleType, secondaryType, density]);
-  const [width, setWidth] = useState(1320);
-  const [paneWidth, setPaneWidth] = useState(1320);
+  const [width, setWidth] = useState(888);
+  const [paneWidth, setPaneWidth] = useState(888);
   const [height, setHeight] = useState(108);
   const [title, setTitle] = useState('Untitled conversation');
   const [material, setMaterial] = useState('composer');
@@ -62,7 +63,7 @@ export function HeaderProportionsStudy() {
   const [reply, setReply] = useState<ReplyFormat>('text');
   const [expanded, setExpanded] = useState(false);
   const [pinned, setPinned] = useState(false);
-  const [count, setCount] = useState(1);
+  const [count, setCount] = useState(3);
   const [notice, setNotice] = useState('');
   const pane = useRef<HTMLDivElement>(null);
   const composer = useRef<HTMLDivElement>(null);
@@ -91,7 +92,7 @@ export function HeaderProportionsStudy() {
   const updateAvatar = (index:number, state:'rest'|'expanded', value:AvatarChoice) => setAvatarTiers(previous => previous.map((entry,i) => i === index ? {...entry,[state]:value} : entry));
   return <section className="header-proportions-study" id="header-proportions">
     <Heading as="h2" size="section">03A · Header & Composer proportions</Heading>
-    <Text as="p" tone="muted">Resize the conversation pane. Hover to widen; click to separate the participants. This proposal stays in Studies until approved.</Text>
+    <Text as="p" tone="muted">Resize the conversation pane. Hover to widen; click to separate the participants. Spacing, proportions, avatar sizes and motion are approved. Texture and color remain under review.</Text>
     <div className="hp-probes" aria-hidden="true">
       <span ref={titleProbe} className={titleType === 'header' ? conversationHeader().titleFrame : typography({role:titleType})}>Typography</span>
       <span ref={subtitleProbe} className={typography({role:secondaryType})}>Linked work</span>
@@ -121,7 +122,7 @@ export function HeaderProportionsStudy() {
       </div>
       <Text variant="small" tone="dim">Always fits the text within these bounds. The cushion is between the text area and the bubble’s right edge; the leading inset stays under Object spacing. Avatars follow the bubble at the selected gap. Narrow panes take priority over the minimum. Titles show up to four lines; scroll the clicked title to read more.</Text>
     </fieldset>
-    <fieldset className="hp-settings hp-object-settings" data-atlas-layout-control><legend>Object spacing · study proposal</legend>
+    <fieldset className="hp-settings hp-object-settings" data-atlas-layout-control><legend>Object spacing · approved baseline</legend>
       <Text variant="small" tone="dim">Independent interior roles use the existing spacing scale. Sliders override density; reset restores inherited insets. The gap is the minimum reserved separation between the text area and avatar cluster.</Text>
       <div className="hp-object-grid">{insetRoles.map(([role,label]) => <label key={role}>{label} · {interior[role]}px · {objectSpace[role] === null ? 'inherited' : objectSpace[role] === 0 ? 'none' : `space-${objectSpace[role]}`}
         <input aria-label={label} aria-valuetext={`${interior[role]} pixels${objectSpace[role] === null ? ', inherited' : ''}`} type="range" min="0" max="8" step="1" value={objectSpace[role] ?? spaceScale.reduce((best,value,index) => Math.abs(value-interior[role]) < Math.abs(spaceScale[best]-interior[role]) ? index : best,0)} onChange={e => setObjectSpace(previous => ({...previous,[role]:Number(e.target.value)}))} />
@@ -135,14 +136,14 @@ export function HeaderProportionsStudy() {
       <label>Secondary text <select aria-label="Header secondary typography" value={secondaryType} onChange={e => setSecondaryType(e.target.value as TypeRole)}>{typeOptions.map(role => <option key={role}>{role}</option>)}</select></label>
     </fieldset>
     <fieldset className="hp-settings hp-avatar-settings" data-atlas-layout-control><legend>Avatar sizes by participant tier</legend>
-      <Text variant="small" tone="dim">Rest controls the whole cluster’s height, preserving its composition. Expanded controls each detached avatar after click. Hover keeps the cluster together. 24 / 32 / 40px are shared Avatar sizes. Header Roster and Header Solo are adjustable study presets; select either in a tier below to preview it.</Text>
+      <Text variant="small" tone="dim">Rest controls the whole cluster’s height, preserving its composition. Expanded controls each detached avatar after click. Hover keeps the cluster together. 24 / 32 / 40px are shared Avatar sizes. Agent XL and Agent XXL are approved size tiers; sliders let you explore variations without changing the saved baseline.</Text>
       <div className="hp-controls">
-        <label>Header Roster · {rosterSize}px <input aria-label="Header Roster size" type="range" min="24" max="96" step="1" value={rosterSize} onChange={e => setRosterSize(Number(e.target.value))} /></label>
-        <label>Header Solo · {soloSize}px <input aria-label="Header Solo size" type="range" min="24" max="96" step="1" value={soloSize} onChange={e => setSoloSize(Number(e.target.value))} /></label>
+        <label>Agent XL · {rosterSize}px <input aria-label="Agent XL size" type="range" min="24" max="96" step="1" value={rosterSize} onChange={e => setRosterSize(Number(e.target.value))} /></label>
+        <label>Agent XXL · {soloSize}px <input aria-label="Agent XXL size" type="range" min="24" max="96" step="1" value={soloSize} onChange={e => setSoloSize(Number(e.target.value))} /></label>
       </div>
       <div className="hp-avatar-grid">{tiers.map((label,index) => <div key={label} data-active={index === tier}>
         <strong>{label}{index === tier ? ' · viewing' : ''}</strong>
-        {(['rest','expanded'] as const).map(state => <label key={state}>{state === 'rest' ? 'Rest cluster' : 'Expanded avatar'}<select aria-label={`${label} ${state} avatar size`} value={avatarTiers[index][state]} onChange={e => updateAvatar(index,state,e.target.value === 'roster' || e.target.value === 'solo' ? e.target.value : Number(e.target.value) as AvatarChoice)}>{avatarOptions.map(([size,name]) => <option value={size} key={size}>{name}</option>)}</select></label>)}
+        {(['rest','expanded'] as const).map(state => <label key={state}>{state === 'rest' ? 'Rest cluster' : 'Expanded avatar'}<select aria-label={`${label} ${state} avatar size`} value={avatarTiers[index][state]} onChange={e => updateAvatar(index,state,e.target.value === 'xl' || e.target.value === 'xxl' ? e.target.value : Number(e.target.value) as AvatarChoice)}>{avatarOptions.map(([size,name]) => <option value={size} key={size}>{name}</option>)}</select></label>)}
       </div>)}</div>
     </fieldset>
     <div data-atlas-layout-control><Input label="Study conversation title" value={title} onChange={e => setTitle(e.target.value)} /></div>
@@ -164,6 +165,6 @@ export function HeaderProportionsStudy() {
           replyFormat={reply} onReplyFormatChange={setReply} />
       </div>
     </div>
-    <Text as="p" variant="small" tone="dim">The pane is capped by the available window; use the slider or drag its lower-right edge. Base height follows the content and density; Composer height is an optional minimum. Avatar settings are kept separately for each participant tier. Expanded titles can use as many lines as needed. {notice}</Text>
+    <Text as="p" variant="small" tone="dim">The pane is capped by the available window; use the slider or drag its lower-right edge. Base height follows the content and density; Composer height is an optional minimum. Avatar settings are kept separately for each participant tier. Clicked titles show up to four lines and scroll for longer text. {notice}</Text>
   </section>;
 }

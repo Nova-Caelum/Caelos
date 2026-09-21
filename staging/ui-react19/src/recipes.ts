@@ -1,3 +1,4 @@
+import { agentAvatarSizes } from "./header-layout";
 import { defineRecipe, defineSlotRecipe } from "@pandacss/dev";
 
 export const lettering = {
@@ -613,6 +614,8 @@ export const avatar = defineRecipe({
       sm: { width: "24px", height: "24px", fontSize: "10px" },
       md: { width: "32px", height: "32px", fontSize: "12px" },
       lg: { width: "40px", height: "40px", fontSize: "14px" },
+      xl: { width: `${agentAvatarSizes.xl}px`, height: `${agentAvatarSizes.xl}px`, fontSize: "14px" },
+      xxl: { width: `${agentAvatarSizes.xxl}px`, height: `${agentAvatarSizes.xxl}px`, fontSize: "14px" },
     },
     kind: {
       person: { "--nc-avatar-ink": "var(--nc-sage)" },

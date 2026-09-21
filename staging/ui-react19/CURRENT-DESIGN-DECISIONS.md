@@ -35,3 +35,9 @@ After reviewing Atlas 3 in Compact, Default and Comfortable, the user approved a
 Stable relationships: 6px title → description, 9px inline/action clusters, 12px generic stack, 24px responsive-grid gap. Existing field interiors remain 8px. Preserve all three density options via `SpacingDensity`; width or content length never silently switches the choice. New compositions use Default without configuration.
 
 Implementation: `src/spacing.tsx`, `src/spacing-recipe.ts`, public package exports and the preset. Foundry’s React 19 **Spacing** tab is the maintained reference; Atlas 3 also consumes the shared build. [Reasoning, usage and adoption limits](../../docs/design/SPACING-RELATIONSHIPS.md). This approval does not itself migrate existing host layouts or the React 18 runtime.
+
+## Header geometry and motion approval — September 20
+
+The 23:19 screenshot locks the Header Proportions Study's geometry and motion. See `docs/design/HEADER-PROPORTIONS-REVIEW-2026-09-20.md` in the repository for exact values. Shared `approvedHeaderLayout`, `approvedHeaderMotion`, and `agentAvatarSizes` preserve that baseline independently of material. Header Roster is now **Agent XL (48px)**; Header Solo is **Agent XXL (52px)**, available as Avatar `xl` / `xxl`. This approves the layout and motion only: texture/color remain open, and the complete study header has not been promoted to the production header recipe.
+
+The user subsequently requested staging promotion. Staging now consumes the shared study implementation through `components/chat/approved-header.tsx`, measuring the actual Composer width in its conversation pane. This does not promote the full component to the production Panda recipe or lock material/color.

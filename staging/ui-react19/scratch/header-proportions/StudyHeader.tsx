@@ -1,4 +1,5 @@
-// Atlas-only proportional experiment. Fork of the packaged header; no production export.
+// Approved study implementation shared with staging; full Panda recipe conversion is deferred.
+import "./header-layout.css";
 import React, {
   useEffect,
   useLayoutEffect,
@@ -8,6 +9,7 @@ import React, {
   type ReactNode,
 } from "react";
 import { animate, motion, useMotionValue, useReducedMotion, type MotionStyle } from "motion/react";
+import { approvedHeaderMotion } from "../../src/header-layout";
 import { Link2 } from "lucide-react";
 import { conversationHeader, headerControl } from "../../styled-system/recipes/index.mjs";
 import { Avatar, IconButton } from "@nova-caelum/ui";
@@ -140,8 +142,8 @@ export function ContextRing({ shape, percent = null, className }: ContextRingPro
 /**
  * The approved Atlas 2 conversation header. One identity: a Yrsa title that completes on
  * hover, a varied-size avatar composite that stays calm from one to six participants, and a
- * click that separates the roster like a cell dividing. The footprint is fixed — 420x112 at
- * rest and 468x142 pinned, at every count, in both shapes.
+ * click that separates the roster. The host supplies proportional widths and approved
+ * interior spacing through the shared layout styles.
  *
  * Presentational and controlled: participants, linked work and the agent detail all arrive as
  * props. The component owns only the interaction state the approved behaviour is made of
@@ -332,15 +334,14 @@ export function ConversationHeader({
       ...(reducedMotion
         ? { duration: 0 }
         : {
-            type: "spring" as const, stiffness: 280, damping: 34, mass: 1,
-            restDelta: 0.001, restSpeed: 0.01,
+            ...approvedHeaderMotion.split,
           }),
     });
     return () => animation.stop();
   }, [isPinned, reducedMotion, separation]);
   useEffect(() => {
     const animation = animate(disclosure, expanded ? 1 : 0, {
-      duration: reducedMotion ? 0 : 0.26, ease: [0.16, 1, 0.3, 1],
+      ...approvedHeaderMotion.disclosure, duration: reducedMotion ? 0 : approvedHeaderMotion.disclosure.duration,
     });
     return () => animation.stop();
   }, [expanded, reducedMotion, disclosure]);
@@ -560,8 +561,8 @@ export function ConversationHeader({
                           existing || reducedMotion
                             ? { duration: 0 }
                             : expanded
-                              ? { duration: 0.34, ease: [0.16, 1, 0.3, 1] }
-                              : { duration: 0.13, delay: 0 }
+                              ? approvedHeaderMotion.titleReveal
+                              : approvedHeaderMotion.titleCollapse
                         }
                       >
                         {char.text.replace(/ /g, " ")}
