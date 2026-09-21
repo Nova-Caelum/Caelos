@@ -1,0 +1,25 @@
+.i2-glossary-layout { display: grid; grid-template-columns: 222px minmax(0,1fr); gap: 27px; margin-top: 27px; align-items: start; }
+.i2-glossary-nav { padding: 12px; border: 1px solid var(--il-edge); border-radius: 12px; position: sticky; top: 18px; }
+.i2-glossary-nav nav { display: grid; gap: 6px; }
+.i2-glossary-nav nav button { justify-content: flex-start; white-space: normal; text-align: left; }
+.i2-glossary-nav > p { padding: 15px 9px 6px; }
+.i2-glossary-panel { min-width: 0; }
+.i2-glossary-panel > .i2-meta { margin-top: 9px; }
+.i2-icon-choice { margin-top: 27px; }
+.i2-icon-choice > p { margin-top: 9px; max-width: 72ch; }
+.i2-icon-sample { display: flex; align-items: center; gap: 9px; margin-top: 15px; }
+.i2-icon-sample > svg { flex-shrink: 0; }
+.i2-harness-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,260px),1fr)); gap: 15px; margin-top: 21px; }
+.i2-harness-card { padding: 21px; border: 1px solid var(--il-edge); border-radius: 12px; display: flex; flex-direction: column; gap: 21px; }
+.i2-harness-hero { display: grid; place-items: center; min-height: 126px; }
+.i2-harness-sizes { display: flex; align-items: end; justify-content: space-between; gap: 9px; }
+.i2-harness-sizes > span { display: flex; align-items: center; flex-direction: column; gap: 9px; }
+.i2-harness-sizes code { font-size: 10px; color: var(--il-muted); }
+.i2-harness-contrast { display: flex; gap: 9px; }
+.i2-harness-contrast > span { display: grid; place-items: center; flex: 1; height: 54px; border-radius: 6px; border: 1px solid var(--il-edge); }
+.i2-harness-on-light { background: var(--il-ink); color: var(--nc-ground); }
+.i2-harness-on-dark, .i2-harness-on-grid { background: var(--nc-ground); color: var(--il-ink); }
+.i2-harness-on-grid { background-image: linear-gradient(var(--il-edge) 1px,transparent 1px),linear-gradient(90deg,var(--il-edge) 1px,transparent 1px); background-size: 9px 9px; }
+.i2-harness-card a { color: inherit; text-underline-offset: 4px; margin-top: auto; }
+@media(max-width:760px) { .i2-glossary-layout { grid-template-columns: minmax(0,1fr); gap:21px; } .i2-glossary-nav { position: static; } .i2-glossary-nav nav { grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); } }
+

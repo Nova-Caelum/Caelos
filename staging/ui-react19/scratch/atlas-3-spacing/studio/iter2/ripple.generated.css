@@ -1,0 +1,97 @@
+/* Generated from the shared RippleLoader recipe. Base resets omitted to isolate this scratch study. */
+@layer tokens{
+  @keyframes nc-ripple {
+    0% {
+      opacity: var(--ripple-rest);
+}
+
+    30% {
+      opacity: var(--ripple-peak);
+}
+
+    60% {
+      opacity: var(--ripple-rest);
+}
+
+    100% {
+      opacity: var(--ripple-rest);
+}
+}
+}
+
+@layer recipes{
+  @layer _base{
+
+    .caelos-ripple-loader {
+      --ripple-size: 12px;
+      --ripple-gap: 1px;
+      --ripple-rest: 0.14;
+      --ripple-peak: 0.92;
+      gap: var(--ripple-gap);
+      flex: none;
+      display: inline-grid;
+      grid-template-columns: repeat(3, 1fr);
+      vertical-align: -1px;
+      width: var(--ripple-size);
+      height: var(--ripple-size);
+}
+
+    .caelos-ripple-loader > i {
+      background: currentColor;
+      animation: nc-ripple 1.5s ease infinite;
+      border-radius: calc(var(--ripple-size) / 12);
+      display: block;
+      opacity: var(--ripple-rest);
+}
+
+    .caelos-ripple-loader[data-still=true] > i {
+      animation: none;
+}
+
+    .caelos-ripple-loader > i:nth-child(2),.caelos-ripple-loader > i:nth-child(4) {
+      animation-delay: 100ms;
+}
+
+    .caelos-ripple-loader > i:nth-child(3),.caelos-ripple-loader > i:nth-child(5),.caelos-ripple-loader > i:nth-child(6) {
+      animation-delay: 200ms;
+}
+
+    .caelos-ripple-loader > i:nth-child(7),.caelos-ripple-loader > i:nth-child(8) {
+      animation-delay: 300ms;
+}
+
+    .caelos-ripple-loader > i:nth-child(9) {
+      animation-delay: 400ms;
+}
+
+    .caelos-ripple-loader[data-still=true] > i:nth-child(1) {
+      opacity: 0.9;
+}
+
+    .caelos-ripple-loader[data-still=true] > i:nth-child(2),.caelos-ripple-loader[data-still=true] > i:nth-child(4) {
+      opacity: 0.62;
+}
+
+    .caelos-ripple-loader[data-still=true] > i:nth-child(3),.caelos-ripple-loader[data-still=true] > i:nth-child(5),.caelos-ripple-loader[data-still=true] > i:nth-child(7) {
+      opacity: 0.38;
+}
+
+    @media (prefers-reduced-motion: reduce) {
+      .caelos-ripple-loader > i {
+        animation: none;
+}
+
+      .caelos-ripple-loader > i:nth-child(1) {
+        opacity: 0.9;
+}
+
+      .caelos-ripple-loader > i:nth-child(2),.caelos-ripple-loader > i:nth-child(4) {
+        opacity: 0.62;
+}
+
+      .caelos-ripple-loader > i:nth-child(3),.caelos-ripple-loader > i:nth-child(5),.caelos-ripple-loader > i:nth-child(7) {
+        opacity: 0.38;
+}
+}
+}
+}

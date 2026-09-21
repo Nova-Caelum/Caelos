@@ -1,0 +1,68 @@
+/* Iter 4 · scratch-only. Every rule is scoped under .iter4 so Iter 1–3 render exactly as before.
+   Values marked "starting value" are for the user's eye in a later aesthetic pass. */
+
+/* Harness: allow two or four options in a 2-up grid. */
+.iter4 .i4-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 21px; align-items: stretch; }
+.iter4 .i4-carried { display: inline-flex; align-items: center; gap: 6px; margin-left: 9px; padding: 1px 8px; border-radius: 999px; font-size: 11px; color: var(--il-muted); background: var(--nc-elevated); vertical-align: 2px; }
+.iter4 .i4-new { color: var(--sys-sem-sage-on-tint); background: var(--sys-sem-sage-tint); }
+@media (max-width: 1000px) { .iter4 .i4-comparison { grid-template-columns: minmax(0, 1fr); } }
+
+/* ── Alert family ─────────────────────────────────────────────────────────
+   One anatomy: leading tone icon + title on one line; body, command and actions
+   hang from the title's text axis (icon 16 + gap 9 = 25px). Tighter and smaller-
+   radiused than an info card (card recipe: 24px padding, 18px radius).
+   One tone = one existing token set: tone / tint / line / glow / on-tint. */
+.iter4 .i4-alert { --i4-axis: 25px; box-sizing: border-box; width: 100%; min-width: 0; padding: 15px 18px 18px; border-radius: var(--sys-radius-xl); }
+.iter4 .i4-alert[data-tone=gold]   { --i4-tone: var(--sys-sem-progress); --i4-tint: var(--sys-sem-progress-tint); --i4-line: var(--sys-sem-progress-line); --i4-glow: var(--sys-sem-progress-glow); --i4-on: var(--sys-sem-progress-on-tint); }
+.iter4 .i4-alert[data-tone=blue]   { --i4-tone: var(--sys-accent); --i4-tint: var(--sys-accent-tint); --i4-line: var(--sys-accent-line); --i4-glow: var(--sys-accent-glow); --i4-on: var(--sys-accent-on-tint); }
+.iter4 .i4-alert[data-tone=indigo] { --i4-tone: var(--sys-sem-ready); --i4-tint: var(--sys-sem-ready-tint); --i4-line: var(--sys-sem-ready-line); --i4-glow: var(--sys-sem-ready-glow); --i4-on: var(--sys-sem-ready-on-tint); }
+/* Cream is mixed from the primary text token; no new palette colour. Starting values. */
+.iter4 .i4-alert[data-tone=cream]  { --i4-tone: var(--sys-text-primary); --i4-tint: color-mix(in srgb, var(--sys-text-primary) 6%, transparent); --i4-line: color-mix(in srgb, var(--sys-text-primary) 16%, transparent); --i4-glow: color-mix(in srgb, var(--sys-text-primary) 9%, transparent); --i4-on: var(--sys-text-primary); }
+.iter4 .i4-alert[data-tone=none]   { --i4-tone: var(--sys-text-primary); --i4-on: var(--il-muted); }
+
+/* Permission · tonal-button material at card scale. Same structure as the tonal recipe and the
+   glass token (a diagonal wash fading by 72%), with the tone substituted for the fixed violet,
+   over an opaque elevated base so graph lines never run behind the words. */
+.iter4 .i4-alert[data-kind=permission] {
+  background: linear-gradient(125deg, var(--i4-tint), transparent 72%), color-mix(in srgb, var(--i4-tone) 5%, var(--nc-elevated));
+  border: 1px solid var(--i4-line);
+  box-shadow: var(--sys-elev-1), 0 0 18px var(--i4-glow);
+}
+.iter4 .i4-alert[data-kind=permission][data-glow=false] { box-shadow: var(--sys-elev-1); }
+/* System edge: the neutral hairline the composer and card recipe already use. Tone lives in fill and glow only. */
+.iter4 .i4-alert[data-kind=permission][data-edge=system] { border-color: var(--il-edge); }
+
+/* Question · the package's glass Card supplies fill, blur, edge and shadow (the same material as the
+   conversation header). Only padding and radius are set by the alert anatomy above. */
+.iter4 .i4-alert[data-kind=questions][data-tone=cream] {
+  background: linear-gradient(125deg, var(--i4-tint), transparent 72%), var(--nc-glass-bg);
+  border-color: var(--i4-line);
+  box-shadow: 0 18px 44px var(--nc-glass-shadow), 0 0 18px var(--i4-glow);
+}
+
+.iter4 .i4-alert-head { display: flex; align-items: center; gap: 9px; min-width: 0; flex-wrap: wrap; }
+.iter4 .i4-alert-head h4 { flex: 1 1 12rem; min-width: 0; font-size: 15px; line-height: 1.45; font-weight: 550; }
+.iter4 .i4-alert-icon { flex-shrink: 0; color: var(--i4-tone); }
+.iter4 .i4-alert-kicker { font-size: 11px; line-height: 1.5; color: var(--i4-on); white-space: nowrap; }
+.iter4 .i4-alert-pager { display: flex; align-items: center; gap: 3px; margin-left: auto; }
+.iter4 .i4-alert-pager .i4-alert-kicker { margin-right: 6px; }
+.iter4 .i4-alert-body { padding-left: var(--i4-axis); }
+.iter4 .i4-alert-body > p { margin-top: 3px; font-size: 13px; color: var(--il-muted); }
+.iter4 .i4-alert-command { display: block; width: fit-content; max-width: 100%; margin-top: 9px; padding: 6px 9px; border-radius: 6px; background: color-mix(in srgb, var(--nc-chrome) 55%, transparent); font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--il-muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+.iter4 .i4-alert-actions { display: grid; grid-template-columns: max-content max-content minmax(0, 1fr); gap: 9px; align-items: center; margin-top: 15px; }
+.iter4 .i4-allow { justify-self: end; }
+.iter4 .i4-alert kbd { font: inherit; font-size: 11px; opacity: .7; margin-left: 3px; }
+/* Answer rows are boxes, so the BOX is centred in the card (equal insets left and right) while the
+   label keeps the title's text axis. Text hangs from the axis; filled shapes span symmetrically. */
+.iter4 .i4-choices { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; margin-left: calc(-1 * var(--i4-axis)); }
+.iter4 .i4-choices > button { display: flex; align-items: center; justify-content: space-between; gap: 15px; width: 100%; min-height: 36px; height: auto; padding-block: 8px; padding-inline-start: 24px; /* icon 16 + gap 9 − the button's own 1px border: label lands on the title's text axis at every width */ text-align: left; white-space: normal; }
+.iter4 .i4-choices > button[aria-pressed=true] { color: var(--il-ink); }
+
+/* Narrow study columns: keep all three actions usable, drop the shortcut hint, release the hanging indent. */
+@container (max-width: 24rem) {
+  .iter4 .i4-alert { --i4-axis: 0px; }
+  .iter4 .i4-alert kbd { display: none; }
+  .iter4 .i4-alert-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-left: 0; }
+  .iter4 .i4-alert-actions > button { min-width: 0; padding-inline: 9px; }
+  .iter4 .i4-alert-pager { margin-left: 0; }
+}

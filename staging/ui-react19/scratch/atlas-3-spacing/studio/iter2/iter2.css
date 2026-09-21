@@ -1,0 +1,315 @@
+/* Scratch-only proposal styling. Shared recipes and approved study.css stay untouched. */
+.iter2, .i2-portal { color: var(--il-ink); font-family: var(--font-ibm-plex-sans, 'IBM Plex Sans', sans-serif); font-size: 14px; line-height: 1.55; }
+.iter2 { --i2-inset: 21px; --i2-section: 27px; margin-top: 27px; }
+.iter2[data-caelos-theme=light] { background: var(--nc-ground); padding: 21px; border-radius: 12px; }
+.iter2 *, .i2-portal * { box-sizing: border-box; }
+.iter2 h2, .iter2 h3, .iter2 h4, .iter2 p, .i2-portal h4, .i2-portal p { margin: 0; }
+.iter2 h2 { font-size: clamp(24px, 2.3vw, 32px); line-height: 1.2; font-weight: 500; letter-spacing: -.02em; margin: 9px 0 15px; }
+.iter2 h3 { font-size: 18px; font-weight: 550; line-height: 1.35; }
+.iter2 h4, .i2-portal h4 { font-size: 15px; line-height: 1.45; font-weight: 550; }
+.iter2 button:not(.i2-composer-host *), .iter2 textarea:not(.i2-composer-host *), .i2-portal button, .i2-portal textarea { font: inherit; }
+.iter2 button:not(.i2-composer-host *), .i2-portal button { cursor: pointer; }
+.iter2 button:disabled:not(.i2-composer-host *), .i2-portal button:disabled { cursor: default; }
+.iter2 button:focus-visible:not(.i2-composer-host *), .iter2 a:focus-visible:not(.i2-composer-host *), .iter2 textarea:focus-visible:not(.i2-composer-host *), .i2-portal button:focus-visible, .i2-portal textarea:focus-visible { outline: 2px solid var(--nc-focus-ring, var(--nc-ready)); outline-offset: 3px; }
+.i2-intro { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 42px; align-items: start; padding: 0 0 27px; }
+.i2-intro > div:first-child > p:last-child { max-width: 780px; color: var(--il-muted); }
+.i2-eyebrow, .i2-number { color: var(--il-muted); font-size: 12px; }
+.i2-review-summary { display: flex; align-items: start; flex-direction: column; gap: 12px; padding-top: 9px; }
+.i2-meta, .i2-footnote { font-size: 12px; color: var(--il-muted); line-height: 1.5; }
+.i2-global-controls, .i2-controls, .i2-row, .i2-actions, .i2-check { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.i2-global-controls { border-top: 1px solid var(--il-edge); padding: 18px 0; }
+.i2-check { gap: 9px; }
+.i2-index { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px 21px; padding: 15px 0 27px; border-bottom: 1px solid var(--il-edge); }
+.i2-index a { display: flex; gap: 12px; align-items: baseline; padding: 9px 12px; border-radius: 6px; text-decoration: none; color: var(--il-ink); }
+.i2-index a:hover { background: var(--nc-elevated); }
+.i2-index span, .i2-index small { color: var(--il-muted); font-size: 11px; }
+.i2-index small { margin-left: auto; white-space: nowrap; }
+.i2-study { padding: 30px 0; border-bottom: 1px solid var(--il-edge); scroll-margin-top: 18px; }
+.i2-study-heading { display: flex; justify-content: space-between; gap: 21px; align-items: start; }
+.i2-study-heading > div { position: relative; padding-left: 30px; }
+.i2-study-heading .i2-number { position: absolute; left: 0; top: 3px; }
+.i2-study-heading p { margin-top: 9px; color: var(--il-muted); max-width: 940px; }
+.i2-study-heading > button { flex-shrink: 0; }
+.i2-decision { margin: 24px 0 15px !important; font-size: 15px; }
+.i2-controls { gap: 15px; padding-bottom: 21px; }
+.i2-controls > div { max-width: 260px; }
+.i2-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 21px; align-items: stretch; }
+.i2-option { min-width: 0; display: flex; flex-direction: column; border: 1px solid var(--il-edge); border-radius: 12px; background: var(--nc-chrome); }
+.i2-option-heading { display: flex; align-items: baseline; gap: 12px; padding: 18px 21px; min-height: 101px; border-bottom: 1px solid var(--il-edge); }
+.i2-option-heading h4 { font-size: 14px; }
+.i2-option-heading p { color: var(--il-muted); font-size: 12px; margin-top: 6px; }
+.i2-option-letter { color: var(--nc-sage, var(--il-muted)); font-size: 12px; flex-shrink: 0; }
+.i2-specimen { min-width: 0; width: 100%; flex: 1; padding: 30px 27px; min-height: 190px; border-radius: 0 0 12px 12px; margin-inline: auto; overflow-wrap: anywhere; }
+.i2-specimen-workspace { padding: 0; }
+.i2-review { margin-top: 21px; padding: 18px 21px; background: var(--nc-chrome); border-radius: 9px; }
+.i2-review-options { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.i2-review-options > span { margin-right: 6px; }
+.i2-review-options button[aria-pressed=true] { background: var(--nc-elevated-2); color: var(--il-ink); }
+.i2-review-notes { display: flex; flex-direction: column; gap: 9px; color: var(--il-muted); font-size: 12px; margin-top: 15px; }
+.i2-review-notes textarea { width: 100%; min-height: 85px; resize: vertical; background: var(--nc-ground); border: 1px solid var(--il-edge); border-radius: 6px; color: var(--il-ink); padding: 12px 15px; line-height: 1.6; }
+.i2-review-notes textarea::placeholder { color: var(--il-muted); opacity: .65; }
+.i2-footnote { padding: 24px 0; max-width: 950px; }
+.i2-muted { color: var(--il-muted); }
+.i2-actions { gap: 3px; }
+.i2-actions button[aria-pressed=true] { color: var(--nc-ready); background: var(--nc-elevated-2); }
+.i2-activity-trigger, .i2-step-trigger { display: flex; align-items: center; gap: 9px; text-align: left; border: 0; padding: 3px 0; color: var(--il-muted); background: transparent; line-height: 1.5; }
+.i2-activity-trigger:hover, .i2-step-trigger:hover { color: var(--il-ink); }
+.i2-activity-trigger > svg, .i2-step-trigger > svg { flex-shrink: 0; }
+.i2-mark, .i2-step-mark { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 21px; flex-shrink: 0; color: var(--il-ink); }
+.i2-chevron { transition: transform 180ms ease; }
+.i2-chevron[data-open=true] { transform: rotate(180deg); }
+.i2-step-trigger > svg[data-open=true] { transform: rotate(90deg); }
+.i2-chain { padding-top: 15px; }
+.i2-step { display: flex; position: relative; gap: 9px; padding-bottom: 15px; }
+.i2-step:last-child { padding-bottom: 0; }
+.i2-chain .i2-step:not(:last-child)::before { content: ''; position: absolute; width: 2px; background: color-mix(in srgb, var(--il-muted) 55%, transparent); left: 8px; top: 24px; bottom: 0; }
+
+.i2-step-body { flex: 1; min-width: 0; }
+.i2-step-body > p { margin-top: 9px; }
+.i2-single-detail { padding: 12px 0 0 27px; }
+.i2-step-body > .i2-preview { margin-top: 15px; }
+.i2-code-detail { margin-top: 9px; border-radius: 6px; padding: 12px 15px; min-width: 0; }
+.i2-code-detail code, .i2-permission code { font-family: 'IBM Plex Mono', monospace; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.i2-code-detail pre { margin: 0; }
+.i2-conversation { display: flex; flex-direction: column; gap: 24px; }
+.i2-prose { font-size: 15px; line-height: 1.75; }
+.i2-prose p + p { margin-top: 18px; }
+.i2-agent-name { color: var(--nc-sage, var(--il-muted)); font-size: 13px; font-weight: 500; line-height: 26px; }
+.i2-agent-name[data-agent=athena] { color: var(--nc-ready); }
+.i2-message-a .i2-agent-name { float: left; padding-right: 15px; }
+.i2-message-b .i2-named-message { display: grid; grid-template-columns: 66px minmax(0, 1fr); gap: 15px; }
+.i2-phrase { animation: i2-arrival 400ms ease both; }
+.i2-arrive { animation: i2-arrival 650ms ease both; }
+@keyframes i2-arrival { from { opacity: .12; } to { opacity: 1; } }
+.i2-user-wrap { margin-left: auto; max-width: 450px; }
+.i2-user { position: relative; isolation: isolate; border-radius: 18px; padding: 18px 21px; border: 1px solid var(--il-edge); }
+.i2-user::before { content: ''; position: absolute; inset: 0; border-radius: inherit; z-index: -1; pointer-events: none; }
+.i2-diffusion-a::before { background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--nc-ready) 13%, transparent), transparent 80%); }
+.i2-diffusion-b::before { background: radial-gradient(ellipse at 0% 0%, color-mix(in srgb, var(--nc-sage) 18%, transparent), transparent 60%); }
+.i2-user-wrap > .i2-actions { justify-content: flex-end; margin-top: 6px; }
+/* `display: block` + zero padding keep the editing text on the exact line the reading <p> sat on:
+   a textarea's UA padding is 2px and its default inline-block baseline adds a gap below. */
+.i2-user textarea { display: block; width: 100%; min-height: 90px; margin: 0; padding: 0; background: transparent; border: 0; color: inherit; resize: vertical; }
+.i2-code-shell { margin-top: 18px; padding: 9px; border-radius: 12px; border: 1px solid var(--il-edge); }
+.i2-code-shell > .i2-row { justify-content: space-between; padding-left: 9px; }
+.i2-code-shell .i2-code-detail { margin-top: 3px; padding: 18px; }
+.i2-preview { width: 100%; max-width: 28rem; }
+.i2-preview-card { border-radius: 12px; border: 1px solid var(--il-edge); padding: 15px 18px 21px; margin-top: 12px; }
+.i2-preview-tools { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+.i2-excerpt { position: relative; max-height: 14rem; overflow: hidden; mask-image: linear-gradient(to bottom, black 70%, transparent); }
+.i2-excerpt-copy { min-height: 10rem; }
+.i2-excerpt-blur { position: absolute; inset: 0; pointer-events: none; }
+.i2-excerpt-blur i { position: absolute; inset: 65% 0 0; backdrop-filter: blur(1px); mask-image: linear-gradient(transparent, black); }
+.i2-excerpt-blur i:nth-child(2) { top: 78%; backdrop-filter: blur(2px); }
+.i2-excerpt-blur i:nth-child(3) { top: 90%; backdrop-filter: blur(4px); }
+.i2-excerpt h4 { font-size: 21px; margin-bottom: 15px; font-weight: 500; }
+.i2-excerpt p + p { margin-top: 15px; }
+.i2-workspace { min-height: 470px; padding: 0 0 27px; border-radius: inherit; }
+.i2-workspace-top { display: flex; justify-content: space-between; align-items: center; gap: 9px; padding: 12px 15px; border-bottom: 1px solid var(--il-edge); }
+.i2-workspace-title { display: flex; flex-direction: column; gap: 3px; min-width: 0; font-size: 12px; }
+.i2-document-layout { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 9px; align-items: start; padding: 21px 15px 0; }
+.i2-toolbar { display: flex; flex-direction: column; align-items: center; padding: 3px; border-radius: 9px; }
+.i2-reading-plane { border-radius: 9px; min-height: 380px; border: 1px solid var(--il-edge); overflow: hidden; }
+.i2-document-body { padding: clamp(21px, 3vw, 39px); font-size: 15px; line-height: 1.75; }
+.i2-document-body h4 { font-size: clamp(22px, 2vw, 30px); line-height: 1.25; font-weight: 550; letter-spacing: -.02em; margin-bottom: 24px; }
+.i2-document-body p + p { margin-top: 21px; }
+.i2-document-body .i2-activity { margin-top: 21px; }
+.i2-file-strip { display: flex; align-items: center; gap: 9px; padding: 12px 15px; font-size: 11px; border-bottom: 1px solid var(--il-edge); flex-wrap: wrap; }
+.i2-file-strip svg { flex-shrink: 0; }
+.i2-file-strip .i2-meta { margin-left: auto; font-size: 10px; }
+.i2-document-editor { width: 100%; min-height: 360px; border: 0; resize: vertical; background: transparent; color: var(--il-ink); line-height: 1.75; }
+.i2-suggestion { margin-top: 21px !important; font-size: 13px; color: var(--nc-sage); }
+.i2-backdrop { position: fixed; inset: 0; background: color-mix(in srgb, var(--nc-ground) 58%, transparent); backdrop-filter: blur(2px); z-index: 90; }
+.i2-drawer { position: fixed; inset: 0 0 0 auto; width: min(100vw, 850px); height: 100dvh; overflow: auto; border-left: 1px solid var(--il-edge); box-shadow: -18px 0 60px #0004; outline: none; z-index: 91; }
+.i2-drawer[data-full=true] { width: 100vw; }
+.i2-drawer .i2-workspace { min-height: 100%; padding: 0 0 45px; }
+/* Round 1 correction (Daniel, 2026-09-20): "a little bit more cusion between the right edge of the
+   screen and the expanded file editor. like 5px max." In the panel the layout's right padding is the
+   ONLY thing between the card and the viewport edge (the left already has the drawer's 36px dissolve
+   on top of it), so this is the single owner of that cushion. 15px -> 18px, one spacing step. The
+   inline workspace keeps 15/15: its right edge meets a stage, not a screen. */
+.i2-drawer .i2-document-layout { max-width: 1000px; margin: 0 auto; padding-right: 18px; }
+.i2-drawer .i2-reading-plane { min-height: 70dvh; }
+.i2-drawer .i2-document-body { padding: clamp(24px, 5vw, 60px); }
+.i2-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.i2-fixture-control { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; padding-bottom: 24px; }
+/* Keep requests and their composer on the same centered measure. */
+.i2-interaction-stage { display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 780px; min-width: 0; margin-inline: auto; }
+/* A complete raised card, with content inset from all four edges. Material and
+   shadow come from Surface; only geometry belongs to this local study. */
+.i2-question, .i2-permission { box-sizing: border-box; width: 100%; min-width: 0; padding: 21px; border: 1px solid var(--il-edge); border-radius: 15px; }
+.i2-question-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 15px; }
+.i2-question h4 { margin-bottom: 15px; font-size: 16px; }
+.i2-choices { display: flex; gap: 9px; margin-bottom: 0; }
+.i2-choices-a { flex-direction: column; }
+.i2-choices-b { flex-wrap: wrap; }
+.i2-choices button { display: flex; align-items: center; gap: 15px; justify-content: space-between; border: 1px solid var(--il-edge); border-radius: 6px; padding: 9px 12px; color: var(--il-ink); background: var(--nc-elevated-2); text-align: left; font-size: 13px; }
+.i2-choices button[aria-pressed=true] { border-color: var(--nc-sage); background: color-mix(in srgb, var(--nc-sage) 12%, var(--nc-elevated-2)); }
+.i2-permission p { color: var(--il-muted); margin: 9px 0; }
+.i2-permission code { display: block; margin-bottom: 15px; overflow-wrap: anywhere; }
+.i2-permission-actions { display: flex; gap: 9px; flex-wrap: wrap; }
+.i2-permission kbd { font: inherit; font-size: 11px; color: var(--il-muted); margin-left: 3px; }
+.i2-composer-host { min-width: 0; padding-bottom: 48px; }
+.i2-fixture-log { font-size: 12px; color: var(--il-muted); border-top: 1px solid var(--il-edge); padding-top: 15px; }
+.i2-fixture-log > p { margin-bottom: 6px; }
+.i2-attachment { width: 100%; max-width: 21rem; display: flex; align-items: center; gap: 12px; border: 1px solid var(--il-edge); border-radius: 9px; padding: 12px; }
+.i2-file-open { display: flex; align-items: center; gap: 12px; flex: 1; text-align: left; min-width: 0; color: var(--il-ink); background: transparent; border: 0; padding: 0; }
+.i2-file-symbol { color: var(--il-muted); display: flex; flex-shrink: 0; }
+.i2-file-label { display: flex; flex-direction: column; gap: 3px; min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
+.i2-file-label small { color: var(--il-muted); font-size: 11px; }
+.i2-attachment-b .i2-file-label { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 3px 12px; }
+.i2-attachment[data-failed=true] { border-color: var(--nc-danger); }
+.i2-attachment[data-failed=true] .i2-file-symbol, .i2-attachment[data-failed=true] small { color: var(--nc-danger); }
+.i2-source { display: inline-flex; align-items: baseline; gap: 3px; color: var(--il-ink); font-size: 12px; text-decoration: none; }
+.i2-source-a { border-radius: 6px; padding: 1px 6px; background: var(--nc-elevated-2); }
+.i2-source-b { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--il-muted); }
+.i2-unread { display: flex; align-items: center; gap: 12px; color: var(--il-muted); font-size: 11px; margin: 24px 0; }
+.i2-unread::before, .i2-unread::after { content: ''; background: var(--il-edge); height: 1px; flex: 1; }
+.i2-error { display: flex; gap: 15px; align-items: center; padding: 9px 0 9px 15px; border-left: 2px solid var(--nc-danger); color: var(--nc-danger); }
+.i2-error p { flex: 1; }
+.i2-error button { flex-shrink: 0; }
+.i2-navigation { display: flex; flex-direction: column; gap: 30px; align-items: center; }
+.i2-jump { display: flex; align-items: center; gap: 9px; padding: 9px 12px; border-radius: 24px; border: 1px solid var(--il-edge); color: var(--il-ink); background: var(--nc-elevated); box-shadow: 0 3px 15px #0002; }
+.iter2[data-caelos-reduced=true] .i2-arrive, .iter2[data-caelos-reduced=true] .i2-phrase { animation: none; }
+@media (prefers-reduced-motion: reduce) { .i2-arrive, .i2-phrase { animation: none !important; } .i2-chevron { transition: none; } }
+@media (max-width: 1000px) { .i2-comparison { grid-template-columns: minmax(0, 1fr); } .i2-index { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+  .i2-intro { grid-template-columns: minmax(0, 1fr); gap: 21px; }
+  .i2-index { grid-template-columns: minmax(0, 1fr); }
+  .i2-study-heading { gap: 9px; }
+  .i2-study-heading > div { padding-left: 0; }
+  .i2-study-heading .i2-number { position: static; }
+  .i2-specimen { padding: 24px 15px; }
+  .i2-specimen-workspace { padding: 0; }
+  .i2-option-heading { min-height: 0; padding: 15px; }
+  .i2-review { padding: 15px; }
+  .i2-message-b .i2-named-message { grid-template-columns: 51px minmax(0, 1fr); gap: 9px; }
+  .i2-drawer .i2-workspace { padding: 0 0 30px; }
+  .i2-document-body { padding: 21px 15px; }
+  .i2-file-strip .i2-meta { margin-left: 0; }
+}
+
+.i2-conversation[data-still=true] .i2-phrase, .i2-conversation[data-still=true] .i2-arrive { animation: none; }
+
+/* Review corrections: maintained materials and semantic tokens, scratch layout only. */
+.i2-chain { margin-left: 27px; padding-top: 9px; }
+.i2-chain[data-summary=false] { margin-left: 0; padding-top: 0; }
+.i2-step-mark { width: auto; min-width: 18px; gap: 6px; color: var(--il-muted); }
+.i2-chain .i2-step:not(:last-child)::before { left: 7px; }
+.i2-step-trigger { width: fit-content; max-width: 100%; flex-wrap: nowrap; }
+.i2-step-label { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.i2-step-label > svg { flex-shrink: 0; }
+/* Center the bot's face optically rather than its antenna-inclusive viewBox. */
+.i2-step-label > .lucide-bot { transform: translateY(-1.5px); }
+.i2-step-anchor { display: inline-flex; align-items: center; justify-content: center; width: 18px; flex-shrink: 0; margin-right: -3px; }
+.i2-chain[data-dot-anchor=true] .i2-step::before { left: 32px; }
+.i2-step-body > p, .i2-step-body > .i2-code-detail, .i2-step-body > .i2-preview { margin-left: 24px; }
+.i2-chain[data-dot-anchor=true] .i2-step-body > p, .i2-chain[data-dot-anchor=true] .i2-step-body > .i2-code-detail, .i2-chain[data-dot-anchor=true] .i2-step-body > .i2-preview { margin-left: 48px; }
+.i2-step-status { display: inline-flex; align-items: center; flex-shrink: 0; min-width: 12px; }
+.i2-step[data-active=true] .i2-step-trigger, .i2-step[data-active=true] .i2-step-mark { color: var(--il-ink); }
+.iter2 .i2-step[data-active=false] .i2-step-trigger, .i2-portal .i2-step[data-active=false] .i2-step-trigger { color: var(--il-muted); font-size: .86em; }
+.i2-chain-b { border-left: 2px solid color-mix(in srgb, var(--il-muted) 55%, transparent); padding-left: 12px; }
+.i2-chain-b .i2-step::before { display: none; }
+.i2-agent-name { font-size: 18px; line-height: 27px; }
+.i2-progress-name { display: flex; gap: 9px; align-items: center; font-size: 13px; color: var(--il-ink); margin-bottom: 6px; }
+.i2-agent-progress { display: grid; gap: 18px; }
+.i2-agent-progress .i2-activity { margin-left: 21px; }
+.i2-user.i2-diffusion-a { background: var(--il-fill); border: 1px solid var(--il-edge); backdrop-filter: none; box-shadow: 0 12px 30px #00000015; }
+.i2-user.i2-diffusion-a::before { background: var(--il-focus); opacity: .8; }
+.i2-preview-tools { padding-bottom: 12px; border-bottom: 1px solid var(--il-edge); }
+.i2-preview-tools h4 { font-size: 15px; flex: 1; }
+.i2-preview-card-b { padding: 9px; }
+.i2-preview-card-b .i2-preview-tools { padding: 6px 9px 0; margin-bottom: 12px; border-bottom: 0; }
+.i2-excerpt-b { background: var(--nc-elevated-2); padding: 15px; border-radius: 6px; }
+.i2-generating { display: flex; align-items: center; justify-content: center; height: 180px; }
+.i2-reading-frame { min-width: 0; }
+.i2-workspace-b .i2-reading-frame { padding: 0 6px 6px; border-radius: 0 0 12px 12px; background: var(--nc-glass-bg); border: 1px solid var(--nc-glass-edge); border-top: 0; backdrop-filter: blur(var(--nc-glass-blur)); }
+.i2-workspace-b .i2-reading-plane { border-radius: 0 0 6px 6px; border-top: 0; }
+.i2-tool-button { width: 34px; padding: 0; flex-shrink: 0; }
+.i2-tool-button:hover { background: transparent; box-shadow: none; }
+.i2-tool-button:hover::before { opacity: 0; }
+.i2-tool-button:not(:disabled):hover svg { color: var(--sys-accent); }
+.i2-interaction-stage { gap: 10px; container-type: inline-size; }
+.i2-permission-actions { display: grid; grid-template-columns: max-content max-content minmax(0, 1fr); gap: 9px; }
+.i2-allow { justify-self: end; }
+.i2-danger-control { box-shadow: 0 0 12px var(--sys-sem-danger-tint); }
+.i2-danger-control:hover { color: var(--sys-sem-danger-hover); border-color: var(--sys-sem-danger-line); box-shadow: 0 0 18px var(--sys-sem-danger-glow); }
+.i2-permission-actions { align-items: start; }
+.i2-choices button { min-height: 36px; height: auto; white-space: normal; }
+/* Keep action controls usable in narrow study columns. */
+@container (max-width: 24rem) {
+  .i2-permission kbd { display: none; }
+  .i2-permission-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .i2-permission-actions > button { min-width: 0; padding-inline: 9px; }
+}
+.i2-attachment[data-failed=true], .i2-error { color: var(--sys-sem-danger-on-tint); border: 1px solid var(--sys-sem-danger-line); background: var(--sys-sem-danger-tint); box-shadow: var(--sys-elev-1), 0 0 18px var(--sys-sem-danger-glow); }
+.i2-attachment[data-failed=true] .i2-file-symbol, .i2-attachment[data-failed=true] small { color: var(--sys-sem-danger-on-tint); }
+.i2-error { padding: 15px; border-radius: 9px; }
+.i2-jump { width: auto; min-width: 64px; height: 58px; padding: 9px 15px; border-radius: 16px; background: var(--nc-glass-bg); border: 1px solid var(--nc-glass-edge); backdrop-filter: blur(var(--nc-glass-blur)); box-shadow: var(--sys-elev-1); }
+.i2-jump:hover { background: var(--nc-glass-bg); }
+.i2-glossary-link { color: var(--il-ink); text-underline-offset: 4px; }
+.i2-icon-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,280px),1fr)); gap: 12px; margin-top: 21px; }
+.i2-icon-entry { display: flex; align-items: start; gap: 15px; padding: 18px; border: 1px solid var(--il-edge); border-radius: 9px; }
+.i2-icon-entry > svg { flex-shrink: 0; margin-top: 3px; color: var(--il-ink); }
+.i2-icon-entry code { color: var(--il-muted); font-size: 11px; }
+.i2-icon-entry p { color: var(--il-muted); font-size: 12px; margin-top: 9px; }
+.i2-token-reference { padding: 21px; margin-top: 21px; border-radius: 9px; }
+.i2-token-reference > * + * { margin-top: 15px; }
+
+/* ── 04 / 05 · "All glass" (variant A) — selected by the user 2026-09-20 from three mock-ups ─────────────────────────
+   One material story for the preview and the workspace it grows into: a glass card whose darker chrome strip melts
+   into the glass body. No divider, no nested card, no second graph-paper layer. Values are FRAMEWORK starting values. */
+.iter2 .i2-glass-card, .i2-portal .i2-glass-card { border-radius: 12px; overflow: hidden; min-width: 0; background: var(--nc-glass-bg); border: 1px solid var(--nc-glass-edge); backdrop-filter: blur(var(--nc-glass-blur)); box-shadow: var(--sys-elev-2); }
+.i2-glass-strip { display: flex; align-items: flex-start; justify-content: space-between; gap: 9px; padding: 12px 12px 21px 15px; background: linear-gradient(180deg, color-mix(in srgb, var(--sys-chrome) 64%, transparent) 0, color-mix(in srgb, var(--sys-chrome) 50%, transparent) 60%, transparent 100%); }
+.i2-glass-strip .i2-actions { flex: none; }
+.i2-glass-strip code { font-family: var(--font-ibm-plex-mono, 'IBM Plex Mono', monospace); font-size: .96em; }
+.i2-glass-name { display: flex; align-items: flex-start; gap: 9px; min-width: 0; }
+.i2-glass-name > svg { flex: none; margin-top: 3px; color: var(--il-muted); }
+.i2-glass-name > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.i2-glass-name h4 { font-size: 14px; line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.i2-glass-name .i2-meta { font-size: 12px; line-height: 16px; overflow-wrap: anywhere; }
+.i2-preview-glass { margin-top: 12px; }
+.i2-glass-excerpt { max-height: 196px; overflow: hidden; padding: 6px 21px 21px; color: var(--il-muted); }
+.i2-glass-excerpt[data-overrun=true] { padding-bottom: 0; mask-image: linear-gradient(to bottom, black 62%, transparent 98%); }
+.i2-glass-excerpt h5 { margin: 0 0 12px; font-size: 21px; line-height: 1.25; font-weight: 550; letter-spacing: -.02em; color: var(--il-ink); }
+.iter2 .i2-glass-excerpt p + p, .i2-portal .i2-glass-excerpt p + p { margin-top: 12px; }
+.i2-glass-excerpt .i2-activity { margin-top: 12px; }
+/* Generating: strip (≈58px) + 132px well ≈ 190px, about three-quarters of the ≈254px final card. */
+.i2-glass-generating { display: grid; place-items: center; height: 138px; margin-top: -12px; padding-bottom: 6px; }
+.i2-glass-notice { display: block; padding: 0 21px 12px; }
+.i2-workspace-a, .i2-workspace-b { min-height: 0; padding: 0 0 27px; }
+.i2-workspace-glass .i2-glass-strip { align-items: center; padding: 12px 9px 18px 15px; }
+.i2-workspace-glass .i2-workspace-title code { font-size: 12px; color: var(--il-ink); }
+.i2-workspace-glass .i2-document-body { padding-top: 9px; }
+/* The panel joins the conversation's world: same ground, no border, no cast shadow; its left edge dissolves. */
+.i2-drawer { border-left: 0; box-shadow: none; padding-left: 36px; background-color: var(--nc-ground); background-image: linear-gradient(var(--nc-graph-line) 1px, transparent 1px), linear-gradient(90deg, var(--nc-graph-line) 1px, transparent 1px); background-size: var(--nc-graph-size) var(--nc-graph-size); background-attachment: fixed; mask-image: linear-gradient(to right, transparent 0, black 36px); }
+.i2-drawer .i2-workspace { min-height: 0; padding: 0 0 45px; }
+/* Inside glass, the decided "raised plain reading plane" for code must sit ABOVE the glass: `elevated` reads as a sunken
+   hole there, so step it to elevated-2. Still flat: no graph, no glass, no blur. */
+.i2-glass-card .i2-code-detail { --nc-surface-color: var(--nc-elevated-2); }
+/* An agent session is interactive (rows open in place), so it is never capped or faded: the card grows with it. */
+.i2-glass-excerpt[data-fit=content] { max-height: none; }
+/* The editor's focus belongs to the card's single edge, not a second rectangle drawn inside the glass. */
+.iter2 .i2-workspace-glass .i2-document-editor:focus-visible, .i2-portal .i2-workspace-glass .i2-document-editor:focus-visible { outline: none; }
+.i2-workspace-glass:has(.i2-document-editor:focus-visible) { border-color: var(--nc-focus, var(--sys-accent-line)); }
+.i2-workspace-glass .i2-document-editor { display: block; font: inherit; padding: 0; }
+/* Round 1 correction (Daniel, 2026-09-20): "that persistent blue outline that we hate, please remove."
+   Same rule, same tokens, applied to the user message. Line 13's generic textarea focus ring drew a
+   2px rectangle 3px INSIDE the bubble; the bubble's own single edge carries the focus instead. These
+   sit after line 13 so they win the (0,3,1) tie on source order. */
+.iter2 .i2-user textarea:focus-visible, .i2-portal .i2-user textarea:focus-visible { outline: none; }
+.i2-user:has(textarea:focus-visible) { border-color: var(--nc-focus, var(--sys-accent-line)); }
+
+/* Variant B · "Strip and paper". The same glass card and the same glass token, untouched. The body is a PLAIN paper plane
+   (`elevated-2`, no sheen, no outline) that runs the FULL width and to the bottom of the card, so no glass overhangs it and
+   there is no side border to read unevenly. The paper fades in from the glass (see the join rule below): no line, no added shadow. This is the user's Iter 1 rule for documents: glass outside, non-glass inside, visibly above what holds it.
+   (An earlier same-night version inset the paper 6px and then overrode the glass fill to even out the visible band; the user
+   rejected that as ad hoc. Removed.) */
+.i2-glass-card[data-inner=paper] > .i2-glass-strip { background: none; padding-bottom: 12px; }
+/* Glass-to-paper join: the paper fades in over 30px instead of starting at an edge, so the material step leaves no line.
+   Same mechanism and distance as the approved Atlas 2 agent card, whose session plane fades into its glass over 30px. */
+.i2-glass-card[data-inner=paper] > .i2-glass-body { background: linear-gradient(180deg, transparent 0, var(--nc-elevated-2) 30px); }
+.i2-glass-card[data-inner=paper] .i2-glass-excerpt { padding-top: 18px; color: var(--il-ink); }
+.i2-glass-card[data-inner=paper] .i2-glass-generating { margin-top: 0; }
+.i2-glass-card[data-inner=paper] .i2-document-body { padding-top: clamp(21px, 3vw, 39px); }
+.i2-glass-card[data-inner=paper] .i2-code-detail { --nc-surface-color: var(--nc-top); }
