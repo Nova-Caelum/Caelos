@@ -1,0 +1,75 @@
+{
+  "name": "avatar nc-avatar",
+  "kind": "recipe",
+  "recipe": "avatar",
+  "material": {
+    "fillMode": "paired",
+    "pairWith": "--il-edge",
+    "balance": 60,
+    "primaryStrength": 50,
+    "secondaryStrength": 25,
+    "overGlass": "no",
+    "edge": "--nc-glass-edge",
+    "edgeWidth": 2,
+    "edgeIntensity": 200,
+    "edgeBlur": 0.75,
+    "elevation": "--sys-elev-2",
+    "squareRadius": "30%",
+    "font": "--font-nova-sans",
+    "weight": "500",
+    "textColour": "user",
+    "textSize": "proportional",
+    "textScale": 38,
+    "imageInset": 15,
+    "imageFit": "cover",
+    "focusEdge": "--nc-focus-edge",
+    "focusGlow": "--nc-focus-glow",
+    "focusGlowSize": "18",
+    "focusFeather": "on",
+    "focusRing": "material",
+    "attention": "--nc-progress",
+    "running": "--nc-sage",
+    "badgeRing": "--nc-ground",
+    "badgeSize": "28",
+    "badgeGlyph": "dot"
+  },
+  "users": [
+    {
+      "name": "Caelos",
+      "colour": "--avatar-red",
+      "image": true
+    },
+    {
+      "name": "Daniel Eghdami",
+      "colour": "--avatar-blue"
+    },
+    {
+      "name": "Athena",
+      "colour": "--avatar-purple"
+    },
+    {
+      "name": "Hermes",
+      "colour": "--avatar-green"
+    },
+    {
+      "name": "Iris",
+      "colour": "--avatar-pink"
+    },
+    {
+      "name": "Nova",
+      "colour": "--avatar-cyan"
+    },
+    {
+      "name": "Apollo",
+      "colour": "--avatar-yellow"
+    },
+    {
+      "name": "Ares",
+      "colour": "--avatar-red"
+    }
+  ],
+  "generated": "// Proposed Avatar + AvatarBadge (\"nc-avatar\") — staged from the Caelos Foundry, NOT applied.\n// Composition (shadcn Avatar): root › frame › image | fallback, plus badge.\n// HOST: set --av-color on the root from the user's colour token, e.g. style={{ \"--av-color\": \"var(--nc-sage)\" }}.\n// The running glyph animates with @keyframes avatarBadgeSpin { to { transform: rotate(360deg) } } — add to the preset.\nexport const avatar = defineSlotRecipe({\n  className: \"avatar\",\n  slots: [\"root\",\"frame\",\"image\",\"fallback\",\"badge\"],\n  base: {\n    root: {\n      position: \"relative\",\n      display: \"inline-grid\",\n      flexShrink: \"0\",\n      verticalAlign: \"middle\",\n      width: \"var(--av-size)\",\n      height: \"var(--av-size)\",\n      \"--av-badge\": \"max(8px, calc(var(--av-size) * 0.28))\",\n      \"--av-focus\": \"0\",\n      outline: \"none\",\n      \"&:focus-visible\": {\n        \"--av-focus\": \"1\",\n      },\n      \"&::after\": {\n        content: \"\\\"\\\"\",\n        position: \"absolute\",\n        inset: \"0\",\n        borderRadius: \"inherit\",\n        pointerEvents: \"none\",\n        boxShadow: \"0 0 18px var(--nc-focus-glow)\",\n        opacity: \"var(--av-focus)\",\n        transition: \"opacity 260ms var(--il-ease, ease)\",\n      },\n    },\n    frame: {\n      position: \"absolute\",\n      inset: \"0\",\n      borderRadius: \"inherit\",\n      overflow: \"hidden\",\n      display: \"grid\",\n      placeItems: \"center\",\n      boxSizing: \"border-box\",\n      background: \"linear-gradient(135deg, color-mix(in srgb, var(--av-color, var(--avatar-green)) 50%, transparent), 60%, color-mix(in srgb, var(--il-edge) 25%, transparent))\",\n      boxShadow: \"var(--sys-elev-2)\",\n      color: \"var(--av-color, var(--avatar-green))\",\n      fontFamily: \"var(--font-nova-sans, 'IBM Plex Sans', sans-serif)\",\n      fontWeight: \"500\",\n      fontSize: \"calc(var(--av-size) * 0.38)\",\n      lineHeight: \"1\",\n      transition: \"border-color 260ms var(--il-ease, ease)\",\n      \"&::before\": {\n        content: \"\\\"\\\"\",\n        position: \"absolute\",\n        inset: \"0\",\n        borderRadius: \"inherit\",\n        pointerEvents: \"none\",\n        background: \"var(--nc-feather-fill)\",\n        filter: \"blur(var(--nc-feather-blur))\",\n        opacity: \"var(--av-focus)\",\n        transition: \"opacity 260ms var(--il-ease, ease)\",\n      },\n      \"&::after\": {\n        content: \"\\\"\\\"\",\n        position: \"absolute\",\n        inset: \"0\",\n        zIndex: \"2\",\n        borderRadius: \"inherit\",\n        pointerEvents: \"none\",\n        border: \"2px solid rgb(from color-mix(in srgb, var(--nc-glass-edge), var(--nc-focus-edge) calc(var(--av-focus) * 100%)) r g b / calc(alpha * 2))\",\n        filter: \"blur(0.75px)\",\n        transition: \"border-color 260ms var(--il-ease, ease)\",\n      },\n    },\n    image: {\n      position: \"relative\",\n      width: \"calc(100% - var(--av-size) * 0.3)\",\n      height: \"calc(100% - var(--av-size) * 0.3)\",\n      objectFit: \"cover\",\n    },\n    fallback: {\n      position: \"relative\",\n      userSelect: \"none\",\n    },\n    badge: {\n      position: \"absolute\",\n      zIndex: \"2\",\n      width: \"var(--av-badge)\",\n      height: \"var(--av-badge)\",\n      borderRadius: \"50%\",\n      boxSizing: \"border-box\",\n      boxShadow: \"0 0 0 max(1.5px, calc(var(--av-size) * .04)) var(--nc-ground)\",\n    },\n  },\n  variants: {\n    shape: {\n      circle: {\n        root: {\n          borderRadius: \"50%\",\n        },\n        badge: {\n          right: \"calc(var(--av-size) * .146 - var(--av-badge) / 2)\",\n          bottom: \"calc(var(--av-size) * .146 - var(--av-badge) / 2)\",\n        },\n      },\n      square: {\n        root: {\n          borderRadius: \"30%\",\n        },\n        badge: {\n          right: \"calc(var(--av-badge) / -4)\",\n          bottom: \"calc(var(--av-badge) / -4)\",\n        },\n      },\n    },\n    size: {\n      sm: {\n        root: {\n          \"--av-size\": \"24px\",\n          \"--av-text\": \"10px\",\n        },\n      },\n      md: {\n        root: {\n          \"--av-size\": \"32px\",\n          \"--av-text\": \"12px\",\n        },\n      },\n      lg: {\n        root: {\n          \"--av-size\": \"40px\",\n          \"--av-text\": \"14px\",\n        },\n      },\n      xl: {\n        root: {\n          \"--av-size\": \"48px\",\n          \"--av-text\": \"14px\",\n        },\n      },\n      xxl: {\n        root: {\n          \"--av-size\": \"54px\",\n          \"--av-text\": \"14px\",\n        },\n      },\n    },\n    status: {\n      attention: {\n        badge: {\n          background: \"var(--nc-progress)\",\n        },\n      },\n      running: {\n        badge: {\n          background: \"var(--nc-sage)\",\n        },\n      },\n    },\n  },\n  defaultVariants: { shape: \"circle\", size: \"md\" },\n});",
+  "elements": [],
+  "slug": "avatar-nc-avatar",
+  "savedAt": "2026-09-21T18:52:12.658Z"
+}

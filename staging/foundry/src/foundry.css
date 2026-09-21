@@ -251,3 +251,4 @@ code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.86em;
 .fd-slider-head output { color: var(--il-ink); font-variant-numeric: tabular-nums; }
 .fd-slider input[type="range"] { width: 100%; accent-color: var(--sys-sem-ready); }
 .fd-slider input[type="range"]:disabled { opacity: .4; }
+.fd-avatar-create [data-av-package] .caelos-avatar__root[data-focus] { --av-focus: 1; }

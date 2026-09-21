@@ -598,34 +598,134 @@ export const scrollArea = defineSlotRecipe({
 });
 
 
-export const avatar = defineRecipe({
+/**
+ * Avatar + AvatarBadge — "nc-avatar", authored by Daniel in the Caelos Foundry's Create tab on
+ * 2026-09-21 (foundry-drafts/avatar-nc-avatar.json), in the conversation header's material.
+ * Composition follows shadcn's Avatar: root › frame › image | fallback, plus badge.
+ *
+ * - The fill is the user's identity colour (`--av-color`, an `--avatar-*` token set by the `color`
+ *   prop; unset reads as green), running into a trace of the edge colour past a 60% midpoint.
+ * - The edge is its own layer above the picture, so a photo never covers it.
+ * - Focus is the only state — no expansion: the edge turns to the focus lavender and the feather
+ *   and glow rise, on the header's disclosure timing. It fires when the avatar itself is focused.
+ * - The badge marks status: attention (permission, action or attention needed) in peach gold,
+ *   running (a background process or subagent) in sage.
+ */
+export const avatar = defineSlotRecipe({
   className: "avatar",
+  slots: ["root", "frame", "image", "fallback", "badge"],
   base: {
-    ...lettering,
-    boxSizing: "border-box", display: "inline-grid", placeItems: "center",
-    flexShrink: 0, position: "relative", overflow: "hidden", verticalAlign: "middle",
-    borderRadius: "50%", color: "var(--nc-avatar-ink)",
-    background: "color-mix(in srgb,var(--nc-avatar-ink) 14%,transparent)",
-    "&:focus-visible": focus,
-    "& img": { width: "100%", height: "100%", objectFit: "cover", gridArea: "1 / 1" },
+    root: {
+      position: "relative",
+      display: "inline-grid",
+      flexShrink: 0,
+      verticalAlign: "middle",
+      width: "var(--av-size)",
+      height: "var(--av-size)",
+      // Badge diameter follows the avatar, never below a legible 8px.
+      "--av-badge": "max(8px, calc(var(--av-size) * 0.28))",
+      "--av-focus": "0",
+      outline: "none",
+      "&:focus-visible": { "--av-focus": "1" },
+      // Focus glow — the Composer's, outside the frame so the clip never cuts it.
+      "&::after": {
+        content: '""',
+        position: "absolute",
+        inset: 0,
+        borderRadius: "inherit",
+        pointerEvents: "none",
+        boxShadow: "0 0 18px var(--nc-focus-glow)",
+        opacity: "var(--av-focus)",
+        transition: "opacity 260ms var(--il-ease, ease)",
+      },
+    },
+    frame: {
+      position: "absolute",
+      inset: 0,
+      borderRadius: "inherit",
+      overflow: "hidden",
+      display: "grid",
+      placeItems: "center",
+      boxSizing: "border-box",
+      background:
+        "linear-gradient(135deg, color-mix(in srgb, var(--av-color, var(--avatar-green)) 50%, transparent), 60%, color-mix(in srgb, var(--il-edge) 25%, transparent))",
+      boxShadow: "var(--sys-elev-2)",
+      color: "var(--av-color, var(--avatar-green))",
+      fontFamily: "var(--font-nova-sans, 'IBM Plex Sans', sans-serif)",
+      fontWeight: 500,
+      fontSize: "calc(var(--av-size) * 0.38)",
+      lineHeight: 1,
+      // Feather: the indigo/sage wash, rising on focus beneath the initials or picture.
+      "&::before": {
+        content: '""',
+        position: "absolute",
+        inset: 0,
+        borderRadius: "inherit",
+        pointerEvents: "none",
+        background: "var(--nc-feather-fill)",
+        filter: "blur(var(--nc-feather-blur))",
+        opacity: "var(--av-focus)",
+        transition: "opacity 260ms var(--il-ease, ease)",
+      },
+      // Edge: 2px of --nc-glass-edge at twice its opacity, softened by .75px, turning to the focus edge.
+      "&::after": {
+        content: '""',
+        position: "absolute",
+        inset: 0,
+        zIndex: 2,
+        borderRadius: "inherit",
+        pointerEvents: "none",
+        border:
+          "2px solid rgb(from color-mix(in srgb, var(--nc-glass-edge), var(--nc-focus-edge) calc(var(--av-focus) * 100%)) r g b / calc(alpha * 2))",
+        filter: "blur(0.75px)",
+        transition: "border-color 260ms var(--il-ease, ease)",
+      },
+    },
+    // A picture sits inside a 15% margin.
+    image: {
+      position: "relative",
+      width: "calc(100% - var(--av-size) * 0.3)",
+      height: "calc(100% - var(--av-size) * 0.3)",
+      objectFit: "cover",
+    },
+    fallback: { position: "relative", userSelect: "none" },
+    badge: {
+      position: "absolute",
+      zIndex: 2,
+      width: "var(--av-badge)",
+      height: "var(--av-badge)",
+      borderRadius: "50%",
+      boxSizing: "border-box",
+      // The cutout: a ring in the surface colour separates the badge from the avatar.
+      boxShadow: "0 0 0 max(1.5px, calc(var(--av-size) * .04)) var(--nc-ground)",
+    },
   },
   variants: {
-    size: {
-      sm: { width: "24px", height: "24px", fontSize: "10px" },
-      md: { width: "32px", height: "32px", fontSize: "12px" },
-      lg: { width: "40px", height: "40px", fontSize: "14px" },
-      xl: { width: `${agentAvatarSizes.xl}px`, height: `${agentAvatarSizes.xl}px`, fontSize: "14px" },
-      xxl: { width: `${agentAvatarSizes.xxl}px`, height: `${agentAvatarSizes.xxl}px`, fontSize: "14px" },
-    },
-    kind: {
-      person: { "--nc-avatar-ink": "var(--nc-sage)" },
-      agent: { "--nc-avatar-ink": "var(--nc-sage)", borderRadius: "30%" },
-    },
+    /** Circle for people, square for agents. */
     shape: {
-      circle: { borderRadius: "50%" },
+      circle: {
+        root: { borderRadius: "50%" },
+        // The badge's centre sits on the circle's edge at 45°: r(1 − cos 45°) in from each side.
+        badge: { right: "calc(var(--av-size) * .146 - var(--av-badge) / 2)", bottom: "calc(var(--av-size) * .146 - var(--av-badge) / 2)" },
+      },
+      square: {
+        root: { borderRadius: "30%" },
+        badge: { right: "calc(var(--av-badge) / -4)", bottom: "calc(var(--av-badge) / -4)" },
+      },
+    },
+    size: {
+      sm: { root: { "--av-size": "24px" } },
+      md: { root: { "--av-size": "32px" } },
+      lg: { root: { "--av-size": "40px" } },
+      xl: { root: { "--av-size": `${agentAvatarSizes.xl}px` } },
+      xxl: { root: { "--av-size": `${agentAvatarSizes.xxl}px` } },
+    },
+    status: {
+      attention: { badge: { background: "var(--nc-progress)" } },
+      running: { badge: { background: "var(--nc-sage)" } },
     },
   },
-  defaultVariants: { size: "md", kind: "person" },
+  defaultVariants: { shape: "circle", size: "md" },
 });
 
 export const identity = defineSlotRecipe({

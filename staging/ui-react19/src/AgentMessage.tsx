@@ -1,17 +1,19 @@
 import type { HTMLAttributes } from "react";
 import { agentMessage } from "../styled-system/recipes/index.mjs";
-import { Avatar, type AvatarProps } from "./components";
+import { Avatar, type AvatarColor, type AvatarProps } from "./components";
 import { NovaLoader } from "./NovaLoader";
 
 export interface AgentIdentity {
   id: string;
   name: string;
   avatarSrc?: string;
+  /** Identity colour; fills the agent's avatar wherever it appears. */
+  color?: AvatarColor;
 }
 
 /** One circular identity token for conversation headers, rosters, mentions and messages. */
 export function AgentAvatar({ agent, size = "sm", ...props }: Omit<AvatarProps, "name" | "src" | "kind" | "shape"> & { agent: AgentIdentity }) {
-  return <Avatar {...props} name={agent.name} src={agent.avatarSrc} kind="agent" shape="circle" size={size} data-agent-avatar={agent.id} />;
+  return <Avatar {...props} name={agent.name} src={agent.avatarSrc} color={agent.color} shape="circle" size={size} data-agent-avatar={agent.id} />;
 }
 
 export interface AgentMessageProps extends HTMLAttributes<HTMLElement> {

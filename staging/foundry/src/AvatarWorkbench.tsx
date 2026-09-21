@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Avatar as PackageAvatar, type AvatarColor } from "@caelos/ui";
 import { agentAvatarSizes } from "@caelos/header-layout";
 import { readTokens, type Token } from "./tokens";
 
@@ -66,26 +67,29 @@ export interface AvatarMaterial {
   badgeGlyph: "dot" | "glyph";
 }
 
-/** Starting point: the header's nc-chathead material, with the Composer's focus fill shape. */
+/**
+ * The approved avatar: "nc-avatar", saved here on 2026-09-21 and now the package's `avatar` recipe.
+ * The Package pane renders that recipe; an unchanged draft is a live parity check against it.
+ */
 export const AVATAR_BASELINE: AvatarMaterial = {
   fillMode: "paired",
-  pairWith: "--nc-sage",
-  balance: 50,
-  primaryStrength: 22,
-  secondaryStrength: 16,
-  overGlass: "yes",
-  edge: "--il-edge",
-  edgeWidth: 1,
-  edgeIntensity: 100,
-  edgeBlur: 0,
-  elevation: "--sys-elev-1",
+  pairWith: "--il-edge",
+  balance: 60,
+  primaryStrength: 50,
+  secondaryStrength: 25,
+  overGlass: "no",
+  edge: "--nc-glass-edge",
+  edgeWidth: 2,
+  edgeIntensity: 200,
+  edgeBlur: 0.75,
+  elevation: "--sys-elev-2",
   squareRadius: "30%",
   font: "--font-nova-sans",
   weight: "500",
   textColour: "user",
-  textSize: "recipe",
+  textSize: "proportional",
   textScale: 38,
-  imageInset: 0,
+  imageInset: 15,
   imageFit: "cover",
   focusEdge: "--nc-focus-edge",
   focusGlow: "--nc-focus-glow",
@@ -339,6 +343,9 @@ const USERS: User[] = [
   { name: "Nova", colour: "--avatar-cyan" },
   { name: "Apollo", colour: "--avatar-yellow" },
   { name: "Ares", colour: "--avatar-red" },
+  { name: "Rhea", colour: "--avatar-amber" },
+  { name: "Midas", colour: "--avatar-gold" },
+  { name: "Argent", colour: "--avatar-silver" },
 ];
 const initials = (name: string) =>
   name.trim().split(/[\s-]+/).filter(Boolean).slice(0, 2).map((p) => Array.from(p)[0]).join("").toUpperCase() || "?";
@@ -446,8 +453,28 @@ export function AvatarWorkbench({ scope, themeKey }: { scope: HTMLElement | null
 
       <div className="fd-create-grid">
         <div className="fd-create-stages">
+          <div className="fd-create-pane fd-av-pane" data-av-package>
+            <div className="fd-create-pane-label">Package · the approved Avatar component, rendered from the recipe</div>
+            {shapes.map((shape) => (
+              <div key={shape} className="fd-av-row">
+                {SIZES.map((s) => (
+                  <figure key={s.key} className="fd-av-cell">
+                    <PackageAvatar name={who.name} color={who.colour.replace(/^--avatar-/, "") as AvatarColor} size={s.key} shape={shape} src={who.image ? SAMPLE : undefined} tabIndex={0} data-focus={hold || undefined} />
+                    <figcaption>{s.key}</figcaption>
+                  </figure>
+                ))}
+                {(["attention", "running"] as const).map((st) => (
+                  <figure key={st} className="fd-av-cell">
+                    <PackageAvatar name={who.name} color={who.colour.replace(/^--avatar-/, "") as AvatarColor} size="xxl" shape={shape} status={st} tabIndex={0} />
+                    <figcaption>{st}</figcaption>
+                  </figure>
+                ))}
+              </div>
+            ))}
+          </div>
+
           <div className="fd-create-pane fd-av-pane">
-            <div className="fd-create-pane-label">Sizes · {who.name}</div>
+            <div className="fd-create-pane-label">Draft · sizes · {who.name}</div>
             {shapes.map((shape) => (
               <div key={shape} className="fd-av-block">
                 <div className="fd-av-caption">{shape}</div>
@@ -562,7 +589,7 @@ export function AvatarWorkbench({ scope, themeKey }: { scope: HTMLElement | null
             <Select label="Mark" value={m.badgeGlyph} onChange={(v) => set("badgeGlyph", v)} options={[{ value: "dot", label: "dot" }, { value: "glyph", label: "icon — ! and spinner" }]} />
           </div>
           <Select label="Cutout ring" value={m.badgeRing} onChange={(v) => set("badgeRing", v)} options={tokenOptions(groups.surface)} title="Matches the surface the avatar sits on" />
-          <button type="button" className="fd-link" onClick={() => setM(AVATAR_BASELINE)} disabled={!changed}>Reset to the header material</button>
+          <button type="button" className="fd-link" onClick={() => setM(AVATAR_BASELINE)} disabled={!changed}>Reset to nc-avatar (approved)</button>
 
           <hr className="fd-hr" />
           <div className="fd-eyebrow">Preview</div>

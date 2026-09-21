@@ -873,25 +873,40 @@ export function BreadcrumbSeparator() {
 }
 
 
+/** Identity colours, one `--avatar-*` token each: Claude Code's eight subagent colours plus amber, gold and silver. */
+export const avatarColors = ["red", "orange", "amber", "gold", "yellow", "green", "cyan", "blue", "purple", "pink", "silver"] as const;
+export type AvatarColor = (typeof avatarColors)[number];
 export interface AvatarProps extends HTMLAttributes<HTMLSpanElement> {
   name: string;
   src?: string;
   size?: "sm" | "md" | "lg" | "xl" | "xxl";
+  /** Circle for people, square for agents. */
+  shape?: "circle" | "square";
+  /** Shorthand for shape when `shape` is not given: person → circle, agent → square. */
   kind?: "person" | "agent";
-  shape?: "circle";
+  /** The user's identity colour; it fills the avatar. Unset reads as green. */
+  color?: AvatarColor;
+  /** AvatarBadge: attention (permission, action or attention needed) or running (a background process or subagent). */
+  status?: "attention" | "running";
 }
-/** Identity image with initials when an image is missing or cannot load. */
+/** Identity image with initials when an image is missing or cannot load, and an optional status badge. */
 export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
-  { name, src, size = "md", kind = "person", shape, children, className, ...props }, ref,
+  { name, src, size = "md", kind = "person", shape, color, status, children, className, style, ...props }, ref,
 ) {
   const [failedSrc, setFailedSrc] = useState<string>();
   const initials = name.trim().split(/[\s-]+/).filter(Boolean).slice(0, 2)
     .map(part => Array.from(part)[0]).join("").toUpperCase() || "?";
+  const styles = avatar({ size, shape: shape ?? (kind === "agent" ? "square" : "circle"), status });
+  const label = status === "attention" ? `${name}, needs attention` : status === "running" ? `${name}, working in the background` : name;
   return (
-    <span role="img" aria-label={name} {...props} ref={ref} className={cx(avatar({ size, kind, shape }), className)}>
-      {src && failedSrc !== src
-        ? <img src={src} alt="" onError={() => setFailedSrc(src)} />
-        : children || initials}
+    <span role="img" aria-label={label} {...props} ref={ref} className={cx(styles.root, className)}
+      style={color ? ({ "--av-color": `var(--avatar-${color})`, ...style } as React.CSSProperties) : style}>
+      <span className={styles.frame}>
+        {src && failedSrc !== src
+          ? <img className={styles.image} src={src} alt="" onError={() => setFailedSrc(src)} />
+          : <span className={styles.fallback}>{children || initials}</span>}
+      </span>
+      {status && <span className={styles.badge} aria-hidden="true" />}
     </span>
   );
 });

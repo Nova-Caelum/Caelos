@@ -57,16 +57,6 @@ export const composerCss = {
     marginBottom: "12px",
     color: "var(--il-ink)",
   },
-  ".nc-composer-avatar": {
-    display: "grid",
-    placeItems: "center",
-    width: "23px",
-    height: "23px",
-    borderRadius: "8px",
-    background: "#a1b5a421",
-    color: "var(--sys-sem-sage)",
-    fontSize: "9px",
-  },
   ".nc-composer-recipient-detail": {
     color: "var(--il-dim)",
     fontSize: "11px",

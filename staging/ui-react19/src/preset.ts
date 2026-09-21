@@ -75,10 +75,11 @@ const dark = {
   "--nc-progress": "#e8bd8b",
   "--nc-sage": "#afcbbd",
   "--nc-danger": "#df9fa6",
-  // Avatar identity colours — one per user or agent, named after Claude Code's eight subagent colours
-  // (code.claude.com/docs/en/sub-agents, `color`). Used only for identity, never for status. One family:
-  // OKLCH lightness 80%, chroma .072 on dark — matching --nc-sage / --nc-ready / --nc-progress — at hues
-  // red 18 · orange 55 · yellow 95 · green 160 · cyan 205 · blue 250 · purple 305 · pink 350.
+  // Avatar identity colours — one per user or agent: Claude Code's eight subagent colours
+  // (code.claude.com/docs/en/sub-agents, `color`) plus amber, gold and silver, which the fleet's own
+  // agents use. Identity only, never status. One family: OKLCH lightness 80%, chroma .072 on dark —
+  // matching --nc-sage / --nc-ready / --nc-progress — at hues red 18 · orange 55 · amber 70 · gold 84 ·
+  // yellow 95 · green 160 · cyan 205 · blue 250 · purple 305 · pink 350; silver is near-neutral (.015, 260).
   "--avatar-red": "#e9acac",
   "--avatar-orange": "#e3b292",
   "--avatar-yellow": "#ccbe89",
@@ -87,6 +88,9 @@ const dark = {
   "--avatar-blue": "#9bc2eb",
   "--avatar-purple": "#c8b3e4",
   "--avatar-pink": "#e2abc4",
+  "--avatar-amber": "#dcb68b",
+  "--avatar-gold": "#d4ba88",
+  "--avatar-silver": "#b8bec8",
   "--nc-glass-bg":
     "linear-gradient(125deg,rgba(145,125,190,.14),rgba(145,125,190,.028) 72%),rgba(30,28,43,.24)",
   "--nc-glass-blur": "19px",
@@ -121,7 +125,8 @@ const light = {
   "--nc-progress": "#895615",
   "--nc-sage": "#3b695b",
   "--nc-danger": "#9c414e",
-  // Avatar identity colours, light theme: the same hues at OKLCH lightness 50%, chroma .10 (cyan .085, to stay in sRGB).
+  // Avatar identity colours, light theme: the same hues at OKLCH lightness 50%, chroma .10 (cyan .085, to stay
+  // in sRGB; silver .02).
   "--avatar-red": "#94494d",
   "--avatar-orange": "#8e5224",
   "--avatar-yellow": "#756208",
@@ -130,6 +135,9 @@ const light = {
   "--avatar-blue": "#32669a",
   "--avatar-purple": "#715391",
   "--avatar-pink": "#8d4a6b",
+  "--avatar-amber": "#875814",
+  "--avatar-gold": "#7e5d07",
+  "--avatar-silver": "#5d646f",
   "--nc-glass-bg":
     "linear-gradient(125deg,rgba(145,125,190,.23),rgba(145,125,190,.046) 72%),rgba(249,246,251,.76)",
   "--nc-glass-blur": "2px",

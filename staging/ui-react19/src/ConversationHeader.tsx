@@ -9,7 +9,7 @@ import React, {
 import { animate, motion, useMotionValue, useReducedMotion, type MotionStyle } from "motion/react";
 import { Link2 } from "lucide-react";
 import { conversationHeader, headerControl } from "../styled-system/recipes/index.mjs";
-import { Avatar, IconButton } from "./components";
+import { Avatar, IconButton, type AvatarColor } from "./components";
 import { Popover, PopoverContent, PopoverTrigger } from "./foundation";
 import { Card } from "./components";
 import { useCaelosTheme } from "./theme";
@@ -23,6 +23,8 @@ export interface ConversationParticipant {
   id?: string;
   /** Rendered as the avatar monogram and as the roster label once pinned. */
   name: string;
+  /** Identity colour; fills the participant's avatar. */
+  color?: AvatarColor;
   /** 0-100. `null` is honest unavailable telemetry: a dashed ring, never 0%. */
   contextPercent?: number | null;
   /** One short word for the avatar's accessible name and its native title. */
@@ -617,6 +619,7 @@ export function ConversationHeader({
                       <Avatar
                         name={participant.name}
                         src={participant.src}
+                        color={participant.color}
                         kind={shape === "rounded" ? "agent" : "person"}
                         size="lg"
                       />

@@ -12,7 +12,7 @@ import { animate, motion, useMotionValue, useReducedMotion, type MotionStyle } f
 import { approvedHeaderMotion } from "../../src/header-layout";
 import { Link2 } from "lucide-react";
 import { conversationHeader, headerControl } from "../../styled-system/recipes/index.mjs";
-import { Avatar, IconButton } from "@nova-caelum/ui";
+import { Avatar, IconButton, type AvatarColor } from "@nova-caelum/ui";
 import { Popover, PopoverContent, PopoverTrigger } from "@nova-caelum/ui";
 import { Card } from "@nova-caelum/ui";
 import { useCaelosTheme } from "@nova-caelum/ui";
@@ -26,6 +26,8 @@ export interface ConversationParticipant {
   id?: string;
   /** Rendered as the avatar monogram and as the roster label once pinned. */
   name: string;
+  /** Identity colour; fills the participant's avatar. */
+  color?: AvatarColor;
   /** 0-100. `null` is honest unavailable telemetry: a dashed ring, never 0%. */
   contextPercent?: number | null;
   /** One short word for the avatar's accessible name and its native title. */
@@ -680,6 +682,7 @@ export function ConversationHeader({
                       <Avatar
                         name={participant.name}
                         src={participant.src}
+                        color={participant.color}
                         kind={shape === "rounded" ? "agent" : "person"}
                         size="lg"
                       />

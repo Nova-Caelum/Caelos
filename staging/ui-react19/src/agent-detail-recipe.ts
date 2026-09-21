@@ -102,7 +102,7 @@ export const agentDetail = defineSlotRecipe({
       cursor: "pointer",
       borderRadius: "50%",
       font: "inherit",
-      "& > :first-child": { width: "50px", height: "50px", fontSize: "23px" },
+      "& > :first-child": { "--av-size": "50px" },
       "& svg": { position: "absolute", inset: 0, width: "60px", height: "60px" },
       "[data-shape=rounded] &": { borderRadius: "var(--sys-radius-md)" },
       "&:focus-visible": {
