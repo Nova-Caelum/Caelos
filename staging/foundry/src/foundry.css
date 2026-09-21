@@ -237,3 +237,13 @@ code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.86em;
 .fd-grid2-row { font-size: 12px; display: flex; align-items: center; }
 .fd-grid2 .fd-tile-stage { min-height: 76px; padding: 14px; }
 .fd-grid2 .fd-tile-caption { display: none; }
+
+/* Create · subject switch and the avatar workbench */
+.fd-create-subjects { margin-bottom: 18px; }
+.fd-av-pane { align-items: stretch; padding: 18px 22px 22px; gap: 14px; }
+.fd-av-block { display: flex; flex-direction: column; gap: 14px; }
+.fd-av-caption { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--il-dim); }
+.fd-av-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 22px 26px; }
+.fd-av-cell { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 56px; }
+.fd-av-cell figcaption { font-size: 11px; color: var(--il-dim); white-space: nowrap; }
+.fd-check { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--il-muted); }

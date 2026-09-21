@@ -11,6 +11,7 @@ import {
 } from "./inventory";
 import { readTokens, TOKEN_GROUPS, tokensForClasses, type Token } from "./tokens";
 import { HeaderWorkbench } from "./HeaderWorkbench";
+import { AvatarWorkbench } from "./AvatarWorkbench";
 import { childMarkup, duplicateOf, fingerprint, FingerprintScope, useDistinctCount, useFingerprintRegistry } from "./fidelity";
 
 type View = "create" | "components" | "tokens" | "drafts" | "proposals";
@@ -641,6 +642,32 @@ function DraftsView() {
   );
 }
 
+/* ─── Create ─── */
+
+const CREATE_SUBJECTS = [["header", "Conversation header"], ["avatar", "Avatar · Badge"]] as const;
+type CreateSubject = (typeof CREATE_SUBJECTS)[number][0];
+
+/** One workbench per component being authored; the choice is kept in the URL (`?subject=`). */
+function CreateView({ scope, themeKey }: { scope: HTMLElement | null; themeKey: string }) {
+  const [subject, setSubject] = useState<CreateSubject>(() => (new URLSearchParams(location.search).get("subject") === "avatar" ? "avatar" : "header"));
+  const choose = (s: CreateSubject) => {
+    setSubject(s);
+    const p = new URLSearchParams(location.search);
+    p.set("subject", s);
+    history.replaceState(null, "", `?${p}`);
+  };
+  return (
+    <>
+      <div className="fd-segment fd-create-subjects" role="group" aria-label="Component">
+        {CREATE_SUBJECTS.map(([v, l]) => (
+          <button key={v} type="button" className={`fd-seg ${subject === v ? "is-on" : ""}`} aria-pressed={subject === v} onClick={() => choose(v)}>{l}</button>
+        ))}
+      </div>
+      {subject === "avatar" ? <AvatarWorkbench scope={scope} themeKey={themeKey} /> : <HeaderWorkbench scope={scope} themeKey={themeKey} />}
+    </>
+  );
+}
+
 /* ─── Shell ─── */
 
 export function App() {
@@ -700,7 +727,7 @@ export function App() {
             <main className="fd-main">
               {view === "components" && info && <ComponentView key={info.name} info={info} onPick={setPick} />}
               {view === "tokens" && <TokenView scope={scope} themeKey={`${theme}-${glass}`} />}
-              {view === "create" && <HeaderWorkbench scope={scope} themeKey={`${theme}-${glass}`} />}
+              {view === "create" && <CreateView scope={scope} themeKey={`${theme}-${glass}`} />}
               {view === "drafts" && <DraftsView />}
               {view === "proposals" && <ProposalsView />}
             </main>
