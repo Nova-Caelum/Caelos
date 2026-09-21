@@ -4,6 +4,7 @@ import { activity } from "../styled-system/recipes/index.mjs";
 import { Surface } from "./foundation";
 import { RippleLoader } from "./RippleLoader";
 import { useCaelosTheme } from "./theme";
+import type { MessageSpeaker } from "./ConversationMessage";
 
 const cx = (...values: (string | undefined | false)[]) => values.filter(Boolean).join(" ");
 
@@ -29,6 +30,8 @@ export interface ActivityChainProps {
   activeIndex?: number;
   /** The agent's name above its own chain in a multi-agent turn. */
   agentName?: ReactNode;
+  /** Neutral while working; the speaker's accent once response text starts. */
+  speaker?: MessageSpeaker | "neutral";
   /** Count summary and collapsed history appear at this many steps. */
   summaryThreshold?: number;
   /** Controlled summary expansion. Omit for internal state. */
@@ -53,6 +56,7 @@ export function ActivityChain({
   steps,
   activeIndex = -1,
   agentName,
+  speaker = "neutral",
   summaryThreshold = 3,
   open,
   onOpenChange,
@@ -78,11 +82,11 @@ export function ActivityChain({
   const visible = isOpen || !hasSummary ? steps : steps.slice(-1);
   // A single row with no count summary carries a leading dot instead.
   const anchored = !hasSummary;
-  const styles = activity({ summary: hasSummary, anchored });
+  const styles = activity({ summary: hasSummary, anchored, speaker });
 
   return (
     <div className={cx(styles.root, className)} data-activity="">
-      {agentName != null && <div className={styles.agentName}>{agentName}</div>}
+      {agentName != null && <div className={styles.agentName} data-activity-agent="" data-speaker={speaker}>{agentName}</div>}
       {hasSummary && (
         <button type="button" className={styles.summary} aria-expanded={isOpen} aria-controls={id}
           onClick={() => setOpen(!isOpen)}>

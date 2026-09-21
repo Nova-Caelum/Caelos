@@ -1,5 +1,6 @@
-import type { HTMLAttributes, ReactNode } from "react";
+import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
 import { conversationMessage } from "../styled-system/recipes/index.mjs";
+import { AgentAvatar, type AgentIdentity } from "./AgentMessage";
 
 const cx = (...values: (string | undefined | false)[]) => values.filter(Boolean).join(" ");
 
@@ -16,22 +17,32 @@ export function ConversationColumn({ className, ...props }: ConversationColumnPr
 export interface ConversationMessageProps extends HTMLAttributes<HTMLElement> {
   /** Quiet inline name. Omitted on a continuation, exactly as the approved specimen does. */
   agentName?: ReactNode;
+  /** Avatar identity; keep it on continuations to preserve the text column. */
+  agent?: AgentIdentity;
+  /** Hide the repeated avatar while keeping subsequent prose aligned. */
+  continued?: boolean;
+  /** Group renderers show the avatar only beside the final visible prose block. */
+  avatarVisible?: boolean;
   /** One accent per speaker so two agents in a turn stay distinguishable. */
   speaker?: MessageSpeaker;
 }
 
-/**
- * 02 · Agent message — inline name, unboxed indented text. Daniel: "Perfect!!! you got it!"
- * The name floats beside the first line rather than sitting in its own column, and the body
- * is never boxed. This is the approved Atlas 3 form; the package's `AgentMessage` (circular
- * avatar, 12px byline) is a different, older layout and is unchanged.
- */
-export function ConversationMessage({ agentName, speaker = "sage", className, children, ...props }: ConversationMessageProps) {
+/** Unboxed prose with a consistent avatar gutter; legacy inline names remain supported. */
+export function ConversationMessage({ agentName, agent, continued = false, avatarVisible = !continued, speaker = "sage", className, children, ...props }: ConversationMessageProps) {
   const styles = conversationMessage({ speaker });
   return (
-    <article {...props} className={cx(styles.turn, className)} data-speaker={speaker}>
-      {agentName != null && <span className={styles.name}>{agentName}</span>}
-      {children}
+    <article {...props} className={cx(styles.turn, agent && styles.avatarTurn, className)} data-speaker={speaker}>
+      {agent ? (
+        <>
+          <span className={styles.avatar} data-message-identity={avatarVisible ? "avatar" : "continuation"}>
+            {avatarVisible && <AgentAvatar agent={agent} size="md" style={{ "--nc-avatar-ink": `var(--nc-${speaker})` } as CSSProperties} />}
+          </span>
+          <div className={styles.body}>{children}</div>
+        </>
+      ) : <>
+        {agentName != null && <span className={styles.name}>{agentName}</span>}
+        {children}
+      </>}
     </article>
   );
 }

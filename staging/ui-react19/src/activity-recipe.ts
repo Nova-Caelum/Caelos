@@ -130,6 +130,11 @@ export const activity = defineSlotRecipe({
     },
   },
   variants: {
+    speaker: {
+      neutral: {},
+      sage: { agentName: { color: "var(--nc-sage)" } },
+      ready: { agentName: { color: "var(--nc-ready)" } },
+    },
     // The chain indents under the count summary; a single row with no summary sits flush.
     summary: {
       true: { chain: { marginLeft: "27px", paddingTop: "var(--sys-space-3)" } },

@@ -6,14 +6,12 @@ import { conversationType, proseType } from "./chat-parts";
  * Translated from the approved specimen `studio/iter2/Elements.tsx` -> `Messages` (variant "a")
  * and `.i2-conversation` / `.i2-agent-name` / `.i2-prose` / `.i2-actions` in `iter2.css`.
  *
- * This is NOT the same layout as the package's existing `AgentMessage`, which keeps a circular
- * avatar and a 12px byline. The approved Atlas 3 form has no avatar and floats an 18px/27px name
- * beside the first line. Both are kept; `AgentMessage` is untouched. See the report's
- * "Blocked / unsure" for the written-record-versus-specimen conflict.
+ * Avatar messages use one fixed gutter for every agent and continuation.
+ * The separate `AgentMessage` layout remains unchanged.
  */
 export const conversationMessage = defineSlotRecipe({
   className: "conversation-message",
-  slots: ["root", "turn", "name", "prose", "phrase", "actions"],
+  slots: ["root", "turn", "name", "avatarTurn", "avatar", "body", "prose", "phrase", "actions"],
   base: {
     // One conversation column. The host owns viewport placement and the composer offset.
     root: {
@@ -27,12 +25,21 @@ export const conversationMessage = defineSlotRecipe({
     // The name floats so the first line of prose wraps around it.
     name: {
       float: "left",
+      position: "relative",
       paddingRight: "var(--sys-space-5)",
       fontSize: "18px",
       lineHeight: "27px",
       fontWeight: 500,
       color: "var(--nc-sage)",
     },
+    avatarTurn: {
+      display: "grid",
+      gridTemplateColumns: "32px minmax(0, 1fr)",
+      columnGap: "var(--sys-space-4)",
+      alignItems: "end",
+    },
+    avatar: { display: "flex", alignItems: "center" },
+    body: { minWidth: 0 },
     prose: {
       ...proseType,
       minWidth: 0,
