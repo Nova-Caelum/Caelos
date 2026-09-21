@@ -120,7 +120,21 @@ export function glassStyles(m: HeaderMaterial): Styles {
   return out;
 }
 
-const kebab = (k: string) => k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+/** The header's agents take the glass's blur: same token, same condition, plus the roster split. */
+export function agentStyles(m: HeaderMaterial): Styles {
+  if (m.blur === "none") return {};
+  const on = "max(var(--nc-occluded, 1), var(--split, 0))";
+  return {
+    "--av-backdrop":
+      m.blurTiming === "behind"
+        ? `blur(calc(var(${m.blur}) * ${on})) saturate(calc(1 + .4 * ${on}))`
+        : `blur(var(${m.blur})) saturate(140%)`,
+  };
+}
+
+const AGENT_NAME: Styles = { backdropFilter: "var(--av-backdrop, none)", borderRadius: "var(--sys-radius-full)" };
+
+const kebab = (k: string) => (k.startsWith("--") ? k : k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`));
 
 function toCss(selector: string, styles: Styles): string {
   const own: string[] = [];
@@ -135,6 +149,7 @@ function toCss(selector: string, styles: Styles): string {
 function toRecipe(name: string, m: HeaderMaterial): string {
   const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "draft";
   const styles = glassStyles(m);
+  const agent = agentStyles(m);
   const lines = (o: Styles, depth: number): string =>
     Object.entries(o)
       .map(([k, v]) => {
@@ -167,6 +182,7 @@ function toRecipe(name: string, m: HeaderMaterial): string {
     `    glass: {`,
     lines(styles, 3),
     `    },`,
+    ...(Object.keys(agent).length ? [`    agent: {`, lines(agent, 3), `    },`, `    agentName: {`, lines(AGENT_NAME, 3), `    },`] : []),
     `  },`,
     `},`,
   ].join("\n");
@@ -244,7 +260,12 @@ export function HeaderWorkbench({ scope, themeKey }: { scope: HTMLElement | null
   }, []);
   useEffect(() => { void loadSaved(); }, [loadSaved]);
 
-  const css = toCss(`.fd-create [data-material="draft"] .caelos-conversation-header__glass`, glassStyles(material));
+  const agent = agentStyles(material);
+  const css = [
+    toCss(`.fd-create [data-material="draft"] .caelos-conversation-header__glass`, glassStyles(material)),
+    Object.keys(agent).length ? toCss(`.fd-create [data-material="draft"] .caelos-conversation-header__agent`, agent) : "",
+    Object.keys(agent).length ? toCss(`.fd-create [data-material="draft"] .caelos-conversation-header__agentName`, AGENT_NAME) : "",
+  ].join("\n");
   const recipe = toRecipe(name || "draft", material);
   const changed = JSON.stringify(withDefaults(material)) !== JSON.stringify(APPROVED_MATERIAL);
 

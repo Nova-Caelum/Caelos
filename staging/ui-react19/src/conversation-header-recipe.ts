@@ -410,6 +410,14 @@ export const conversationHeader = defineSlotRecipe({
             opacity: "var(--reveal, 0)",
           },
         },
+        // The agents take the glass's blur on the same condition — content behind the header — and
+        // also as the roster splits, when they leave the glass and stack over the transcript.
+        agent: {
+          "--av-backdrop":
+            "blur(calc(var(--nc-glass-blur) * max(var(--nc-occluded, 1), var(--split, 0)))) saturate(calc(1 + .4 * max(var(--nc-occluded, 1), var(--split, 0))))",
+        },
+        // Each agent's name, once the roster splits, blurs what is behind it the same way — a soft pill.
+        agentName: { backdropFilter: "var(--av-backdrop, none)", borderRadius: "var(--sys-radius-full)" },
       },
     },
   },

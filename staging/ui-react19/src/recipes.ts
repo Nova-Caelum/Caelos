@@ -650,6 +650,9 @@ export const avatar = defineSlotRecipe({
       background:
         "linear-gradient(135deg, color-mix(in srgb, var(--av-color, var(--avatar-green)) 50%, transparent), 60%, color-mix(in srgb, var(--il-edge) 25%, transparent))",
       boxShadow: "var(--sys-elev-2)",
+      // Host hook: a container that floats the avatar over content (the conversation header) sets
+      // --av-backdrop to blur what passes behind it. Unset, nothing is blurred.
+      backdropFilter: "var(--av-backdrop, none)",
       color: "var(--av-color, var(--avatar-green))",
       fontFamily: "var(--font-nova-sans, 'IBM Plex Sans', sans-serif)",
       fontWeight: 500,
