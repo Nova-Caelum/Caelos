@@ -779,6 +779,8 @@ export interface TaskRowProps extends Omit<HTMLAttributes<HTMLDivElement>, "titl
   title: string;
   status: string;
   onStatusChange?: (value: string) => void;
+  /** Render the status control greyed out (present but not yet interactive). */
+  statusDisabled?: boolean;
   owner?: { name: string; avatar?: ReactNode };
   onOpen?: () => void;
   options?: MenuOption[];
@@ -790,7 +792,7 @@ export interface TaskRowProps extends Omit<HTMLAttributes<HTMLDivElement>, "titl
 }
 // Slots preserve product controls without nesting independent buttons inside Row.
 export const TaskRow = forwardRef<HTMLDivElement, TaskRowProps>(function TaskRow({
-  title, status, onStatusChange, owner, onOpen, options = STATUS_OPTIONS,
+  title, status, onStatusChange, statusDisabled, owner, onOpen, options = STATUS_OPTIONS,
   leading, afterTitle, metadata, actions, trailing, className, style, onClick, ...props
 }, ref) {
   const selected = options.find(o => o.value === status);
@@ -817,8 +819,8 @@ export const TaskRow = forwardRef<HTMLDivElement, TaskRowProps>(function TaskRow
       {afterTitle}
       </div>
       <div data-task-controls>
-      {onStatusChange
-        ? <StatusSelect value={status} onValueChange={onStatusChange} options={options} />
+      {onStatusChange || statusDisabled
+        ? <StatusSelect value={status} onValueChange={onStatusChange ?? (() => undefined)} options={options} disabled={statusDisabled} />
         : <Badge tone={tone}>{selected?.label || status}</Badge>}
       {owner && <Tooltip label={owner.name}><Avatar name={owner.name} size="sm" tabIndex={0}>{owner.avatar}</Avatar></Tooltip>}
       {metadata}
