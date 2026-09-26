@@ -208,7 +208,7 @@ await test("Escape keeps focus on the brain when the pointer rests on the closin
   await agent.press('ArrowDown');
   const hermes=page.getByRole('menuitemradio',{name:'Hermes',exact:true});
   await hermes.waitFor();
-  await page.waitForTimeout(400);
+  await page.getByRole('menu',{name:'Agent: Hermes',exact:true}).evaluate(e=>Promise.all(e.getAnimations().map(a=>a.finished)));
   // The pointer rests on a menu row while the user works the keyboard.
   const row=await hermes.boundingBox();
   await page.mouse.move(row.x+row.width/2,row.y+row.height/2);
@@ -219,14 +219,17 @@ await test("Escape keeps focus on the brain when the pointer rests on the closin
   // Hold the retreat open so the ordering below does not depend on runner speed.
   const menu=page.locator('[role=menu][aria-label="Agent: Design Lead"]');
   await menu.evaluate(e=>e.getAnimations().forEach(a=>a.pause()));
-  await page.keyboard.press('Escape');
-  assert.equal(await brain.evaluate(e=>e===document.activeElement),true);
-  // The retreat turns pointer-events off, so the browser reports the resting
-  // pointer leaving its row. On a slow runner that report lands after Escape.
-  await menu.locator('[role=menuitemradio]',{hasText:'Hermes'}).evaluate(e=>e.dispatchEvent(
-    new PointerEvent('pointerout',{bubbles:true,pointerType:'mouse',relatedTarget:document.body})));
-  assert.equal(await brain.evaluate(e=>e===document.activeElement),true,'focus left the brain for the closing menu');
-  await menu.evaluate(e=>e.getAnimations().forEach(a=>a.finish()));
+  try {
+    await page.keyboard.press('Escape');
+    assert.equal(await brain.evaluate(e=>e===document.activeElement),true,'Escape did not return focus to the brain');
+    // The retreat turns pointer-events off, so the browser reports the resting
+    // pointer leaving its row. On a slow runner that report lands after Escape.
+    await menu.locator('[role=menuitemradio]',{hasText:'Hermes'}).evaluate(e=>e.dispatchEvent(
+      new PointerEvent('pointerout',{bubbles:true,pointerType:'mouse',relatedTarget:document.body})));
+    assert.equal(await brain.evaluate(e=>e===document.activeElement),true,'focus left the brain for the closing menu');
+  } finally {
+    await menu.evaluate(e=>e.getAnimations().forEach(a=>a.finish()));
+  }
   await menu.waitFor({state:'detached'});
   assert.equal(await brain.evaluate(e=>e===document.activeElement),true,'focus fell to the page after the menu closed');
   await page.mouse.move(10,10);
