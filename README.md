@@ -1,5 +1,9 @@
 # Caelos
 
+[![build](https://github.com/Nova-Caelum/Caelos/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Nova-Caelum/Caelos/actions/workflows/ci.yml)
+
+CI builds `@nova-caelum/ui` (`tsc --noEmit`, `tsup`, `panda cssgen`) on every push and pull request to `main`. It does not run the browser acceptance suite (`npm run test:ui`).
+
 Caelos is a console for commanding a fleet of AI agents, from Nova Caelum & Co.
 
 The approved design system lives in [`@nova-caelum/ui`](packages/ui/README.md), our reusable Panda CSS component package. Use it for new interface work. Existing application components are being replaced according to the [migration inventory](packages/ui/MIGRATION.md).
