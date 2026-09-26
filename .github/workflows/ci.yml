@@ -1,0 +1,36 @@
+name: test:ui
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build:ui
+      - name: Start ui preview server
+        run: |
+          npm run preview:ui > preview.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -sf -o /dev/null http://127.0.0.1:5182; then
+              echo "preview ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "preview never became ready"
+          cat preview.log
+          exit 1
+      - run: npm run test:ui
