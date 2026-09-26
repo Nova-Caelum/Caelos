@@ -1,8 +1,8 @@
 # Caelos
 
-[![build](https://github.com/Nova-Caelum/Caelos/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Nova-Caelum/Caelos/actions/workflows/ci.yml)
+[![build + ui tests](https://github.com/Nova-Caelum/Caelos/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Nova-Caelum/Caelos/actions/workflows/ci.yml)
 
-CI builds `@nova-caelum/ui` (`tsc --noEmit`, `tsup`, `panda cssgen`) on every push and pull request to `main`. It does not run the browser acceptance suite (`npm run test:ui`).
+CI builds `@nova-caelum/ui` (`tsc --noEmit`, `tsup`, `panda cssgen`) and runs its Playwright browser acceptance suite (`npm run test:ui`, Chromium on Ubuntu) on every push and pull request to `main`.
 
 Caelos is a console for commanding a fleet of AI agents, from Nova Caelum & Co.
 

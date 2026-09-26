@@ -398,6 +398,12 @@ function Choice({
   const content = useRef(null);
   const interactedOutside = useRef(false);
   const nestedDock = useSettingsMenuDock(open, !!menuOwner, trigger, content);
+  // A retreating menu turns pointer-events off, so a resting pointer "leaves"
+  // its row. Radix would refocus the menu then, stealing focus from wherever
+  // Escape or the next control already moved it.
+  const ignoreRetreatingLeave = (event) => {
+    if (!open) event.preventDefault();
+  };
   // Open on completed click, preserving the same pointer and keyboard contract.
   const changeOpen = (value) => {
     if (value) {
@@ -482,6 +488,7 @@ function Choice({
                 key={item}
                 value={item}
                 textValue={itemText?.(item) ?? item}
+                onPointerLeave={ignoreRetreatingLeave}
               >
                 {renderItem ? renderItem(item) : item}
                 <Dropdown.ItemIndicator>
