@@ -199,6 +199,45 @@ await test("Agent settings support keyboard selection and Escape returns focus",
   await page.getByRole('menuitemradio',{name:'Hermes',exact:true}).click();
   await brain.press('Escape');
 });
+await test("Escape keeps focus on the brain when the pointer rests on the closing agent menu", async () => {
+  const brain=primary.getByRole('button',{name:/Model and reasoning:/});
+  await brain.focus();
+  await brain.press('ArrowDown');
+  const agent=primary.getByRole('button',{name:'Agent: Hermes',exact:true});
+  await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Agent: Hermes');
+  await agent.press('ArrowDown');
+  const hermes=page.getByRole('menuitemradio',{name:'Hermes',exact:true});
+  await hermes.waitFor();
+  await page.getByRole('menu',{name:'Agent: Hermes',exact:true}).evaluate(e=>Promise.all(e.getAnimations().map(a=>a.finished)));
+  // The pointer rests on a menu row while the user works the keyboard.
+  const row=await hermes.boundingBox();
+  await page.mouse.move(row.x+row.width/2,row.y+row.height/2);
+  await page.keyboard.press('End');
+  await page.waitForFunction(() => document.activeElement?.textContent?.includes('Design Lead'));
+  await page.keyboard.press('Enter');
+  await primary.getByRole('button',{name:'Agent: Design Lead',exact:true}).waitFor();
+  // Hold the retreat open so the ordering below does not depend on runner speed.
+  const menu=page.locator('[role=menu][aria-label="Agent: Design Lead"]');
+  await menu.evaluate(e=>e.getAnimations().forEach(a=>a.pause()));
+  try {
+    await page.keyboard.press('Escape');
+    assert.equal(await brain.evaluate(e=>e===document.activeElement),true,'Escape did not return focus to the brain');
+    // The retreat turns pointer-events off, so the browser reports the resting
+    // pointer leaving its row. On a slow runner that report lands after Escape.
+    await menu.locator('[role=menuitemradio]',{hasText:'Hermes'}).evaluate(e=>e.dispatchEvent(
+      new PointerEvent('pointerout',{bubbles:true,pointerType:'mouse',relatedTarget:document.body})));
+    assert.equal(await brain.evaluate(e=>e===document.activeElement),true,'focus left the brain for the closing menu');
+  } finally {
+    await menu.evaluate(e=>e.getAnimations().forEach(a=>a.finish()));
+  }
+  await menu.waitFor({state:'detached'});
+  assert.equal(await brain.evaluate(e=>e===document.activeElement),true,'focus fell to the page after the menu closed');
+  await page.mouse.move(10,10);
+  await brain.click();
+  await primary.getByRole('button',{name:'Agent: Design Lead',exact:true}).click();
+  await page.getByRole('menuitemradio',{name:'Hermes',exact:true}).click();
+  await brain.press('Escape');
+});
 await test("Agent, model and reasoning submenus meet the card edge without covering their fields", async () => {
   const specimen = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
   await specimen.goto(process.env.PREVIEW_URL || "http://127.0.0.1:5182");
@@ -626,6 +665,10 @@ await test("Bottom-edge composer flips compact pickers above without clipping", 
     el.style.cssText =
       "position:fixed;bottom:0;left:12px;right:12px;z-index:1;padding-bottom:0";
     el.querySelector("output").style.display = "none";
+    // Pin the writing surface itself to the floor. The under row is ~47.5px on
+    // its own, which already meets the approved 47px dock lane
+    // (COMPOSER-SPACING.md), so leaving it tests the fits-below case instead.
+    el.querySelector(".nc-composer-under").style.display = "none";
   });
   await primary
     .getByRole("button", { name: "Reply format: Text + voice", exact: true })
@@ -665,12 +708,13 @@ await test("Bottom-edge composer flips compact pickers above without clipping", 
   await primary.evaluate((el) => {
     el.removeAttribute("style");
     el.querySelector("output").removeAttribute("style");
+    el.querySelector(".nc-composer-under").removeAttribute("style");
   });
 });
 await page.setViewportSize({ width: 1280, height: 1000 });
 await page.keyboard.press("Escape");
 await page.screenshot({
-  path: "/private/tmp/caelos-panda-verified.png",
+  path: "/tmp/caelos-panda-verified.png",
   fullPage: true,
 });
 await test("No runtime errors", async () => assert.deepEqual(errors, []));
