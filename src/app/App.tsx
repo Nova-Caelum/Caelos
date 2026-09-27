@@ -79,7 +79,7 @@ export const FOUNDRY_DEMO_PROJECT: Project = {
   created_at: "2026-07-30T00:00:00.000Z",
   status: "in-progress",
   team: ["Da Vinci", "Codex"],
-  owner: "Daniel Eghdami",
+  owner: "Demo Owner",
   client: "Nova Caelum",
 };
 
@@ -150,7 +150,7 @@ const FOUNDRY_DEMO_ITEMS: WorkItem[] = [
     description: "Compare staging and branch preview before Daniel merges the promotion PR.",
     state: "pending-review",
     priority: "medium",
-    assignee: "Daniel Eghdami",
+    assignee: "Demo Owner",
     team: ["Product"],
     blocked_by: [],
     doc_paths: [],
