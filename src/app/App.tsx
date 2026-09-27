@@ -147,7 +147,7 @@ const FOUNDRY_DEMO_ITEMS: WorkItem[] = [
     id: "foundry-task-preview",
     project_id: FOUNDRY_DEMO_PROJECT.id,
     title: "Review branch preview",
-    description: "Compare staging and branch preview before Daniel merges the promotion PR.",
+    description: "Compare staging and branch preview before the maintainer merges the promotion PR.",
     state: "pending-review",
     priority: "medium",
     assignee: "Demo Owner",
@@ -197,6 +197,9 @@ function getLinks(initId: string): InitLinks {
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "");
 const BEARER = import.meta.env.VITE_BEARER_TOKEN as string | undefined;
+// Pinned human owner shown first in owner pickers (build-time, not a literal in source —
+// see .env.production / .env.development / .env.example).
+const HUMAN_OWNER = import.meta.env.VITE_HUMAN_OWNER as string | undefined;
 
 // Enum-translation layer killed (2026-07-27) — backend v0.6.1 emits hyphenated Set A / Set B
 // values directly (task_workflow_state / project_lifecycle_state). No underscore form anywhere.
@@ -3463,8 +3466,8 @@ export function ProjectInfoTab({ project, onSave, onSwitchTab }: {
 
   const ownerItems = [
     { value: "__none__", label: "(none)" },
-    { value: "daniel", label: "daniel" },
-    ...agents.filter(a => a.agent_name !== "daniel").map(a => ({ value: a.agent_name, label: a.agent_name })),
+    ...(HUMAN_OWNER ? [{ value: HUMAN_OWNER, label: HUMAN_OWNER }] : []),
+    ...agents.filter(a => a.agent_name !== HUMAN_OWNER).map(a => ({ value: a.agent_name, label: a.agent_name })),
   ];
 
   return (
