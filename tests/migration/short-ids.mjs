@@ -232,6 +232,25 @@ try {
     const label = [...el.parentElement.children].find(n => n !== el);
     return label && label.textContent.trim() === 'Task';
   }), 'Drawer identifier belongs beside the "Task" signpost, not inside the editable title row');
+  // The grown hit area must never win a click that belongs to a neighbour. The drawer is
+  // the tight case: the editable title sits directly under the signpost line, inside the
+  // identifier's x-span, and "copy fired when I meant to edit the title" would be the
+  // worst failure this control could have.
+  const theft = await detail.evaluate(dlg => {
+    const id = dlg.querySelector('[data-short-id]'), ib = id.getBoundingClientRect();
+    const top = ib.top - 14, bottom = ib.bottom + 14, out = [];
+    dlg.querySelectorAll('h1,h2,button,input,textarea,[role="button"],a').forEach(n => {
+      if (n === id || id.contains(n)) return;
+      const r = n.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      if (r.left >= ib.right || r.right <= ib.left || r.top >= bottom || r.bottom <= top) return;
+      const w = document.elementFromPoint(Math.max(r.left, ib.left) + 1, Math.max(r.top, top) + 1);
+      if (w === id || id.contains(w)) out.push(n.tagName + '.' + String(n.className || '').slice(0, 30));
+    });
+    return out;
+  });
+  assert.deepEqual(theft, [], 'Identifier hit area must not steal a click from a neighbour: ' + JSON.stringify(theft));
+  console.log('PASS grown hit area steals no click from any drawer neighbour');
   await page.evaluate(() => navigator.clipboard.writeText('sentinel-before-drawer-copy'));
   await headerId.click();
   await headerId.getByText('Copied', { exact: true }).waitFor();
