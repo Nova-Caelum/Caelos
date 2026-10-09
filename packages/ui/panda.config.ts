@@ -23,6 +23,8 @@ export default defineConfig({
       menu: ["*"],
       scroll: ["*"],
       errorMessage: ["*"],
+      alert: ["*"],
+      notification: ["*"],
     },
   },
 });

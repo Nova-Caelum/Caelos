@@ -5,3 +5,5 @@ export { approvedTokens } from "./tokens";
 export * from "./overlays";
 export * from "./foundation";
 export * from "./ErrorMessage";
+export * from "./Alert";
+export * from "./Notification";

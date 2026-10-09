@@ -67,3 +67,10 @@ footer {
   }
 
 }
+
+/* The preview page styles bare <header> and <section> for its own layout; the ported
+   Alert and Notification use those elements internally, so reset them in the specimen. */
+[data-error-surfaces] header,
+[data-notification-center] header { margin: 0; }
+[data-error-surfaces] section,
+[data-notification-center] section { margin-top: 0; }
