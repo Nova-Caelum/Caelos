@@ -11,7 +11,7 @@ import {
   ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, Columns3, EyeOff, ListFilter,
   MoreHorizontal, Pin, PinOff, RotateCcw,
 } from "lucide-react";
-import { failureReason } from "./failures";
+import { failureReason, isMissingRoute } from "./failures";
 
 /** One worklog entry, as the engine's door returns it. */
 export type WorklogRow = {
@@ -129,6 +129,29 @@ function moveItem<T>(list: T[], from: number, to: number): T[] {
   const [item] = next.splice(from, 1);
   next.splice(to, 0, item);
   return next;
+}
+
+// Whether this server serves the worklog read. Learned once per session from a first
+// read: a 404 means no such route (Nova's ops-server), so the tab is not offered at all;
+// any other answer — rows or another failure — offers it (the tab shows that failure).
+let worklogRoute: "unknown" | "present" | "absent" = "unknown";
+let worklogProbe: Promise<void> | null = null;
+
+/** True once this server is known to serve the worklog read; false while unknown or absent. */
+export function useWorklogRoute(projectCode: string, load: (projectCode: string) => Promise<WorklogRow[]>): boolean {
+  const [route, setRoute] = useState(worklogRoute);
+  useEffect(() => {
+    if (worklogRoute !== "unknown") { setRoute(worklogRoute); return; }
+    let cancelled = false;
+    worklogProbe ??= load(projectCode).then(
+      () => { worklogRoute = "present"; },
+      e => { worklogRoute = isMissingRoute(e) ? "absent" : "present"; },
+    );
+    void worklogProbe.then(() => { if (!cancelled) setRoute(worklogRoute); });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- route availability is per server, probed once
+  }, [projectCode]);
+  return route === "present";
 }
 
 export function WorklogTab({ projectCode, load }: {

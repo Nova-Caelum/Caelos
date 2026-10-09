@@ -60,6 +60,14 @@ export async function apiErrorFromResponse(method: string, path: string, respons
   return new ApiError({ method, path, status: response.status, reason: reasonFromBody(body, response.status) });
 }
 
+/**
+ * A 404 from a read the console treats as optional means this server does not serve
+ * that route at all (Nova's ops-server has no runs or worklog read; the engine's door
+ * has both). The one 404 the door gives on those routes for another reason — an
+ * unknown project — cannot happen here, because the project was already loaded.
+ */
+export const isMissingRoute = (error: unknown): boolean => error instanceof ApiError && error.status === 404;
+
 /** The reason to show for any thrown value. */
 export function failureReason(error: unknown): string {
   if (error instanceof ApiError) return error.reason;

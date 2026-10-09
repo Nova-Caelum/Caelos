@@ -2199,10 +2199,9 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onBack, onC
 
         {divider}
 
-        {/* Runs are not linked to modules yet, so a module shows its project's runs. */}
-        <OpenRuns projectCode={mod.project_id} load={loadProjectRuns} where="module" />
-
-        {divider}
+        {/* Runs are not linked to modules yet, so a module shows its project's runs.
+            On a server without runs the section, and its divider, are not rendered. */}
+        <OpenRuns projectCode={mod.project_id} load={loadProjectRuns} where="module" after={divider} />
 
         {/* Tasks in module */}
         <div>
