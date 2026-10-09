@@ -765,12 +765,14 @@ export interface ShortIdProps extends Omit<ButtonHTMLAttributes<HTMLButtonElemen
  * ragged title edge between `TCF-7` and `TCF-1234` — the identifiers lined up, the
  * titles did not, and a ragged edge down a task list reads as accidental.
  *
- * `IDENTIFIER_SLOT_CH` covers `KEY-1` through `KEY-999`, which is every project this
- * scheme has, and also swallows the 6-character confirmation word so the swap cannot
- * shift a row. A four-digit number overflows its slot by about a glyph and pushes only
- * its own title; nothing else in the list moves.
+ * `IDENTIFIER_SLOT_CH` is 9 rather than 8 because `ch` is the width of a zero, which
+ * in this face is a shade narrower than the advance it actually sets: 8 glyphs measure
+ * 49.5px against 8ch's 48px, so an eight-character `TCF-9001` would have overflowed a
+ * slot sized by counting characters. Nine covers `KEY-1` through `KEY-9999` and
+ * swallows the 6-character confirmation word, so neither a long number nor the copy
+ * confirmation can shift a row. A five-digit number would push only its own title.
  */
-const IDENTIFIER_SLOT_CH = 8;
+const IDENTIFIER_SLOT_CH = 9;
 export const ShortId = forwardRef<HTMLButtonElement, ShortIdProps>(function ShortId({
   value, noun = "task ID", className, style, onClick, onPointerEnter, onPointerLeave, onFocus, onBlur, ...props
 }, ref) {
@@ -806,6 +808,11 @@ export const ShortId = forwardRef<HTMLButtonElement, ShortIdProps>(function Shor
       // are inline. `dim` is the same mono tier folder paths already use here.
       className={cx(typography({ role: "mono", tone: "dim" }), foundation({ kind: "identifier" }), className)}
       style={{
+        // Inline, because the mono typography role also declares a line-height (16px)
+        // and would otherwise win over the recipe. The identifier keeps the mono FONT
+        // and takes the surrounding text's LINE, which is what puts its line box —
+        // and so `1lh` and the box built from it — on the title's first line.
+        lineHeight: "inherit",
         minWidth: `${IDENTIFIER_SLOT_CH}ch`,
         // Quiet at rest, legible on approach: a control that stays dim under the pointer
         // reads as decoration, and nothing else here signals that it can be clicked.
@@ -882,14 +889,34 @@ export const TaskRow = forwardRef<HTMLDivElement, TaskRowProps>(function TaskRow
       }}>
       <div data-task-content>
       {leading}
-      <span aria-hidden style={{ width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0 }} />
-      {/* State, then coordinate, then title: the identifier sits where the eye scans a
-          column of IDs, and ahead of a title that wraps to any number of lines. It must
-          stay OUT of `afterTitle` — the responsive check in tests/migration/task-rows.mjs
-          measures `[data-task-content] > button:last-of-type` as the title. */}
+      {/* Dot, identifier and title all align on ONE baseline — `align-self: baseline`,
+          which flexbox resolves from each item's own first line. That is what holds
+          them together when the title wraps: a wrapped title's first baseline is still
+          its first line's, so nothing beside it moves. Centring them instead — the
+          previous behaviour — centred each against the flex line's cross size, which
+          grows with the title and left the dot and the identifier 10px low.
+
+          The dot rides in a line box of its own rather than being a bare flex item,
+          because `vertical-align: middle` is the one thing in CSS that centres a box on
+          "baseline plus half the x-height" — the optical middle of a line of text — and
+          it only has that meaning inside an inline formatting context. A bare flex item
+          ignores it, and every pixel offset standing in for it is a guess at the font's
+          x-height. This way the font supplies the number. */}
+      <span style={{ alignSelf: "baseline", flexShrink: 0, lineHeight: "inherit" }}>
+        <span aria-hidden style={{ display: "inline-block", verticalAlign: "middle", width: 6, height: 6, borderRadius: "50%", background: color }} />
+      </span>
+      {/* The identifier sits where the eye scans a column of IDs, ahead of a title that
+          wraps to any number of lines. It must stay OUT of `afterTitle` — the responsive
+          check in tests/migration/task-rows.mjs measures
+          `[data-task-content] > button:last-of-type` as the title. */}
       <ShortId value={shortId} />
       <button type="button" onClick={onOpen} className={button({ variant: "text" })}
-        style={{ flex: 1, minWidth: 0, height: "auto", minHeight: 32, paddingBlock: 4, justifyContent: "flex-start", textAlign: "left", whiteSpace: "normal", overflowWrap: "anywhere",
+        style={{ flex: 1, minWidth: 0, height: "auto", minHeight: 32, paddingBlock: "var(--task-line-pad, 4px)", justifyContent: "flex-start", textAlign: "left", whiteSpace: "normal", overflowWrap: "anywhere",
+          // Top, not centre. With `min-height: 32px` and centred content the first line
+          // sat 16px down on a one-line row and 14.25px down once it wrapped, so no fixed
+          // treatment of the identifier beside it could match both. Anchored to the top
+          // it is one offset — `--task-line-pad` plus half a line — at every line count.
+          alignSelf: "baseline", alignItems: "flex-start",
           textDecoration: status === "done" ? "line-through" : undefined,
           color: `var(--task-row-title-color, ${status === "done" || status === "deferred" ? "var(--il-dim)" : "var(--il-muted)"})` }}>
         {title}

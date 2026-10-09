@@ -34,6 +34,10 @@ const tasks = [
   task('task-root', 'Root task', { short_id: 'TCF-108' }),
   task('task-child', 'Child task', { parent_work_item_id: 'task-root' }),
   task('task-bare', 'Unnumbered task'),
+  // Long enough to wrap at 1440px and far past it at 390px. The wrap state is the one
+  // that regressed: centring put the dot and the identifier 10px below the title's
+  // first line, and a one-line fixture could never have caught it.
+  task('task-wrap', 'A deliberately long task title that wraps onto more than one line so the identifier beside it can be checked against the first line rather than against the middle of the whole block', { module_id: 'module-fixture', short_id: 'TCF-9001' }),
 ];
 const writes = [];
 await page.route('**/*', async route => {
@@ -132,6 +136,100 @@ try {
   assert.equal(offsets.length, 1, 'Titles must start at one offset from their identifier regardless of its length: ' + JSON.stringify(edges));
   console.log('PASS identifiers form a column; every title starts at the same offset', { offset: offsets[0], edges });
 
+  // ── 1c. Vertical alignment, by geometry. The dot, the identifier and the title's
+  //        FIRST line must share one axis at every width, theme and wrap state. This is
+  //        the check that would have caught the shipped defect: centring held on a
+  //        one-line row and put the dot and identifier 10px low the moment a title
+  //        wrapped, which at 390px is nearly every row.
+  //
+  //        Gated on two content-independent quantities:
+  //          • the identifier and the title share a BASELINE, and
+  //          • the dot sits half an x-height above that shared baseline — the optical
+  //            middle of a line of Latin text, and what `vertical-align: middle` means.
+  //
+  //        Ink centres and inline-box centres are reported but deliberately NOT gated,
+  //        because neither is stable under correct layout. An ink centre moves with the
+  //        letters the title happens to contain — "Root task" has no descender and
+  //        measures 1.45px off a title that does, at an identical baseline — so gating
+  //        on it would fail a correct row for its wording. An inline box runs from the
+  //        font's ascent to its descent, so two different sizes sharing a baseline can
+  //        never also be concentric, and a 6px circle has no descent at all. Baselines
+  //        are what a reader actually reads two adjacent texts against.
+  const ALIGN_TOLERANCE = 0.5;
+  const measureRow = async (taskId) => page.locator(`[data-task-id="${taskId}"] [data-task-content]`).evaluate(content => {
+    const round = value => Math.round(value * 100) / 100;
+    const fontMetrics = (el, text) => {
+      const cs = getComputedStyle(el);
+      const ctx = document.createElement('canvas').getContext('2d');
+      ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      const m = ctx.measureText(text);
+      // 'x' gives the x-height of the face at this size — the figure `vertical-align:
+      // middle` uses, measured here rather than assumed.
+      const xh = ctx.measureText('x').actualBoundingBoxAscent;
+      return { ascent: m.fontBoundingBoxAscent, inkAscent: m.actualBoundingBoxAscent, inkDescent: m.actualBoundingBoxDescent, xHeight: xh };
+    };
+    // Range rects, with nothing inserted into the DOM — a probe element of its own
+    // changes the line box it is trying to measure.
+    const firstLine = el => {
+      const node = [...el.childNodes].find(n => n.nodeType === 3 && n.textContent.trim());
+      const range = document.createRange(); range.selectNodeContents(node);
+      const rects = [...range.getClientRects()];
+      return { rect: rects[0], lines: rects.length, text: node.textContent };
+    };
+    const dot = content.querySelector('span[aria-hidden]');
+    const id = content.querySelector('[data-short-id]');
+    const title = content.querySelector('button:last-of-type');
+    const idLine = firstLine(id), titleLine = firstLine(title);
+    const idFont = fontMetrics(id, idLine.text), titleFont = fontMetrics(title, titleLine.text);
+    const idBaseline = idLine.rect.top + idFont.ascent;
+    const titleBaseline = titleLine.rect.top + titleFont.ascent;
+    const idInk = idBaseline - (idFont.inkAscent - idFont.inkDescent) / 2;
+    const titleInk = titleBaseline - (titleFont.inkAscent - titleFont.inkDescent) / 2;
+    const dotBox = dot.getBoundingClientRect(), dotCentre = dotBox.top + dotBox.height / 2;
+    return {
+      titleLines: titleLine.lines,
+      // Gated.
+      baseline_id_vs_title: round(idBaseline - titleBaseline),
+      dot_vs_optical_middle: round(dotCentre - (titleBaseline - titleFont.xHeight / 2)),
+      // Reported only — see the note above on why neither is a gate.
+      ink_id_vs_title: round(idInk - titleInk),
+      ink_dot_vs_title: round(dotCentre - titleInk),
+      inlineBox_id_vs_title: round((idLine.rect.top + idLine.rect.height / 2) - (titleLine.rect.top + titleLine.rect.height / 2)),
+    };
+  });
+  const GATED = ['baseline_id_vs_title', 'dot_vs_optical_middle'];
+  const alignmentReport = [];
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const theme of ['dark', 'light']) {
+      // The console pins dark on the provider; flipping the class is how the light
+      // surface is reachable at all, and proving geometry does not move with it is
+      // the point of running both.
+      await page.evaluate(t => {
+        const provider = document.querySelector('[data-caelos-theme]') || document.querySelector('.dark') || document.body;
+        provider.classList.toggle('dark', t === 'dark');
+        provider.setAttribute('data-caelos-theme', t);
+      }, theme);
+      await page.waitForTimeout(150);
+      for (const [surface, id] of [['card row', 'task-a'], ['card row, wrapped', 'task-wrap'], ['root row', 'task-root']]) {
+        const m = await measureRow(id);
+        const worst = Math.max(...GATED.map(k => Math.abs(m[k])));
+        alignmentReport.push({ width, theme, surface, lines: m.titleLines, worst: Math.round(worst * 100) / 100, ...m });
+        assert.ok(worst <= ALIGN_TOLERANCE, `Alignment ${surface} @${width}px ${theme}: worst ${worst}px > ${ALIGN_TOLERANCE}px — ${JSON.stringify(m)}`);
+      }
+    }
+  }
+  // Wrap-invariance: whatever the residual is, it must not CHANGE when a title wraps.
+  // That difference, not the absolute figure, is what the shipped defect actually was.
+  for (const key of GATED) {
+    const spread = Math.max(...alignmentReport.map(r => r[key])) - Math.min(...alignmentReport.map(r => r[key]));
+    assert.ok(spread <= 0.5, `${key} must not move between widths, themes or wrap states; spread ${Math.round(spread * 100) / 100}px`);
+  }
+  await page.evaluate(() => { const p = document.querySelector('[data-caelos-theme]'); if (p) { p.classList.add('dark'); p.setAttribute('data-caelos-theme', 'dark'); } });
+  await page.setViewportSize({ width: 1440, height: 1000 }); await page.waitForTimeout(200);
+  console.log('PASS dot, identifier and title line 1 share one axis at every width, theme and wrap state');
+  console.table(alignmentReport);
+
   // ── 2. Graceful absence: a row with no identifier renders no identifier element, no
   //       placeholder and no reserved width — and its title is not shifted by its
   //       numbered neighbours. This is production's state until the backend ships.
@@ -206,16 +304,20 @@ try {
   assert.notEqual(ring.outlineStyle, 'none', 'Keyboard focus must paint a visible ring: ' + JSON.stringify(ring));
   assert.ok(parseFloat(ring.outlineWidth) >= 2, 'Focus ring must be at least 2px: ' + JSON.stringify(ring));
   console.log('PASS keyboard focus paints a visible ring from the package', ring);
-  // The identifier's text box is one 10px line — 16px tall, under WCAG 2.2 SC 2.5.8's
-  // 24×24 minimum. The hit area is grown past the text box, and the proof is a hit test
-  // 18px above the text's centre, not the element's own getBoundingClientRect.
+  // WCAG 2.2 SC 2.5.8 wants 24×24. The identifier earns that from the line box the
+  // alignment fix gave it — one inherited line plus the row's block padding — so the
+  // `::after` overlay an earlier revision used is gone, and with it the only part of
+  // this control that could have overlapped a neighbour. Measured on the real box and
+  // confirmed by a hit test at its corners, not inferred from the CSS.
   const hit = await chip.evaluate(el => {
     const b = el.getBoundingClientRect();
-    const probe = y => { const t = document.elementFromPoint(b.x + b.width / 2, y); return t === el || el.contains(t); };
-    return { textBox: { w: Math.round(b.width), h: Math.round(b.height) }, above: probe(b.top - 10), below: probe(b.bottom + 10) };
+    const at = (x, y) => { const t = document.elementFromPoint(x, y); return t === el || el.contains(t); };
+    return { box: { w: Math.round(b.width), h: Math.round(b.height) },
+      topEdge: at(b.x + b.width / 2, b.top + 1), bottomEdge: at(b.x + b.width / 2, b.bottom - 1) };
   });
-  assert.ok(hit.above && hit.below, 'Copy target must extend past its 16px text box: ' + JSON.stringify(hit));
-  console.log('PASS copy target extends beyond the text box to a comfortable size', hit);
+  assert.ok(hit.box.w >= 24 && hit.box.h >= 24, 'Copy target must clear WCAG 2.2 SC 2.5.8 (24×24): ' + JSON.stringify(hit));
+  assert.ok(hit.topEdge && hit.bottomEdge, 'The whole box must be the target, not just the glyphs: ' + JSON.stringify(hit));
+  console.log('PASS copy target clears 24×24 from its own line box, no overlay needed', hit);
   await page.keyboard.press('Enter');
   await chip.getByText('Copied', { exact: true }).waitFor();
   assert.equal(await page.evaluate(() => navigator.clipboard.readText()), 'TCF-42');
