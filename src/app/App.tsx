@@ -1,6 +1,6 @@
 // Nova Caelum — Task Management Dashboard
 import { useState, useEffect, useCallback, useRef } from "react";
-import { CaelosProvider, Heading, Text, Separator, Progress, Loading, ResizeHandle, Surface, Toaster, Popover, PopoverTrigger, PopoverContent, PopoverClose, Card, Chip, Row, Tooltip, Breadcrumb, BreadcrumbItem, BreadcrumbSeparator, TaskRow as SharedTaskRow, Badge, StatusSelect, type Tone, Input, TextArea, Button, UserCard, PersonChip, ScrollArea, Select as SharedSelect, Drawer, Dialog, IconButton, ActionMenuRoot, ActionMenuTrigger, ActionMenuContent, ActionMenuItem, ActionMenuCheckboxItem, ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@nova-caelum/ui";
+import { CaelosProvider, Heading, Text, Separator, Progress, Loading, ResizeHandle, Surface, Toaster, Popover, PopoverTrigger, PopoverContent, PopoverClose, Card, Chip, Row, Tooltip, Breadcrumb, BreadcrumbItem, BreadcrumbSeparator, TaskRow as SharedTaskRow, ShortId, Badge, StatusSelect, type Tone, Input, TextArea, Button, UserCard, PersonChip, ScrollArea, Select as SharedSelect, Drawer, Dialog, IconButton, ActionMenuRoot, ActionMenuTrigger, ActionMenuContent, ActionMenuItem, ActionMenuCheckboxItem, ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@nova-caelum/ui";
 import { toast } from "sonner";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -40,8 +40,16 @@ type Cycle    = { id: string; project_id: string; name: string; start_date: stri
 
 export type WorkItemPriority = "none" | "low" | "medium" | "high" | "urgent";
 
+// `short_id` (2026-10-08): the human-facing task identifier — `<3-letter project key>-<n>`,
+// e.g. `TCF-42` — assigned by the database at creation, never reused, unchanged by renames
+// or moves. OPTIONAL and read-only on the client for two separate reasons:
+//   • the backend column does not exist yet, so every row in production arrives without it
+//     (see adaptWorkItemRead) and every surface must render as it does today; and
+//   • it is never client-writable. The POST and PATCH whitelists further down build their
+//     own bodies field by field, so it cannot reach a write even through `duplicateTask`'s
+//     `{...rest}` spread — which is correct: a duplicate is a new row and earns a new id.
 export type WorkItem = {
-  id: string; uuid?: string; project_id: string; module_id?: string | null; parent_item_id?: string | null;
+  id: string; uuid?: string; short_id?: string | null; project_id: string; module_id?: string | null; parent_item_id?: string | null;
   cycle_id?: string | null; title: string; description: string;
   acceptance_criteria?: string | null; acceptance_criteria_ref?: string | null;
   state: WorkItemState; priority: WorkItemPriority; assignee: string; team: string[];
@@ -292,6 +300,16 @@ function adaptWorkItemRead(x: any): WorkItem {
   return {
     id: x.external_id ?? x.id ?? "",
     uuid: x.id ?? undefined,
+    // This adapter is a whitelist, not a spread: a field absent from this list is dropped
+    // at the read boundary and can never reach a surface, however correctly the backend
+    // sends it. `short_id` therefore needs an explicit line here, and it is the only
+    // change this feature requires outside the render path.
+    //
+    // Narrowed to a non-empty string rather than `x.short_id ?? null`, on the same
+    // reasoning as `position` above: the column is nullable, list reads carry it as JSON
+    // `null` until the backend ships, and `""` from a half-migrated row must land as
+    // absent — not as a zero-width identifier the copy control would happily copy.
+    short_id: typeof x.short_id === "string" && x.short_id.length > 0 ? x.short_id : null,
     project_id: x.project_code ?? x.project_id ?? "",
     module_id: toExternalId(x.module_id),
     parent_item_id: toExternalId(x.parent_work_item_id ?? x.parent_item_id),
@@ -1738,7 +1756,7 @@ function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onBack, 
     catch { /* Parent reports failure. */ }
     finally { setBlockerSaving(false); }
   }
-  const blockerRows = blockers.map(b => <SharedTaskRow key={b.id} title={b.title} status={b.state} options={WORK_STATE_OPTIONS}
+  const blockerRows = blockers.map(b => <SharedTaskRow key={b.id} title={b.title} shortId={b.short_id} status={b.state} options={WORK_STATE_OPTIONS}
     onOpen={() => onOpenTask(b.id)} leading={<Badge tone="danger"><AlertTriangle size={11} /></Badge>}
     actions={<IconButton variant="text" label={`Remove blocker ${b.title}`} icon={<Unlink size={11} />} disabled={blockerSaving} onClick={() => changeBlocker(b.id, true)} />} />);
 
@@ -1773,8 +1791,16 @@ function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onBack, 
             </Breadcrumb>
             <IconButton variant="text" label="Move to different project or module" onClick={onOpenMove} icon={<FolderInput size={13} />} />
           </div>
+          {/* The identifier belongs on the existing "Task" signpost line, not beside the
+              editable title below it: that title is a field the reader types into, and a
+              copy control there would wedge between the input and its status select. Here
+              it reads as what it is — the coordinate of the thing named underneath. */}
+          {/* `items-center`, matching the row: the signpost and the identifier are two
+              sizes on one line, so they share a centre, not a baseline. On a baseline
+              the smaller identifier's capitals centred 0.75px low. */}
           <div className="flex items-center gap-2 mt-1">
             <Text variant="label">Task</Text>
+            <ShortId value={task.short_id} />
           </div>
           <div className="flex items-center gap-3 min-w-0 -mt-0.5">
             <EditableTitleInline
@@ -1842,7 +1868,7 @@ function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onBack, 
           {subtasks.length > 0 && (
             <div className="space-y-0.5 mb-3">
               {subtasks.map(sub => (
-                <SharedTaskRow key={sub.id} title={sub.title} status={sub.state} options={WORK_STATE_OPTIONS}
+                <SharedTaskRow key={sub.id} title={sub.title} shortId={sub.short_id} status={sub.state} options={WORK_STATE_OPTIONS}
                   onOpen={() => onOpenTask(sub.id)} onStatusChange={value => { void onSave(sub.id, { state: value as WorkItemState }).catch(() => {}); }}
                   actions={<IconButton variant="text" label={`Remove subtask ${sub.title}`} icon={<X size={11} />} onClick={() => onDeleteSubtask(sub.id)} />} />
               ))}
@@ -1896,7 +1922,7 @@ function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onBack, 
             <Text as="p" variant="label" tone="muted" className="    mb-3">Releases ({releases.length})</Text>
             <div className="space-y-1.5">
               {releases.map(r => (
-                <SharedTaskRow key={r.id} title={r.title} status={r.state} options={WORK_STATE_OPTIONS} onOpen={() => onOpenTask(r.id)} trailing={<ArrowRight size={11} />} />
+                <SharedTaskRow key={r.id} title={r.title} shortId={r.short_id} status={r.state} options={WORK_STATE_OPTIONS} onOpen={() => onOpenTask(r.id)} trailing={<ArrowRight size={11} />} />
               ))}
             </div>
           </div>
@@ -2179,7 +2205,7 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onBack, onC
           ) : (
             <div className="space-y-px">
               {modTasks.map(task => (
-                <SharedTaskRow key={task.id} title={task.title} status={task.state} options={WORK_STATE_OPTIONS}
+                <SharedTaskRow key={task.id} title={task.title} shortId={task.short_id} status={task.state} options={WORK_STATE_OPTIONS}
                   owner={task.assignee ? { name: task.assignee } : undefined} onOpen={() => { onSelectTask(task); onClose(); }} />
               ))}
             </div>
@@ -2230,6 +2256,7 @@ export function TaskRow({ task, allItems, depth, gripRef, onSelect, onDelete, on
           <SharedTaskRow
             data-task-id={task.id}
             title={task.title}
+            shortId={task.short_id}
             status={task.state}
             options={WORK_STATE_OPTIONS}
             onOpen={() => onSelect(task)}
@@ -2842,7 +2869,16 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
 
   const visibleFilter = (task: WorkItem) => {
     if (!visibleStates.includes(task.state)) return false;
-    if (search && !task.title.toLowerCase().includes(search.toLowerCase())) return false;
+    // Title OR short identifier, both folded to lower case: an identifier is a thing
+    // people type from memory or paste out of a chat message, and the one spelling
+    // nobody uses is the canonical upper-case one. `TCF-42`, `tcf-42` and a bare `42`
+    // all reach the row. Substring, not prefix — the search box is already substring
+    // for titles, and `42` matching `TCF-42` is the behaviour the field implies.
+    if (search) {
+      const needle = search.toLowerCase();
+      const haystacks = [task.title, task.short_id ?? ""];
+      if (!haystacks.some(value => value.toLowerCase().includes(needle))) return false;
+    }
     return true;
   };
 

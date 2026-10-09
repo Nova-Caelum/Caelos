@@ -27,6 +27,21 @@ export const foundation = defineRecipe({
     progress: { appearance: "none", display: "block", width: "100%", height: "4px", border: 0, borderRadius: "999px", overflow: "hidden", background: "var(--il-edge)", color: "var(--sys-accent)", "&::-webkit-progress-bar": { background: "var(--il-edge)", borderRadius: "999px" }, "&::-webkit-progress-value": { background: "var(--sys-accent)", borderRadius: "999px" }, "&::-moz-progress-bar": { background: "var(--sys-accent)", borderRadius: "999px" } },
     resize: { touchAction: "none", userSelect: "none", cursor: "col-resize", background: "transparent", "&:hover, &:focus-visible, &[data-dragging=true]": { background: "var(--nc-ready)", outline: "none" }, "@media (forced-colors: active)": { "&:focus-visible": { outline: "2px solid Highlight" } } },
     dot: { display: "inline-block", width: "6px", height: "6px", flexShrink: 0, borderRadius: "50%", background: "currentColor", verticalAlign: "middle" },
+    // A copyable identifier (`ShortId`). The application's global focus ring deliberately
+    // excludes this package's subtree, and the typography recipe carries no focus state,
+    // so a bare styled button here would have had no visible keyboard indicator at all.
+    // Same outline + offset the sibling native controls above use, rather than the inset
+    // ring from `control`, which reads wrong on transparent inline text.
+    // It presents a box at least one line tall (`line-height: inherit` takes the
+    // surrounding text's line rather than the mono role's own 16px) with its text
+    // centred in it. Vertical placement belongs to the host: a task row grows the box
+    // to its first-line box and pins it to the top; a signpost line centres it. In a
+    // task row the box is 32px tall, so it clears WCAG 2.2 SC 2.5.8 (24×24) unaided.
+    identifier: { display: "flex", alignItems: "center", minHeight: "1lh", lineHeight: "inherit", padding: 0, appearance: "none", background: "transparent", border: 0, margin: 0, flexShrink: 0, cursor: "pointer", whiteSpace: "nowrap", textAlign: "left", fontVariantNumeric: "tabular-nums", transition: "color 100ms var(--il-ease)", "&:focus-visible": { outline: "2px solid var(--nc-ready)", outlineOffset: "2px", borderRadius: "2px" }, "@media (forced-colors: active)": { "&:focus-visible": { outline: "2px solid Highlight" } }, "@media (prefers-reduced-motion: reduce)": { transition: "none" } },
+    // Announced, never shown. Width/height 1px with a clip rather than `display:none`
+    // or `visibility:hidden`, both of which remove the node from the accessibility tree
+    // and would silence the live region this exists to carry.
+    announce: { position: "absolute", width: "1px", height: "1px", margin: "-1px", padding: 0, overflow: "hidden", clip: "rect(0 0 0 0)", clipPath: "inset(50%)", whiteSpace: "nowrap", border: 0 },
     surface: { minWidth: 0, color: "var(--il-ink)" },
   },
   layer: { ground: { backgroundColor: "var(--nc-ground)" }, chrome: { backgroundColor: "var(--nc-chrome)" }, elevated: { backgroundColor: "var(--nc-elevated)" } },

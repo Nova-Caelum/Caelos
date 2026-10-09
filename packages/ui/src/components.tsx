@@ -1,6 +1,8 @@
 import React, {
   forwardRef,
+  useEffect,
   useId,
+  useRef,
   useState,
   type ReactNode,
   type ReactElement,
@@ -28,6 +30,7 @@ import {
   menu,
   tooltip,
   scroll,
+  typography,
 } from "../styled-system/recipes/index.mjs";
 import { themeAttributes, useCaelosTheme } from "./theme";
 const cx = (...xs: (string | undefined | false)[]) =>
@@ -735,6 +738,123 @@ export function Tabs({ value, onValueChange, label, items, enclosed = false }: T
     </TabsRoot>
   );
 }
+export interface ShortIdProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "value"> {
+  /** The identifier itself, e.g. `TCF-42`. Falsy renders nothing at all. */
+  value?: string | null;
+  /** What the identifier names, used only to build the accessible label. */
+  noun?: string;
+}
+/**
+ * A copyable short identifier — Structural voice: a coordinate the eye references
+ * rather than reads, so it takes the locked contract's Plex Mono identifier role
+ * (`typography({ role: "mono" })`) at the `dim` tier, one step below the `muted` title
+ * it sits beside. At `muted` it resolved to the title's exact colour and stopped being
+ * quiet at all; measured on the real build it now reads 5.4:1 against the row to the
+ * title's 8.25:1 — recessive, and still past AA for 10px text.
+ *
+ * The identifier IS the copy control. A separate icon button would add a second
+ * interactive target to every task row for a value that is already the only thing
+ * worth copying there, and `TaskRow` is deliberately dense.
+ *
+ * Absence renders `null` — not an empty span, not a reserved spacer. The backend has
+ * not shipped `short_id` yet, so until it does every surface must lay out exactly as
+ * it does today; a placeholder of any width would be a visible regression for weeks.
+ *
+ * The slot is a fixed `min-width`, not shrink-to-fit, so the titles beside it start at
+ * one x down the whole list. Measured on the real build, shrink-to-fit left a 13.5px
+ * ragged title edge between `TCF-7` and `TCF-1234` — the identifiers lined up, the
+ * titles did not, and a ragged edge down a task list reads as accidental.
+ *
+ * `IDENTIFIER_SLOT_CH` is 9 rather than 8 because `ch` is the width of a zero, which
+ * in this face is a shade narrower than the advance it actually sets: 8 glyphs measure
+ * 49.5px against 8ch's 48px, so an eight-character `TCF-9001` would have overflowed a
+ * slot sized by counting characters. Nine covers `KEY-1` through `KEY-9999` and
+ * swallows the 6-character confirmation word, so neither a long number nor the copy
+ * confirmation can shift a row. A five-digit number would push only its own title.
+ */
+const IDENTIFIER_SLOT_CH = 9;
+export const ShortId = forwardRef<HTMLButtonElement, ShortIdProps>(function ShortId({
+  value, noun = "task ID", className, style, onClick, onPointerEnter, onPointerLeave, onFocus, onBlur, ...props
+}, ref) {
+  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
+  // Hover/focus brightening is React state rather than a `:hover` rule because the
+  // locked recipe set owns this package's CSS; a one-off pseudo-class here would be a
+  // second place appearance is decided. The cost is one re-render per pointer entry.
+  const [hot, setHot] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The confirmation is transient, so a row that unmounts mid-countdown (filtered out,
+  // reordered, archived) must not leave a timer holding a setState on a dead component.
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  if (!value) return null;
+  const label = state === "copied" ? "Copied" : state === "failed" ? "Failed" : value;
+  const announce = (next: "copied" | "failed") => {
+    setState(next);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setState("idle"), 1400);
+  };
+  return (
+    <>
+    <button
+      {...props}
+      ref={ref}
+      type="button"
+      // TaskRow's row-level open handler ignores anything inside a button, and this
+      // marker keeps that true for any future host that widens the exclusion list.
+      data-task-control
+      data-short-id={value}
+      aria-label={`Copy ${noun} ${value}`}
+      // Appearance, reset and the keyboard focus ring live in the recipe layer, which is
+      // where this package decides how things look; only the two stateful values below
+      // are inline. `dim` is the same mono tier folder paths already use here.
+      className={cx(typography({ role: "mono", tone: "dim" }), foundation({ kind: "identifier" }), className)}
+      style={{
+        // Inline, because the mono typography role also declares a line-height (16px)
+        // and would otherwise win over the recipe. The identifier keeps the mono FONT
+        // and takes the surrounding text's LINE, so its text centres in a line box the
+        // same height as the title's.
+        lineHeight: "inherit",
+        minWidth: `${IDENTIFIER_SLOT_CH}ch`,
+        // Quiet at rest, legible on approach: a control that stays dim under the pointer
+        // reads as decoration, and nothing else here signals that it can be clicked.
+        color: state === "copied" ? "var(--sys-accent)" : hot ? "var(--il-ink)" : undefined,
+        ...style,
+      }}
+      onPointerEnter={event => { onPointerEnter?.(event); setHot(true); }}
+      onPointerLeave={event => { onPointerLeave?.(event); setHot(false); }}
+      onFocus={event => { onFocus?.(event); setHot(true); }}
+      onBlur={event => { onBlur?.(event); setHot(false); }}
+      onClick={event => {
+        onClick?.(event);
+        if (event.defaultPrevented) return;
+        // The row behind this control opens the task on click; copying must not also
+        // open a drawer the reader did not ask for.
+        event.stopPropagation();
+        void (async () => {
+          try {
+            await navigator.clipboard.writeText(value);
+            announce("copied");
+          } catch {
+            // Report the failure rather than leaving a control that silently does
+            // nothing — the reader needs to know to select the text by hand.
+            announce("failed");
+          }
+        })();
+      }}
+    >
+      {state === "idle" ? value : label}
+    </button>
+    {/* The live region is a SIBLING of the button, not a child. Nested inside, its
+        announcement competes with the focused control's own name and is inconsistently
+        read across screen readers — and that inconsistency is the kind of thing a
+        headless browser cannot test, so the robust shape is the one that ships.
+        It announces the outcome only; the identifier is already in the aria-label, and
+        repeating it would re-read the whole control on every copy. */}
+    <span className={foundation({ kind: "announce" })} role="status" aria-live="polite">
+      {state === "idle" ? "" : label}
+    </span>
+    </>
+  );
+});
 export interface TaskRowProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
   title: string;
   status: string;
@@ -742,6 +862,8 @@ export interface TaskRowProps extends Omit<HTMLAttributes<HTMLDivElement>, "titl
   owner?: { name: string; avatar?: ReactNode };
   onOpen?: () => void;
   options?: MenuOption[];
+  /** Short task identifier (`TCF-42`). Omitted or falsy renders nothing. */
+  shortId?: string | null;
   leading?: ReactNode;
   afterTitle?: ReactNode;
   metadata?: ReactNode;
@@ -751,7 +873,7 @@ export interface TaskRowProps extends Omit<HTMLAttributes<HTMLDivElement>, "titl
 // Slots preserve product controls without nesting independent buttons inside Row.
 export const TaskRow = forwardRef<HTMLDivElement, TaskRowProps>(function TaskRow({
   title, status, onStatusChange, owner, onOpen, options = STATUS_OPTIONS,
-  leading, afterTitle, metadata, actions, trailing, className, style, onClick, ...props
+  shortId, leading, afterTitle, metadata, actions, trailing, className, style, onClick, ...props
 }, ref) {
   const selected = options.find(o => o.value === status);
   const tone = selected?.tone || "ready";
@@ -767,9 +889,31 @@ export const TaskRow = forwardRef<HTMLDivElement, TaskRowProps>(function TaskRow
       }}>
       <div data-task-content>
       {leading}
-      <span aria-hidden style={{ width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0 }} />
+      {/* Dot, identifier and the title's FIRST line are centred on one axis: each sits in
+          a box `--task-line-box` tall, pinned to the top of the row, with its content
+          centred. The title pads its first line to the middle of that same box, so all
+          three centres land at half of `--task-line-box` from the top whatever the title's
+          line count — and a one-line title still fills the box, so it stays centred
+          against the status and owner controls on the right.
+
+          Centres, not baselines. The identifier is 10px mono beside a 13px title; on a
+          shared baseline its capitals centre a pixel below the title's and it reads low.
+          Plex Sans and Plex Mono share their vertical metrics, so centring their line
+          boxes centres their capitals too, at any size. */}
+      <span style={{ display: "flex", alignItems: "center", alignSelf: "flex-start", minHeight: "var(--task-line-box)", flexShrink: 0 }}>
+        <span aria-hidden style={{ width: 6, height: 6, borderRadius: "50%", background: color }} />
+      </span>
+      {/* The identifier sits where the eye scans a column of IDs, ahead of a title that
+          wraps to any number of lines. It must stay OUT of `afterTitle` — the responsive
+          check in tests/migration/task-rows.mjs measures
+          `[data-task-content] > button:last-of-type` as the title. */}
+      <ShortId value={shortId} style={{ alignSelf: "flex-start", minHeight: "var(--task-line-box)" }} />
       <button type="button" onClick={onOpen} className={button({ variant: "text" })}
-        style={{ flex: 1, minWidth: 0, height: "auto", minHeight: 32, paddingBlock: 4, justifyContent: "flex-start", textAlign: "left", whiteSpace: "normal", overflowWrap: "anywhere",
+        style={{ flex: 1, minWidth: 0, height: "auto", minHeight: "var(--task-line-box)", justifyContent: "flex-start", textAlign: "left", whiteSpace: "normal", overflowWrap: "anywhere",
+          // Top-anchored, padded so the first line's centre is the box's centre. `1lh`
+          // resolves against the title's own line height, so the padding follows it; the
+          // 1px is the button recipe's transparent border, kept for forced-colours mode.
+          alignSelf: "flex-start", alignItems: "flex-start", paddingBlock: "calc((var(--task-line-box) - 1lh) / 2 - 1px)",
           textDecoration: status === "done" ? "line-through" : undefined,
           color: `var(--task-row-title-color, ${status === "done" || status === "deferred" ? "var(--il-dim)" : "var(--il-muted)"})` }}>
         {title}

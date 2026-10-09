@@ -355,7 +355,14 @@ export const row = defineRecipe({
       list: {
         minHeight: "56px",
         "&[data-task-row]": { flexWrap: "wrap", rowGap: "4px" },
-        "& [data-task-content]": { display: "flex", alignItems: "center", gap: "10px", flex: "1 1 200px", minWidth: 0 },
+        // `--task-line-box` is the single tunable in the row's first-line contract: the
+        // height of the box the dot, the identifier and the title's first line are each
+        // centred in. Declared once here and read by all three.
+        //
+        // `align-items` stays `center` for the slots that should follow the whole row
+        // (the expand control, the blocked badge). The three items that must track the
+        // title's FIRST line opt out individually with `align-self: flex-start`.
+        "& [data-task-content]": { "--task-line-box": "32px", display: "flex", alignItems: "center", gap: "10px", flex: "1 1 200px", minWidth: 0 },
         "& [data-task-controls]": { display: "flex", alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", gap: "10px", maxWidth: "100%", marginLeft: "auto" },
         "&[data-task-row]:is(:hover,:focus-within)": {
           "--task-row-title-color": "var(--nc-text-hover)",
