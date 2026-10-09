@@ -334,6 +334,26 @@ try {
     const label = [...el.parentElement.children].find(n => n !== el);
     return label && label.textContent.trim() === 'Task';
   }), 'Drawer identifier belongs beside the "Task" signpost, not inside the editable title row');
+  // Same alignment contract as the row, on the drawer's signpost line: the label and
+  // the identifier are two sizes on one line, so they share a baseline rather than
+  // centring — centred, the smaller one read 0.75px low.
+  const headerAlign = await headerId.evaluate(el => {
+    const parent = el.parentElement;
+    const label = [...parent.children].find(c => c !== el && c.textContent.trim());
+    const baselineOf = (node, text) => {
+      const cs = getComputedStyle(node);
+      const ctx = document.createElement('canvas').getContext('2d');
+      ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      const tn = [...node.childNodes].find(n => n.nodeType === 3 && n.textContent.trim());
+      const range = document.createRange(); range.selectNodeContents(tn);
+      return [...range.getClientRects()][0].top + ctx.measureText(text).fontBoundingBoxAscent;
+    };
+    const text = label.textContent.trim();
+    return Math.round((baselineOf(el, 'TCF-42') - baselineOf(label, text)) * 100) / 100;
+  });
+  assert.ok(Math.abs(headerAlign) <= 0.5, `Drawer signpost and identifier must share a baseline, off by ${headerAlign}px`);
+  console.log('PASS drawer signpost and identifier share a baseline', { delta: headerAlign });
+
   // The grown hit area must never win a click that belongs to a neighbour. The drawer is
   // the tight case: the editable title sits directly under the signpost line, inside the
   // identifier's x-span, and "copy fired when I meant to edit the title" would be the
