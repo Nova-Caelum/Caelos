@@ -9,14 +9,19 @@ import {
   StatusPill,
   ActivityButton,
   FOUNDRY_DEMO_PROJECT,
+  loadProjectRuns,
+  loadProjectWorklog,
   type ProjectViewShellProps,
 } from "./App";
+import { OpenRuns } from "./OpenRuns";
+import { WorklogTab } from "./WorklogTab";
 
 const TABS = [
   { value: "info", label: "Info" },
   { value: "tasks", label: "Tasks" },
   { value: "cycles", label: "Cycles" },
   { value: "team", label: "Team" },
+  { value: "worklog", label: "Worklog" },
 ];
 
 export function ProjectViewLayeredShell({
@@ -83,6 +88,9 @@ export function ProjectViewLayeredShell({
                 <span>{project.folder_path}</span>
               </Text>
             )}
+            <div className="mt-5">
+              <OpenRuns projectCode={project.id} load={loadProjectRuns} where="project" />
+            </div>
           </div>
 
           <Separator />
@@ -121,6 +129,13 @@ export function ProjectViewLayeredShell({
             className="flex-1 flex flex-col overflow-hidden data-[state=inactive]:hidden"
           >
             <TeamTab projectId={project.id} />
+          </TabsContent>
+          <TabsContent
+            style={{ paddingTop: 0, minHeight: 0 }}
+            value="worklog"
+            className="flex-1 flex flex-col overflow-hidden data-[state=inactive]:hidden"
+          >
+            <WorklogTab key={project.id} projectCode={project.id} load={loadProjectWorklog} />
           </TabsContent>
       </Card>
     </TabsRoot>

@@ -44,7 +44,7 @@ try{
  for(const [kind,label,field,id] of [['project','Migration fixture','project_ids','migration-fixture'],['module','Linked module','module_ids','module-fixture'],['work item','Linked task','work_item_ids','task-fixture']]){
   const trigger=page.getByRole('button',{name:`Link ${kind}`,exact:true});await trigger.click();
   const dialog=page.getByRole('dialog');await settle(dialog);failLink=true;
-  await dialog.getByRole('button',{name:new RegExp(label)}).click();await page.getByText('Failed',{exact:true}).last().waitFor();
+  await dialog.getByRole('button',{name:new RegExp(label)}).click();await page.getByText(/^Failed to link /).last().waitFor();
   assert(await dialog.isVisible());await page.waitForFunction(()=>!document.querySelector('[role=dialog] button[disabled]'));
   await page.setViewportSize({width:390,height:844});await settle(dialog);
   const b=await dialog.boundingBox();assert(b.x>=0 && b.x+b.width<=391);

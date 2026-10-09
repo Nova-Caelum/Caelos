@@ -17,6 +17,7 @@ import {
   lettering,
 } from "./recipes";
 import { composerCss, composerKeyframes } from "./composer-styles";
+import { errorMessage } from "./error-message-recipe";
 const dark = {
   ...approvedTokens,
   "--nc-ground": "var(--sys-ground)",
@@ -107,7 +108,7 @@ export default definePreset({
         },
       },
       recipes: { foundation, typography, avatar, button, card, chip, row, tooltip },
-      slotRecipes: { overlay, disclosure, identity, field: input, menu, scroll: scrollArea },
+      slotRecipes: { overlay, disclosure, identity, field: input, menu, scroll: scrollArea, errorMessage },
       keyframes: {
         "nc-overlay-in": { from: { opacity: 0 }, to: { opacity: 1 } },
         "nc-overlay-out": { to: { opacity: 0 } },

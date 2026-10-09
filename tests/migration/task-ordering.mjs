@@ -58,7 +58,7 @@ try{
  assert(!writes.some(w=>w.id==='hidden'),'Hidden task must not be patched');
  assert(tasks[2].position<tasks[1].position);
  // Failed ordering must restore the persisted sequence and preserve the filter.
- failOrder=true;await drag(row('beta'),row('alpha'),'Beta');await page.getByText(/Failed to save order:/).waitFor();
+ failOrder=true;await drag(row('beta'),row('alpha'),'Beta');await page.getByText(/Failed to save order/).waitFor();
  await row('beta').waitFor();assert.deepEqual(await order(),['module-order','beta','alpha','root']);failOrder=false;
  // Root sequence combines modules and tasks and must persist through both adapters.
  await page.getByRole('button',{name:'Collapse Ordering module',exact:true}).click();

@@ -4,3 +4,4 @@ export * from "./Composer";
 export { approvedTokens } from "./tokens";
 export * from "./overlays";
 export * from "./foundation";
+export * from "./ErrorMessage";
