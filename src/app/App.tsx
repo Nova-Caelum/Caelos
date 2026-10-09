@@ -1795,10 +1795,10 @@ function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onBack, 
               editable title below it: that title is a field the reader types into, and a
               copy control there would wedge between the input and its status select. Here
               it reads as what it is — the coordinate of the thing named underneath. */}
-          {/* `items-baseline`, matching the row. The signpost and the identifier are two
-              different sizes on one line, and centring them left the smaller one reading
-              0.75px low — the same fault Daniel caught in the row, on a second surface. */}
-          <div className="flex items-baseline gap-2 mt-1">
+          {/* `items-center`, matching the row: the signpost and the identifier are two
+              sizes on one line, so they share a centre, not a baseline. On a baseline
+              the smaller identifier's capitals centred 0.75px low. */}
+          <div className="flex items-center gap-2 mt-1">
             <Text variant="label">Task</Text>
             <ShortId value={task.short_id} />
           </div>

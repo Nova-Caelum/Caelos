@@ -355,17 +355,14 @@ export const row = defineRecipe({
       list: {
         minHeight: "56px",
         "&[data-task-row]": { flexWrap: "wrap", rowGap: "4px" },
-        // `--task-line-pad` is the single tunable in the row's first-line contract: the
-        // block padding the title and the identifier both sit inside, so their line
-        // boxes start at one y. Declared here once and read by both, rather than
-        // repeated as a literal at each of them.
+        // `--task-line-box` is the single tunable in the row's first-line contract: the
+        // height of the box the dot, the identifier and the title's first line are each
+        // centred in. Declared once here and read by all three.
         //
         // `align-items` stays `center` for the slots that should follow the whole row
         // (the expand control, the blocked badge). The three items that must track the
-        // title's FIRST line — dot, identifier, title — opt out individually with
-        // `align-self: baseline`, which beats the container for those items and leaves
-        // everything else in the row where it was.
-        "& [data-task-content]": { "--task-line-pad": "4px", display: "flex", alignItems: "center", gap: "10px", flex: "1 1 200px", minWidth: 0 },
+        // title's FIRST line opt out individually with `align-self: flex-start`.
+        "& [data-task-content]": { "--task-line-box": "32px", display: "flex", alignItems: "center", gap: "10px", flex: "1 1 200px", minWidth: 0 },
         "& [data-task-controls]": { display: "flex", alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", gap: "10px", maxWidth: "100%", marginLeft: "auto" },
         "&[data-task-row]:is(:hover,:focus-within)": {
           "--task-row-title-color": "var(--nc-text-hover)",

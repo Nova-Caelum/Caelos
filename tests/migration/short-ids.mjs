@@ -18,6 +18,7 @@ const context = await browser.newContext({ viewport: { width: 1440, height: 1000
 // navigator.clipboard: a stub would pass even if the control never called it.
 await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: process.env.MIGRATION_PREVIEW_URL || 'http://127.0.0.1:5194' });
 const page = await context.newPage(); page.setDefaultTimeout(10000);
+const REAL_FONTS = process.env.VERIFY_REMOTE_FONTS === '1';
 const errors = []; page.on('pageerror', e => errors.push(e.message));
 
 const project = { code: 'migration-fixture', name: 'Migration fixture', status: 'in-progress', team: [], owner: 'daniel' };
@@ -59,6 +60,9 @@ await page.route('**/*', async route => {
     if (params.name === 'list_agents') data = [{ agent_name: 'daniel' }, { agent_name: 'caelum' }];
     await route.fulfill({ json: { result: { content: [{ type: 'text', text: JSON.stringify(data) }] } } }); return;
   }
+  // Opt-in, as in project-info.mjs: the optical alignment gate below needs the real
+  // IBM Plex faces, and only Google Fonts serves them to this app.
+  if (REAL_FONTS && ['fonts.googleapis.com', 'fonts.gstatic.com'].includes(u.hostname)) { await route.continue(); return; }
   if (!['localhost', '127.0.0.1'].includes(u.hostname)) { await route.abort(); return; }
   await route.continue();
 });
@@ -137,69 +141,72 @@ try {
   console.log('PASS identifiers form a column; every title starts at the same offset', { offset: offsets[0], edges });
 
   // ── 1c. Vertical alignment, by geometry. The dot, the identifier and the title's
-  //        FIRST line must share one axis at every width, theme and wrap state. This is
-  //        the check that would have caught the shipped defect: centring held on a
-  //        one-line row and put the dot and identifier 10px low the moment a title
-  //        wrapped, which at 390px is nearly every row.
+  //        FIRST line must share one horizontal axis — Daniel's rule: "the centre of the
+  //        text aligns with the centre of the dot and the centre of the task title" — at
+  //        every width, theme and wrap state. Centring on the whole row put the dot and
+  //        identifier 10px low once a title wrapped; sharing a baseline then left the
+  //        10px identifier reading a pixel low beside the 13px title. Both were rejected.
   //
-  //        Gated on two content-independent quantities:
-  //          • the identifier and the title share a BASELINE, and
-  //          • the dot sits half an x-height above that shared baseline — the optical
-  //            middle of a line of Latin text, and what `vertical-align: middle` means.
-  //
-  //        Ink centres and inline-box centres are reported but deliberately NOT gated,
-  //        because neither is stable under correct layout. An ink centre moves with the
-  //        letters the title happens to contain — "Root task" has no descender and
-  //        measures 1.45px off a title that does, at an identical baseline — so gating
-  //        on it would fail a correct row for its wording. An inline box runs from the
-  //        font's ascent to its descent, so two different sizes sharing a baseline can
-  //        never also be concentric, and a 6px circle has no descent at all. Baselines
-  //        are what a reader actually reads two adjacent texts against.
+  //        Two gates:
+  //          • STRUCTURAL, always: the dot's centre, the identifier box's centre and the
+  //            centre of the title's first LINE BOX coincide. Line boxes come from
+  //            line-height and padding, not from the face, so this holds on any font.
+  //          • OPTICAL, with VERIFY_REMOTE_FONTS=1: the identifier's and the title's
+  //            first-line TEXT (content area and cap band) share that centre too. Where
+  //            text sits inside its line box depends on the face's metrics, so this is
+  //            only meaningful on the real IBM Plex faces — which share their vertical
+  //            metrics between Sans and Mono, and so centre together. Without the
+  //            opt-in the suite runs on fallback faces and reports these unchecked.
   const ALIGN_TOLERANCE = 0.5;
   const measureRow = async (taskId) => page.locator(`[data-task-id="${taskId}"] [data-task-content]`).evaluate(content => {
     const round = value => Math.round(value * 100) / 100;
-    const fontMetrics = (el, text) => {
-      const cs = getComputedStyle(el);
-      const ctx = document.createElement('canvas').getContext('2d');
-      ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-      const m = ctx.measureText(text);
-      // 'x' gives the x-height of the face at this size — the figure `vertical-align:
-      // middle` uses, measured here rather than assumed.
-      const xh = ctx.measureText('x').actualBoundingBoxAscent;
-      return { ascent: m.fontBoundingBoxAscent, inkAscent: m.actualBoundingBoxAscent, inkDescent: m.actualBoundingBoxDescent, xHeight: xh };
-    };
     // Range rects, with nothing inserted into the DOM — a probe element of its own
     // changes the line box it is trying to measure.
     const firstLine = el => {
       const node = [...el.childNodes].find(n => n.nodeType === 3 && n.textContent.trim());
       const range = document.createRange(); range.selectNodeContents(node);
       const rects = [...range.getClientRects()];
-      return { rect: rects[0], lines: rects.length, text: node.textContent };
+      return { rect: rects[0], lines: rects.length, centre: rects[0].top + rects[0].height / 2 };
+    };
+    const capCentre = (el, line) => {
+      const cs = getComputedStyle(el);
+      const ctx = document.createElement('canvas').getContext('2d');
+      ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      const m = ctx.measureText('H');
+      const baseline = line.rect.top + (line.rect.height - m.fontBoundingBoxAscent - m.fontBoundingBoxDescent) / 2 + m.fontBoundingBoxAscent;
+      return baseline - m.actualBoundingBoxAscent / 2;
     };
     const dot = content.querySelector('span[aria-hidden]');
     const id = content.querySelector('[data-short-id]');
     const title = content.querySelector('button:last-of-type');
     const idLine = firstLine(id), titleLine = firstLine(title);
-    const idFont = fontMetrics(id, idLine.text), titleFont = fontMetrics(title, titleLine.text);
-    const idBaseline = idLine.rect.top + idFont.ascent;
-    const titleBaseline = titleLine.rect.top + titleFont.ascent;
-    const idInk = idBaseline - (idFont.inkAscent - idFont.inkDescent) / 2;
-    const titleInk = titleBaseline - (titleFont.inkAscent - titleFont.inkDescent) / 2;
     const dotBox = dot.getBoundingClientRect(), dotCentre = dotBox.top + dotBox.height / 2;
+    const idBox = id.getBoundingClientRect();
+    const ts = getComputedStyle(title), tb = title.getBoundingClientRect();
+    const titleLineBoxCentre = tb.top + parseFloat(ts.borderTopWidth) + parseFloat(ts.paddingTop) + parseFloat(ts.lineHeight) / 2;
     return {
       titleLines: titleLine.lines,
-      // Gated.
-      baseline_id_vs_title: round(idBaseline - titleBaseline),
-      dot_vs_optical_middle: round(dotCentre - (titleBaseline - titleFont.xHeight / 2)),
-      // Reported only — see the note above on why neither is a gate.
-      ink_id_vs_title: round(idInk - titleInk),
-      ink_dot_vs_title: round(dotCentre - titleInk),
-      inlineBox_id_vs_title: round((idLine.rect.top + idLine.rect.height / 2) - (titleLine.rect.top + titleLine.rect.height / 2)),
+      // Structural — always gated.
+      linebox_id_vs_title: round(idBox.top + idBox.height / 2 - titleLineBoxCentre),
+      linebox_dot_vs_title: round(dotCentre - titleLineBoxCentre),
+      // Optical — gated only on the real faces.
+      text_id_vs_title: round(idLine.centre - titleLine.centre),
+      text_dot_vs_title: round(dotCentre - titleLine.centre),
+      cap_id_vs_title: round(capCentre(id, idLine) - capCentre(title, titleLine)),
     };
   });
-  const GATED = ['baseline_id_vs_title', 'dot_vs_optical_middle'];
+  // `document.fonts.check` answers true for a face that was never declared, so ask the
+  // FontFaceSet what actually loaded.
+  // Faces load lazily, on first use, so wait for them before asking.
+  const plexLoaded = await page.evaluate(async () => {
+    await Promise.all(['10px "IBM Plex Mono"', '13px "IBM Plex Sans"', '500 13px "IBM Plex Sans"'].map(f => document.fonts.load(f).catch(() => [])));
+    await document.fonts.ready;
+    return ['IBM Plex Mono', 'IBM Plex Sans'].every(f => [...document.fonts].some(ff => ff.family.replace(/"/g, '') === f && ff.status === 'loaded'));
+  });
+  if (REAL_FONTS) assert.ok(plexLoaded, 'VERIFY_REMOTE_FONTS=1 but IBM Plex did not load — the optical gate would be measuring a fallback face');
+  const GATED = ['linebox_id_vs_title', 'linebox_dot_vs_title', ...(REAL_FONTS ? ['text_id_vs_title', 'text_dot_vs_title', 'cap_id_vs_title'] : [])];
   const alignmentReport = [];
-  for (const width of [1440, 390]) {
+  for (const width of [1440, 768, 390]) {
     await page.setViewportSize({ width, height: 900 });
     for (const theme of ['dark', 'light']) {
       // The console pins dark on the provider; flipping the class is how the light
@@ -227,7 +234,7 @@ try {
   }
   await page.evaluate(() => { const p = document.querySelector('[data-caelos-theme]'); if (p) { p.classList.add('dark'); p.setAttribute('data-caelos-theme', 'dark'); } });
   await page.setViewportSize({ width: 1440, height: 1000 }); await page.waitForTimeout(200);
-  console.log('PASS dot, identifier and title line 1 share one axis at every width, theme and wrap state');
+  console.log(`PASS dot, identifier and title line 1 share one axis at every width, theme and wrap state — ${REAL_FONTS ? 'structural + optical, on IBM Plex' : 'structural only; optical figures below are on fallback faces and unchecked (VERIFY_REMOTE_FONTS=1 gates them)'}`);
   console.table(alignmentReport);
 
   // ── 2. Graceful absence: a row with no identifier renders no identifier element, no
@@ -304,8 +311,8 @@ try {
   assert.notEqual(ring.outlineStyle, 'none', 'Keyboard focus must paint a visible ring: ' + JSON.stringify(ring));
   assert.ok(parseFloat(ring.outlineWidth) >= 2, 'Focus ring must be at least 2px: ' + JSON.stringify(ring));
   console.log('PASS keyboard focus paints a visible ring from the package', ring);
-  // WCAG 2.2 SC 2.5.8 wants 24×24. The identifier earns that from the line box the
-  // alignment fix gave it — one inherited line plus the row's block padding — so the
+  // WCAG 2.2 SC 2.5.8 wants 24×24. The identifier earns that from the row's 32px
+  // first-line box (`--task-line-box`), which it fills to centre on the title, so the
   // `::after` overlay an earlier revision used is gone, and with it the only part of
   // this control that could have overlapped a neighbour. Measured on the real box and
   // confirmed by a hit test at its corners, not inferred from the CSS.
@@ -335,24 +342,23 @@ try {
     return label && label.textContent.trim() === 'Task';
   }), 'Drawer identifier belongs beside the "Task" signpost, not inside the editable title row');
   // Same alignment contract as the row, on the drawer's signpost line: the label and
-  // the identifier are two sizes on one line, so they share a baseline rather than
-  // centring — centred, the smaller one read 0.75px low.
+  // the identifier are two sizes on one line, so their text boxes share a centre.
+  // On a shared baseline the smaller identifier's capitals centred 0.75px low.
   const headerAlign = await headerId.evaluate(el => {
-    const parent = el.parentElement;
-    const label = [...parent.children].find(c => c !== el && c.textContent.trim());
-    const baselineOf = (node, text) => {
-      const cs = getComputedStyle(node);
-      const ctx = document.createElement('canvas').getContext('2d');
-      ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const round = value => Math.round(value * 100) / 100;
+    const label = [...el.parentElement.children].find(c => c !== el && c.textContent.trim() && !c.matches('[role="status"]'));
+    const boxCentre = node => { const r = node.getBoundingClientRect(); return r.top + r.height / 2; };
+    const textCentre = node => {
       const tn = [...node.childNodes].find(n => n.nodeType === 3 && n.textContent.trim());
       const range = document.createRange(); range.selectNodeContents(tn);
-      return [...range.getClientRects()][0].top + ctx.measureText(text).fontBoundingBoxAscent;
+      const r = range.getClientRects()[0];
+      return r.top + r.height / 2;
     };
-    const text = label.textContent.trim();
-    return Math.round((baselineOf(el, 'TCF-42') - baselineOf(label, text)) * 100) / 100;
+    return { linebox: round(boxCentre(el) - boxCentre(label)), text: round(textCentre(el) - textCentre(label)) };
   });
-  assert.ok(Math.abs(headerAlign) <= 0.5, `Drawer signpost and identifier must share a baseline, off by ${headerAlign}px`);
-  console.log('PASS drawer signpost and identifier share a baseline', { delta: headerAlign });
+  assert.ok(Math.abs(headerAlign.linebox) <= 0.5, `Drawer signpost and identifier boxes must share a centre: ${JSON.stringify(headerAlign)}`);
+  if (REAL_FONTS) assert.ok(Math.abs(headerAlign.text) <= 0.5, `Drawer signpost and identifier text must share a centre on IBM Plex: ${JSON.stringify(headerAlign)}`);
+  console.log('PASS drawer signpost and identifier share a centre', { ...headerAlign, optical: REAL_FONTS ? 'gated' : 'fallback faces, unchecked' });
 
   // The grown hit area must never win a click that belongs to a neighbour. The drawer is
   // the tight case: the editable title sits directly under the signpost line, inside the

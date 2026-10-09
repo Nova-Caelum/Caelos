@@ -810,8 +810,8 @@ export const ShortId = forwardRef<HTMLButtonElement, ShortIdProps>(function Shor
       style={{
         // Inline, because the mono typography role also declares a line-height (16px)
         // and would otherwise win over the recipe. The identifier keeps the mono FONT
-        // and takes the surrounding text's LINE, which is what puts its line box —
-        // and so `1lh` and the box built from it — on the title's first line.
+        // and takes the surrounding text's LINE, so its text centres in a line box the
+        // same height as the title's.
         lineHeight: "inherit",
         minWidth: `${IDENTIFIER_SLOT_CH}ch`,
         // Quiet at rest, legible on approach: a control that stays dim under the pointer
@@ -889,34 +889,31 @@ export const TaskRow = forwardRef<HTMLDivElement, TaskRowProps>(function TaskRow
       }}>
       <div data-task-content>
       {leading}
-      {/* Dot, identifier and title all align on ONE baseline — `align-self: baseline`,
-          which flexbox resolves from each item's own first line. That is what holds
-          them together when the title wraps: a wrapped title's first baseline is still
-          its first line's, so nothing beside it moves. Centring them instead — the
-          previous behaviour — centred each against the flex line's cross size, which
-          grows with the title and left the dot and the identifier 10px low.
+      {/* Dot, identifier and the title's FIRST line are centred on one axis: each sits in
+          a box `--task-line-box` tall, pinned to the top of the row, with its content
+          centred. The title pads its first line to the middle of that same box, so all
+          three centres land at half of `--task-line-box` from the top whatever the title's
+          line count — and a one-line title still fills the box, so it stays centred
+          against the status and owner controls on the right.
 
-          The dot rides in a line box of its own rather than being a bare flex item,
-          because `vertical-align: middle` is the one thing in CSS that centres a box on
-          "baseline plus half the x-height" — the optical middle of a line of text — and
-          it only has that meaning inside an inline formatting context. A bare flex item
-          ignores it, and every pixel offset standing in for it is a guess at the font's
-          x-height. This way the font supplies the number. */}
-      <span style={{ alignSelf: "baseline", flexShrink: 0, lineHeight: "inherit" }}>
-        <span aria-hidden style={{ display: "inline-block", verticalAlign: "middle", width: 6, height: 6, borderRadius: "50%", background: color }} />
+          Centres, not baselines. The identifier is 10px mono beside a 13px title; on a
+          shared baseline its capitals centre a pixel below the title's and it reads low.
+          Plex Sans and Plex Mono share their vertical metrics, so centring their line
+          boxes centres their capitals too, at any size. */}
+      <span style={{ display: "flex", alignItems: "center", alignSelf: "flex-start", minHeight: "var(--task-line-box)", flexShrink: 0 }}>
+        <span aria-hidden style={{ width: 6, height: 6, borderRadius: "50%", background: color }} />
       </span>
       {/* The identifier sits where the eye scans a column of IDs, ahead of a title that
           wraps to any number of lines. It must stay OUT of `afterTitle` — the responsive
           check in tests/migration/task-rows.mjs measures
           `[data-task-content] > button:last-of-type` as the title. */}
-      <ShortId value={shortId} />
+      <ShortId value={shortId} style={{ alignSelf: "flex-start", minHeight: "var(--task-line-box)" }} />
       <button type="button" onClick={onOpen} className={button({ variant: "text" })}
-        style={{ flex: 1, minWidth: 0, height: "auto", minHeight: 32, paddingBlock: "var(--task-line-pad, 4px)", justifyContent: "flex-start", textAlign: "left", whiteSpace: "normal", overflowWrap: "anywhere",
-          // Top, not centre. With `min-height: 32px` and centred content the first line
-          // sat 16px down on a one-line row and 14.25px down once it wrapped, so no fixed
-          // treatment of the identifier beside it could match both. Anchored to the top
-          // it is one offset — `--task-line-pad` plus half a line — at every line count.
-          alignSelf: "baseline", alignItems: "flex-start",
+        style={{ flex: 1, minWidth: 0, height: "auto", minHeight: "var(--task-line-box)", justifyContent: "flex-start", textAlign: "left", whiteSpace: "normal", overflowWrap: "anywhere",
+          // Top-anchored, padded so the first line's centre is the box's centre. `1lh`
+          // resolves against the title's own line height, so the padding follows it; the
+          // 1px is the button recipe's transparent border, kept for forced-colours mode.
+          alignSelf: "flex-start", alignItems: "flex-start", paddingBlock: "calc((var(--task-line-box) - 1lh) / 2 - 1px)",
           textDecoration: status === "done" ? "line-through" : undefined,
           color: `var(--task-row-title-color, ${status === "done" || status === "deferred" ? "var(--il-dim)" : "var(--il-muted)"})` }}>
         {title}

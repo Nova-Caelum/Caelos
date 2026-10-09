@@ -32,17 +32,12 @@ export const foundation = defineRecipe({
     // so a bare styled button here would have had no visible keyboard indicator at all.
     // Same outline + offset the sibling native controls above use, rather than the inset
     // ring from `control`, which reads wrong on transparent inline text.
-    // It presents a box one line tall: `line-height: inherit` takes the surrounding
-    // text's line rather than the mono role's own 16px, padded by the host's
-    // `--task-line-pad` and pinned to the top of its flex line. Beside a wrapping title
-    // that is what holds its centre on the title's FIRST line, and `align-self`
-    // overrides the container for this item alone, so nothing else in the row moves.
-    //
-    // At the row's 19.5px line that box is 27.5px tall, so it clears WCAG 2.2 SC 2.5.8
-    // (24×24) by itself. An earlier revision grew a 16px box with an `::after` overlay;
-    // the overlay is gone because the box no longer needs it — which also removes the
-    // only part of this control that could ever have overlapped a neighbour.
-    identifier: { alignSelf: "baseline", display: "flex", alignItems: "center", minHeight: "1lh", lineHeight: "inherit", paddingBlock: "var(--task-line-pad, 0px)", paddingInline: 0, appearance: "none", background: "transparent", border: 0, margin: 0, flexShrink: 0, cursor: "pointer", whiteSpace: "nowrap", textAlign: "left", fontVariantNumeric: "tabular-nums", transition: "color 100ms var(--il-ease)", "&:focus-visible": { outline: "2px solid var(--nc-ready)", outlineOffset: "2px", borderRadius: "2px" }, "@media (forced-colors: active)": { "&:focus-visible": { outline: "2px solid Highlight" } }, "@media (prefers-reduced-motion: reduce)": { transition: "none" } },
+    // It presents a box at least one line tall (`line-height: inherit` takes the
+    // surrounding text's line rather than the mono role's own 16px) with its text
+    // centred in it. Vertical placement belongs to the host: a task row grows the box
+    // to its first-line box and pins it to the top; a signpost line centres it. In a
+    // task row the box is 32px tall, so it clears WCAG 2.2 SC 2.5.8 (24×24) unaided.
+    identifier: { display: "flex", alignItems: "center", minHeight: "1lh", lineHeight: "inherit", padding: 0, appearance: "none", background: "transparent", border: 0, margin: 0, flexShrink: 0, cursor: "pointer", whiteSpace: "nowrap", textAlign: "left", fontVariantNumeric: "tabular-nums", transition: "color 100ms var(--il-ease)", "&:focus-visible": { outline: "2px solid var(--nc-ready)", outlineOffset: "2px", borderRadius: "2px" }, "@media (forced-colors: active)": { "&:focus-visible": { outline: "2px solid Highlight" } }, "@media (prefers-reduced-motion: reduce)": { transition: "none" } },
     // Announced, never shown. Width/height 1px with a clip rather than `display:none`
     // or `visibility:hidden`, both of which remove the node from the accessibility tree
     // and would silence the live region this exists to carry.
