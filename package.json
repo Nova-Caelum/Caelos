@@ -9,7 +9,9 @@
     "build:ui": "npm run build --workspace @nova-caelum/ui",
     "typecheck:ui": "npm run typecheck --workspace @nova-caelum/ui",
     "preview:ui": "npm run build:ui && vite packages/ui/preview --host 127.0.0.1 --port 5182 --strictPort",
-    "test:ui": "npm run test:browser --workspace @nova-caelum/ui"
+    "test:ui": "npm run test:browser --workspace @nova-caelum/ui",
+    "build:foundry-staging": "node scripts/build-foundry-staging.mjs",
+    "preview:foundry-staging": "vite preview --outDir dist-foundry-react19 --host 127.0.0.1 --port 5196 --strictPort"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

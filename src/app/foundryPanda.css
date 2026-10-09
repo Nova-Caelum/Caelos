@@ -9,6 +9,6 @@
 .foundry-panda .line { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .foundry-panda .spaced { margin: 24px 0; }
 .foundry-panda .muted, .foundry-panda footer { color: var(--il-muted); }
-.foundry-panda [data-composer-demo] { margin-top: 24px; padding-bottom: 100px; }
+.foundry-panda [data-composer-demo] { margin-top: 24px; }
 .foundry-panda output { display: block; margin-top: 22px; color: var(--il-muted); }
 .foundry-panda footer { margin-top: 32px; font-size: 11px; }

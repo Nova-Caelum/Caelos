@@ -1,5 +1,7 @@
 # Shared UI in the Foundry
 
+September 19 update: the workflow below describes the React 18 baseline. The isolated React 19 comparison and rollback procedure are in `Caelos-console/staging/foundry-react19/README.md`. See SOURCE-OWNERSHIP.md before editing either track.
+
 The Foundry Components view renders `@nova-caelum/ui` and its compiled stylesheet. It uses local demonstration state; sending, permissions and voice controls do not call real services.
 
 ## Review and update

@@ -1,3 +1,4 @@
+declare const __FOUNDRY_STAGING__: boolean;
 
   import { createRoot } from "react-dom/client";
   import App from "./app/App.tsx";
@@ -27,7 +28,7 @@
 
   const root = createRoot(document.getElementById("root")!);
   async function renderRoute() {
-    if (isFoundry && import.meta.env.DEV) {
+    if (isFoundry && (import.meta.env.DEV || __FOUNDRY_STAGING__)) {
       const { default: Foundry } = await import("./app/Foundry.tsx");
       root.render(<><App foundryMode /><Foundry /></>);
     } else {

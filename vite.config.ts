@@ -17,7 +17,9 @@ function figmaAssetResolver() {
   }
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  define: { __FOUNDRY_STAGING__: JSON.stringify(mode === "foundry-staging") },
+  build: { outDir: mode === "foundry-staging" ? "dist-foundry-react19" : "dist" },
   plugins: [
     figmaAssetResolver(),
     foundryDevPlugin(),
@@ -35,4 +37,4 @@ export default defineConfig({
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
-})
+}))

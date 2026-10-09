@@ -1621,7 +1621,8 @@ function ProjectNavTree({ project, onSelectTask }: {
 //  TASK DETAIL SLIDE-OVER
 // ════════════════════════════════════════════════════════════════════════════════
 
-function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onBack, onClose, onSave, onAddSubtask, onDeleteSubtask, onAddBlocker, onRemoveBlocker, onOpenTask, onOpenMove }: {
+export function TaskDetailSlideOver({ loadDetail, task, allItems, projectName, moduleName, onBack, onClose, onSave, onAddSubtask, onDeleteSubtask, onAddBlocker, onRemoveBlocker, onOpenTask, onOpenMove }: {
+  loadDetail?: (id: string) => Promise<WorkItem>;
   task: WorkItem; allItems: WorkItem[]; projectName: string; moduleName?: string; onBack: () => void; onClose: () => void;
   onSave: (id: string, patch: Partial<WorkItem>) => Promise<void>;
   onAddSubtask: (parentId: string, title: string, acceptanceCriteria?: string) => Promise<void>;
@@ -1668,7 +1669,7 @@ function TaskDetailSlideOver({ task, allItems, projectName, moduleName, onBack, 
     setHydrating(true);
     (async () => {
       try {
-        const detail = await api<WorkItem>(`/work-items/${openedId}/detail`);
+        const detail = await (loadDetail ? loadDetail(openedId) : api<WorkItem>(`/work-items/${openedId}/detail`));
         if (cancelled || dirtyRef.current) return;
         setForm(p => ({
           ...p,
@@ -1990,7 +1991,8 @@ function CyclePicker({ open, onClose, cycles, onPick, onCreate }: {
 //  MODULE DETAIL SLIDE-OVER
 // ════════════════════════════════════════════════════════════════════════════════
 
-function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onBack, onClose, onSave, onAddTask, onSelectTask, onDeleteMod, onAddToCycle, onCreateCycle }: {
+export function ModuleDetailSlideOver({ loadDetail, mod, allItems, cycles, projectName, onBack, onClose, onSave, onAddTask, onSelectTask, onDeleteMod, onAddToCycle, onCreateCycle }: {
+  loadDetail?: (id: string) => Promise<Mod>;
   mod: Mod; allItems: WorkItem[]; cycles: Cycle[]; projectName: string; onBack: () => void; onClose: () => void;
   onSave: (id: string, patch: Partial<Mod>) => Promise<void>;
   onAddTask: (moduleId: string) => void;
@@ -2027,7 +2029,7 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onBack, onC
     setHydrating(true);
     (async () => {
       try {
-        const detail = await api<Mod>(`/projects/${openedProject}/modules/${openedId}/detail`);
+        const detail = await (loadDetail ? loadDetail(openedId) : api<Mod>(`/projects/${openedProject}/modules/${openedId}/detail`));
         if (cancelled || dirtyRef.current) return;
         setForm(p => ({
           ...p,

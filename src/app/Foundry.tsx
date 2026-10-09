@@ -1,3 +1,4 @@
+declare const __FOUNDRY_STAGING__: boolean;
 import { Heading, Text, Range, Checkbox, LinkButton } from "@nova-caelum/ui";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { AlertTriangle, Check, ChevronsLeft, ChevronsRight, Clipboard, ExternalLink, GitPullRequest, RotateCcw, Save, SlidersHorizontal, Sparkles, Trash2, X } from "lucide-react";
@@ -559,7 +560,7 @@ export default function Foundry() {
         </RowGroup>
       </header>
 
-      {view === "components" ? <FoundryPandaGallery /> : <>
+      {view === "components" ? ((import.meta.env.DEV || __FOUNDRY_STAGING__) ? <FoundryCollectionSwitch /> : <FoundryPandaGallery />) : <>
       <section style={{ ...section, display: "grid", gap: 15 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <SlidersHorizontal size={14} color="var(--sys-text-tertiary)" />
@@ -841,4 +842,21 @@ export default function Foundry() {
     )}
     </CaelosProvider>
   );
+}
+
+/** Separate document isolates React versions, portals and theme CSS. */
+function FoundryCollectionSwitch() {
+  const [candidate, setCandidate] = useState(() => __FOUNDRY_STAGING__ || new URLSearchParams(location.search).get("library") === "react19");
+  const stageUrl = __FOUNDRY_STAGING__ ? `${import.meta.env.BASE_URL}foundry-react19/index.html` : "http://127.0.0.1:5195/";
+  return <>
+    <div style={{ padding: "16px 20px", display: "flex", gap: 8, flexWrap: "wrap" }} role="group" aria-label="Library comparison">
+      <Button aria-pressed={candidate} onClick={() => setCandidate(true)}>React 19 staging</Button>
+      <Button aria-pressed={!candidate} onClick={() => setCandidate(false)}>React 18 baseline</Button>
+      {candidate && <a href={stageUrl} target="_blank" rel="noreferrer">Open full collection</a>}
+    </div>
+    {candidate ? <>
+      {import.meta.env.DEV && <p style={{ padding: "0 20px" }}>Start the separate Foundry preview on port 5195 to review this collection.</p>}
+      <iframe title="React 19 Foundry component collection" src={stageUrl} style={{ width: "100%", height: "max(650px, calc(100dvh - 250px))", border: 0, display: "block" }} />
+    </> : <FoundryPandaGallery />}
+  </>;
 }

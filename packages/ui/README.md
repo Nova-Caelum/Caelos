@@ -2,11 +2,11 @@
 
 The shared implementation of Caelos’ approved September 2026 design system. New UI imports `@nova-caelum/ui`. The approved atlas is design evidence; this package is the component implementation.
 
-For the full implemented export list, start with [COMPONENTS.md](COMPONENTS.md). Source ownership (`packages/ui` is the single source) is in [SOURCE-OWNERSHIP.md](SOURCE-OWNERSHIP.md); planned behavior extraction is in [BEHAVIOR-ROADMAP.md](BEHAVIOR-ROADMAP.md).
+For the full implemented export list, start with [COMPONENTS.md](COMPONENTS.md). Source ownership (React 18 baseline and React 19 staging candidate) is in [SOURCE-OWNERSHIP.md](SOURCE-OWNERSHIP.md); planned behavior extraction is in [BEHAVIOR-ROADMAP.md](BEHAVIOR-ROADMAP.md).
 
 ## Run and use
 
-From the **Caelos repository root** (`packages/ui` is the single source; see [SOURCE-OWNERSHIP.md](SOURCE-OWNERSHIP.md)):
+From the **Caelos repository root** (React 18 baseline commands; see [SOURCE-OWNERSHIP.md](SOURCE-OWNERSHIP.md)):
 
 ```sh
 npm install
@@ -101,7 +101,7 @@ The optional `@nova-caelum/ui/preset` export lets another Panda application shar
 
 ## Scope and migration
 
-The Level 1 source cutover covers the active product and Foundry administrative controls. This is a local source/integration claim, not a deployment or backend-completion claim. See [MIGRATION.md](MIGRATION.md) for the explicit cutover map. Foundry composer callbacks remain demonstration-only; this migration does not create a live chat capability. Intentional authoring specimens and integration limits are listed in the Level 1 ledger. Whole-product light mode needs review in its real contexts. React 18 is the verified runtime for this release.
+The Level 1 source cutover covers the active product and Foundry administrative controls. This is a local source/integration claim, not a deployment or backend-completion claim. See [MIGRATION.md](MIGRATION.md) for the explicit cutover map. Foundry composer callbacks remain demonstration-only; this migration does not create a live chat capability. Intentional authoring specimens and integration limits are listed in the Level 1 ledger. Whole-product light mode needs review in its real contexts. That September 10 validation used React 18. Current runtime ownership and staging are described in SOURCE-OWNERSHIP.md.
 
 Approved evidence is recorded in [DESIGN-REFERENCES.md](DESIGN-REFERENCES.md).
 
