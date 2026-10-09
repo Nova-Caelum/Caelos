@@ -106,3 +106,15 @@ The preview and Foundry use clearly labeled sample catalogs. Regression coverage
 The brain remains the stable composer anchor. Hover reveals the active agent’s avatar to the left of model/reasoning. Pinning with click or keyboard reveals the agent name using the same 260 ms decelerating expansion. The identity is a button; opening it presents only the supplied chat participants with shared avatars, names, and a checked selection. Selecting another participant preserves the draft and loads that agent’s model/reasoning values from the host.
 
 The identity selector reuses the composer Choice menu and shared Avatar, rather than adding another public primitive. Keyboard opening focuses the identity first; arrows, Home/End and typeahead navigate the roster. Selection returns focus to the identity; Escape from the pinned settings returns to the brain. Touch opens the full labeled view. The compact surface wraps within narrow viewports, follows the existing dock/flip rules, inherits portal themes and disables expansion under reduced motion.
+
+## Composer context pills
+
+Approved September 19, 2026. Goal and Instruction are compact, removable pills inside the composer, beside the Add and dictation controls. Use Lucide **Goal** (the flag within target rings) for Goal and FileText for Instruction. On narrow screens, the pills wrap to a row above the controls inside the same composer shell.
+
+- Add → Goal or Session instruction opens an anchored editor when the host supplies its change handler. Save trims and stores the text; Cancel or Escape discards edits.
+- Hover or keyboard focus reveals the complete saved text, including line breaks. Clicking or tapping the pill opens its editor. The separate remove button clears that context.
+- Opening the editor from Add transfers focus without the closing menu stealing it. Dismissal restores focus to the originating pill or message field; outside dismissal preserves the clicked control's focus.
+- The host owns `goal/onGoalChange` and `instruction/onInstructionChange`. Sending includes nonempty context without clearing it. Without a change handler, Add continues to invoke the existing `onAdd` callback.
+- The exported Composer owns this behavior and its Panda styles. Consumers receive Lucide Goal by default; `goalIcon` remains an optional explicit override for both the menu and pill. Preview-only icon comparisons are not part of the component.
+
+Acceptance coverage: `tests/composer-context.mjs` exercises add, edit, save, cancel, remove, exact hover/focus text, default icons, draft preservation, touch, independent instances, narrow screens and light-theme portals.
