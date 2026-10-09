@@ -356,14 +356,15 @@ export const row = defineRecipe({
         minHeight: "56px",
         "&[data-task-row]": { flexWrap: "wrap", rowGap: "4px" },
         // `--task-line-pad` is the single tunable in the row's first-line contract: the
-        // block padding that the title, the identifier and the status dot all sit
-        // inside, so their line boxes start at one y. Declared here once and read by
-        // all three, rather than repeated as a literal at each of them.
+        // block padding the title and the identifier both sit inside, so their line
+        // boxes start at one y. Declared here once and read by both, rather than
+        // repeated as a literal at each of them.
         //
         // `align-items` stays `center` for the slots that should follow the whole row
         // (the expand control, the blocked badge). The three items that must track the
-        // title's FIRST line opt out individually with `align-self: flex-start`, which
-        // beats the container for those items and changes nothing else in the row.
+        // title's FIRST line — dot, identifier, title — opt out individually with
+        // `align-self: baseline`, which beats the container for those items and leaves
+        // everything else in the row where it was.
         "& [data-task-content]": { "--task-line-pad": "4px", display: "flex", alignItems: "center", gap: "10px", flex: "1 1 200px", minWidth: 0 },
         "& [data-task-controls]": { display: "flex", alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", gap: "10px", maxWidth: "100%", marginLeft: "auto" },
         "&[data-task-row]:is(:hover,:focus-within)": {
