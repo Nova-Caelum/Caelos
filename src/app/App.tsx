@@ -14,6 +14,9 @@ import {
 import wordmarkUrl from "@/imports/nova-caelum-wordmark-transparent.png";
 import { NC } from "../design/tokens";
 import { ProjectViewLayeredShell } from "./ProjectViewLayeredShell";
+import { ApiError, apiErrorFromResponse, clearFailure, reportFailure } from "./failures";
+import { OpenRuns, type Run } from "./OpenRuns";
+import type { WorklogRow } from "./WorklogTab";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -390,14 +393,16 @@ async function mcpCall<T>(name: string, args: Record<string, unknown>): Promise<
     headers,
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } }),
   });
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(`MCP ${name} → ${response.status}: ${text.slice(0, 200)}`);
-  }
+  // Failures keep the server's own words (see ./failures): an HTTP error body, a
+  // JSON-RPC error's `message`, or the tool's own text when `isError` is set.
+  if (!response.ok) throw await apiErrorFromResponse("POST", `/mcp ${name}`, response);
   const data = await response.json();
-  if (data?.error) throw new Error(`MCP ${name} error: ${JSON.stringify(data.error).slice(0, 200)}`);
+  if (data?.error) {
+    const reason = typeof data.error?.message === "string" && data.error.message ? data.error.message : JSON.stringify(data.error);
+    throw new ApiError({ method: "POST", path: `/mcp ${name}`, status: null, reason });
+  }
   const raw = data?.result?.content?.[0]?.text;
-  if (data?.result?.isError) throw new Error(typeof raw === "string" ? raw : `MCP ${name} failed`);
+  if (data?.result?.isError) throw new ApiError({ method: "POST", path: `/mcp ${name}`, status: null, reason: typeof raw === "string" && raw ? raw : `${name} failed without a reason.` });
   if (raw === undefined) return data?.result as T;
   try { return JSON.parse(raw) as T; } catch { return raw as unknown as T; }
 }
@@ -435,6 +440,10 @@ function useAgents(): { agents: Agent[]; loading: boolean; error?: string } {
   return { agents, loading, error };
 }
 
+// Reads for the project page's Open runs section and Worklog tab.
+export const loadProjectRuns = (projectCode: string) => api<Run[]>(`/projects/${projectCode}/runs`);
+export const loadProjectWorklog = (projectCode: string) => api<WorklogRow[]>(`/projects/${projectCode}/worklog`);
+
 // Path B: mutations (create/patch/archive) route through POST ${API_BASE}/mcp calling
 // upsert_*/update_project/etc tools directly, instead of duplicating REST PATCH/DELETE
 // routes. Reads stay on the REST facade (/api/*), which is cheaper for list views.
@@ -454,10 +463,10 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
       headers,
       body: (method !== "GET" && method !== "DELETE" && backendBody !== undefined) ? JSON.stringify(backendBody) : undefined,
     });
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      throw new Error(`${method} ${backendPath} → ${response.status}: ${text.slice(0, 200)}`);
-    }
+    // The server's reason is parsed out of the body HERE, whole, and carried on the
+    // thrown ApiError — not sliced into a "<METHOD> <path> → <status>: <body[:200]>"
+    // string for someone downstream to regex back out.
+    if (!response.ok) throw await apiErrorFromResponse(method, backendPath, response);
     if (response.status === 204) return undefined;
     return response.json();
   }
@@ -473,7 +482,7 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
     const cached = initiativeUuidByExternalId.get(externalId);
     if (cached) return cached;
     const resp = await fetch(`${API_BASE}/api/initiatives`, { headers });
-    if (!resp.ok) throw new Error(`GET /api/initiatives → ${resp.status} (resolving UUID for ${externalId})`);
+    if (!resp.ok) throw await apiErrorFromResponse("GET", "/api/initiatives", resp);
     ((await resp.json()) as any[]).forEach(rememberInitiativeUuid);
     const found = initiativeUuidByExternalId.get(externalId);
     if (!found) throw new Error(`initiative not found: ${externalId}`);
@@ -523,6 +532,14 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
       else if (r.link_type === "work_item") links.work_item_ids.push(r.target);
     }
     return links as T;
+  }
+
+  // === Reads the engine's door serves for the console (HSE-94) ===
+  const runsMatch = path.match(/^\/projects\/([^/]+)\/runs$/);
+  if (runsMatch && method === "GET") return (await restFetch(`/api/projects/${runsMatch[1]}/runs`)) as T;
+  const worklogMatch = path.match(/^\/projects\/([^/]+)\/worklog$/);
+  if (worklogMatch && method === "GET") {
+    return (await restFetch(`/api/worklog?project=${encodeURIComponent(decodeURIComponent(worklogMatch[1]))}`)) as T;
   }
 
   // === Projects ===
@@ -683,10 +700,7 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
       const resp = await fetch(`${API_BASE}/api/work-items/${external_id}`, {
         method: "PATCH", headers, body: JSON.stringify({ state: "archived" }),
       });
-      if (!resp.ok) {
-        const text = await resp.text().catch(() => "");
-        throw new Error(`PATCH archive /api/work-items/${external_id} → ${resp.status}: ${text.slice(0, 200)}`);
-      }
+      if (!resp.ok) throw await apiErrorFromResponse("PATCH", `/api/work-items/${external_id}`, resp);
       return adaptWorkItemRead(unwrapRow(await resp.json())) as T;
     }
     const patchBody: Record<string, unknown> = {};
@@ -862,10 +876,7 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
       const resp = await fetch(`${API_BASE}/api/initiatives/${external_id}`, {
         method: "PATCH", headers, body: JSON.stringify({ state: "archived" }),
       });
-      if (!resp.ok) {
-        const text = await resp.text().catch(() => "");
-        throw new Error(`PATCH archive /api/initiatives/${external_id} → ${resp.status}: ${text.slice(0, 200)}`);
-      }
+      if (!resp.ok) throw await apiErrorFromResponse("PATCH", `/api/initiatives/${external_id}`, resp);
       return adaptInitiativeRead(unwrapRow(await resp.json())) as T;
     }
     const patchBody: Record<string, unknown> = {};
@@ -933,6 +944,8 @@ async function mockApi<T>(path: string, opts?: RequestInit): Promise<T> {
     return undefined as T;
   }
 
+  // No runs and no worklog in the in-memory dev store.
+  if (/^\/projects\/[^/]+\/(runs|worklog)$/.test(path) && method === "GET") return [] as T;
   if (/^\/projects\/[^/]+\/work-items$/.test(path) && method === "GET") {
     const pid = path.split("/")[2];
     return store.workItems.filter(w => w.project_id === pid).map(w => ({ ...w, blocked_by: [...w.blocked_by], doc_paths: [...w.doc_paths] })) as T;
@@ -1415,7 +1428,7 @@ export function ActivityButton({ entityType, entityId, projectId, onAddNote }: {
     if (!note.trim() || !onAddNote || postingRef.current) return;
     postingRef.current = true; setPosting(true);
     try { await onAddNote(note.trim()); setNote(""); loadEntries(); }
-    catch { toast.error("Could not save note. Your draft is still here."); }
+    catch (error) { reportFailure("Could not save note", error, "Your draft is still here — try again."); }
     finally { postingRef.current = false; setPosting(false); }
   }
   return <Popover open={open} onOpenChange={next => { setOpen(next); if (next) loadEntries(); }}>
@@ -1972,7 +1985,7 @@ function CyclePicker({ open, onClose, cycles, onPick, onCreate }: {
     if (busy) return;
     setBusy(true);
     try { await onPick(id); onClose(); }
-    catch (error) { toast.error(error instanceof Error ? error.message : "Failed to add to cycle"); }
+    catch (error) { reportFailure("Failed to add to cycle", error); }
     finally { setBusy(false); }
   }
 
@@ -1985,7 +1998,7 @@ function CyclePicker({ open, onClose, cycles, onPick, onCreate }: {
       createdRef.current = { name, id };
       await onPick(id);
       setNewName(""); createdRef.current = null; onClose();
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Failed to create or assign cycle"); }
+    } catch (error) { reportFailure("Failed to create or assign cycle", error); }
     finally { setBusy(false); }
   }
 
@@ -2185,6 +2198,10 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onBack, onC
         </div>
 
         {divider}
+
+        {/* Runs are not linked to modules yet, so a module shows its project's runs.
+            On a server without runs the section, and its divider, are not rendered. */}
+        <OpenRuns projectCode={mod.project_id} load={loadProjectRuns} where="module" after={divider} />
 
         {/* Tasks in module */}
         <div>
@@ -2549,7 +2566,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
         ...sortedItems.filter(w => !w.module_id && !w.parent_item_id).map(w => ({ id: w.id, position: w.position, created_at: w.created_at, isModule: false })),
       ].sort(positionCompare);
       setItemOrder(rootEntries.map(e => e.id));
-    } catch { toast.error("Failed to load project data"); }
+    } catch (error) { reportFailure("Failed to load project data", error); }
     finally { setLoading(false); }
   }, [fixtureMode, projectId]);
 
@@ -2613,8 +2630,8 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
     };
     try {
       await commitOrderWrite({ ids, movedId, getPosition, persist, applyLocal });
-    } catch (e: any) {
-      toast.error(`Failed to save order: ${(e?.message || "unknown error").slice(0, 140)}`);
+    } catch (e) {
+      reportFailure("Failed to save order", e);
       await load();
     }
   }
@@ -2628,8 +2645,8 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
     const applyLocal = (id: string, position: number) => { itemsRef.current = itemsRef.current.map(i => i.id === id ? { ...i, position } : i); setItems(itemsRef.current); };
     try {
       await commitOrderWrite({ ids, movedId, getPosition, persist, applyLocal });
-    } catch (e: any) {
-      toast.error(`Failed to save order: ${(e?.message || "unknown error").slice(0, 140)}`);
+    } catch (e) {
+      reportFailure("Failed to save order", e);
       await load();
     }
   }
@@ -2681,8 +2698,9 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
       setItems(p => [...p, item]);
       if (!taskForm.module_id && !taskForm.parent_item_id) setItemOrder(prev => [...prev, item.id]);
       setCreatingTask(false); setTaskForm(EMPTY_TASK_FORM); setNewTaskDocPath("");
+      clearFailure(taskForm.parent_item_id ? "Failed to create subtask" : "Failed to create task");
       toast.success(taskForm.parent_item_id ? "Subtask created" : "Task created");
-    } catch { toast.error("Failed to create task"); }
+    } catch (error) { reportFailure(taskForm.parent_item_id ? "Failed to create subtask" : "Failed to create task", error); }
     finally { setTaskSaving(false); }
   }
 
@@ -2690,8 +2708,9 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
     try {
       const updated = await api<WorkItem>(`/work-items/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
       setItems(p => p.map(i => i.id === id ? updated : i));
+      clearFailure("Failed to save");
       toast.success("Saved");
-    } catch (error) { toast.error("Failed to save"); throw error; }
+    } catch (error) { reportFailure("Failed to save", error); throw error; }
   }
 
   async function deleteTask_(task: WorkItem) {
@@ -2702,7 +2721,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
       if (selectedTaskId === task.id) setSelectedTaskId(null);
       toast.success("Deleted");
       return true;
-    } catch { toast.error("Failed to delete"); return false; }
+    } catch (error) { reportFailure("Failed to delete", error); return false; }
   }
 
   // Move a task to a different project and/or module. If newProjectId differs from
@@ -2733,9 +2752,8 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
         toast.success("Moved");
       }
       return true;
-    } catch (e: any) {
-      const msg = (e?.message || "unknown error").slice(0, 140);
-      toast.error(`Failed to move: ${msg}`);
+    } catch (e) {
+      reportFailure("Failed to move", e);
       return false;
     }
   }
@@ -2752,7 +2770,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
         setItemOrder(prev => { const n = [...prev]; n.splice(n.indexOf(task.id) + 1, 0, created.id); return n; });
       }
       toast.success("Duplicated");
-    } catch { toast.error("Failed to duplicate"); }
+    } catch (error) { reportFailure("Failed to duplicate", error); }
   }
 
   async function promoteTask(task: WorkItem) {
@@ -2762,7 +2780,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
       setItems(p => p.filter(i => i.id !== task.id).map(i => i.parent_item_id === task.id ? { ...i, parent_item_id: null, module_id: task.id } : i));
       if (selectedTaskId === task.id) setSelectedTaskId(null);
       toast.success(`"${task.title}" promoted to module`);
-    } catch { toast.error("Failed to promote"); }
+    } catch (error) { reportFailure("Failed to promote", error); }
   }
 
   // The quick-add row bypasses the create modal with a literal payload, so it needs its
@@ -2778,12 +2796,12 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
         body: JSON.stringify({ title, description: "", acceptance_criteria: acceptanceCriteria, state: "ready" as WorkItemState, priority: "none" as WorkItemPriority, assignee: "", module_id: parent.module_id ?? null, parent_item_id: parentId }),
       });
       setItems(p => [...p, created]);
-    } catch (error) { toast.error("Failed to add subtask"); throw error; }
+    } catch (error) { reportFailure("Failed to add subtask", error); throw error; }
   }
 
   async function deleteSubtask(id: string) {
     try { await api(`/work-items/${id}`, { method: "DELETE" }); setItems(p => p.filter(i => i.id !== id)); }
-    catch { toast.error("Failed to delete subtask"); }
+    catch (error) { reportFailure("Failed to delete subtask", error); }
   }
 
   async function addBlocker(taskId: string, blockerId: string) {
@@ -2791,7 +2809,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
     try {
       const updated = await api<WorkItem>(`/work-items/${taskId}`, { method: "PATCH", body: JSON.stringify({ blocked_by: [...task.blocked_by, blockerId] }) });
       setItems(p => p.map(i => i.id === taskId ? updated : i)); toast.success("Blocker added");
-    } catch { toast.error("Failed to add blocker"); }
+    } catch (error) { reportFailure("Failed to add blocker", error); }
   }
 
   async function removeBlocker(taskId: string, blockerId: string) {
@@ -2799,7 +2817,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
     try {
       const updated = await api<WorkItem>(`/work-items/${taskId}`, { method: "PATCH", body: JSON.stringify({ blocked_by: task.blocked_by.filter(id => id !== blockerId) }) });
       setItems(p => p.map(i => i.id === taskId ? updated : i)); toast.success("Blocker removed");
-    } catch { toast.error("Failed to remove blocker"); }
+    } catch (error) { reportFailure("Failed to remove blocker", error); }
   }
 
   // ── Cycle handlers ───────────────────────────────────────────────────────────
@@ -2842,8 +2860,9 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
       setMods(p => [...p, m]); setItemOrder(prev => [...prev, m.id]);
       setCreatingMod(false); setModName(""); setModDescription("");
       setModCriteria(""); setModCriteriaRef("");
+      clearFailure("Failed to create module");
       toast.success("Module created");
-    } catch { toast.error("Failed to create module"); }
+    } catch (error) { reportFailure("Failed to create module", error); }
     finally { setModSaving(false); }
   }
 
@@ -2851,8 +2870,9 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
     try {
       const updated = await api<Mod>(`/modules/${id}`, { method: "PATCH", body: JSON.stringify({ ...patch, project_id: projectId }) });
       setMods(p => p.map(m => m.id === id ? updated : m));
+      clearFailure("Failed to update module");
       toast.success("Module updated");
-    } catch (error) { toast.error("Failed to update module"); throw error; }
+    } catch (error) { reportFailure("Failed to update module", error); throw error; }
   }
 
   async function deleteMod_(m: Mod) {
@@ -2862,7 +2882,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
       setItemOrder(prev => prev.filter(id => id !== m.id));
       toast.success("Module archived");
       return true;
-    } catch { toast.error("Failed to archive module"); return false; }
+    } catch (error) { reportFailure("Failed to archive module", error); return false; }
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -3153,7 +3173,7 @@ export function TeamTab({ projectId }: { projectId: string }) {
   const load = useCallback(async () => {
     setLoading(true);
     try { const data = await api<ProjectMember[]>(`/projects/${projectId}/members`); setMembers(data); }
-    catch { toast.error("Failed to load team"); }
+    catch (error) { reportFailure("Failed to load team", error); }
     finally { setLoading(false); }
   }, [projectId]);
 
@@ -3168,7 +3188,7 @@ export function TeamTab({ projectId }: { projectId: string }) {
       const m = await api<ProjectMember>(`/projects/${projectId}/members`, { method: "POST", body: JSON.stringify({ name: addName }) });
       setMembers(p => [...p, m]); setAdding(false); setAddName("");
       toast.success(`${addName} added to team`);
-    } catch { toast.error("Failed to add member"); }
+    } catch (error) { reportFailure("Failed to add member", error); }
     finally { setSaving(false); }
   }
 
@@ -3177,7 +3197,7 @@ export function TeamTab({ projectId }: { projectId: string }) {
       await api(`/projects/${projectId}/members/${member.id}`, { method: "DELETE" });
       setMembers(p => p.filter(m => m.id !== member.id));
       toast.success("Removed");
-    } catch { toast.error("Failed to remove"); }
+    } catch (error) { reportFailure("Failed to remove member", error); }
   }
 
   const onRoster = members.map(m => m.name);
@@ -3245,7 +3265,7 @@ export function CyclesTab({ projectId }: { projectId: string }) {
       const countMap: Record<string, number> = {};
       activeCycles.forEach(c => { countMap[c.id] = allItems.filter(w => w.cycle_id === c.id).length; });
       setCounts(countMap);
-    } catch { toast.error("Failed to load cycles"); }
+    } catch (error) { reportFailure("Failed to load cycles", error); }
     finally { setLoading(false); }
   }, [projectId]);
 
@@ -3261,8 +3281,9 @@ export function CyclesTab({ projectId }: { projectId: string }) {
       const c = await api<Cycle>(`/projects/${projectId}/cycles`, { method: "POST", body: JSON.stringify(form) });
       setCycles(p => [...p, c]); setCounts(p => ({ ...p, [c.id]: 0 }));
       setCreating(false); setForm(EMPTY_CYCLE_FORM);
+      clearFailure("Failed to create cycle");
       toast.success("Cycle created");
-    } catch { toast.error("Failed to create cycle"); }
+    } catch (error) { reportFailure("Failed to create cycle", error); }
     finally { setSaving(false); }
   }
 
@@ -3272,7 +3293,7 @@ export function CyclesTab({ projectId }: { projectId: string }) {
       setCycles(p => p.filter(x => x.id !== c.id));
       toast.success("Cycle deleted");
       return true;
-    } catch { toast.error("Failed to delete cycle"); return false; }
+    } catch (error) { reportFailure("Failed to delete cycle", error); return false; }
   }
 
   async function duplicate(c: Cycle) {
@@ -3281,7 +3302,7 @@ export function CyclesTab({ projectId }: { projectId: string }) {
       const created = await api<Cycle>(`/projects/${projectId}/cycles`, { method: "POST", body: JSON.stringify({ ...rest, name: `${c.name} (copy)` }) });
       setCycles(p => [...p, created]); setCounts(p => ({ ...p, [created.id]: 0 }));
       toast.success("Duplicated");
-    } catch { toast.error("Failed to duplicate"); }
+    } catch (error) { reportFailure("Failed to duplicate", error); }
   }
 
   function fmtDate(d: string) { if (!d) return "—"; return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
@@ -3353,7 +3374,7 @@ export function CyclesTab({ projectId }: { projectId: string }) {
               if (saving) return;
               setSaving(true);
               try { await api(`/projects/${projectId}/cycles/${editCycle.id}`, { method: "PATCH", body: JSON.stringify(editCycle) }); setCycles(p => p.map(c => c.id === editCycle.id ? editCycle : c)); setEditCycle(null); toast.success("Updated"); }
-              catch { toast.error("Failed to update"); } finally { setSaving(false); }
+              catch (error) { reportFailure("Failed to update", error); } finally { setSaving(false); }
             }}>Save</Button>
           </div>
         </Dialog>
@@ -3635,27 +3656,27 @@ function InitiativeView({ initiative, allProjects, onUpdateInit }: {
 
   async function linkProject(pid: string) {
     try { await api(`/initiatives/${initiative.id}/links`, { method: "POST", body: JSON.stringify({ initiative_id: initiative.id, project_ids: [pid], module_ids: [], work_item_ids: [] }) }); setLinks(p => ({ ...p, project_ids: [...p.project_ids, pid] })); toast.success("Project linked"); return true; }
-    catch { toast.error("Failed"); return false; }
+    catch (error) { reportFailure("Failed to link project", error); return false; }
   }
   async function unlinkProject(pid: string) {
     try { await api(`/initiatives/${initiative.id}/links/project/${pid}`, { method: "DELETE" }); setLinks(p => ({ ...p, project_ids: p.project_ids.filter(x => x !== pid) })); toast.success("Unlinked"); return true; }
-    catch { toast.error("Failed"); return false; }
+    catch (error) { reportFailure("Failed to unlink project", error); return false; }
   }
   async function linkItem(wiId: string) {
     try { await api(`/initiatives/${initiative.id}/links`, { method: "POST", body: JSON.stringify({ initiative_id: initiative.id, project_ids: [], module_ids: [], work_item_ids: [wiId] }) }); setLinks(p => ({ ...p, work_item_ids: [...p.work_item_ids, wiId] })); toast.success("Task linked"); return true; }
-    catch { toast.error("Failed"); return false; }
+    catch (error) { reportFailure("Failed to link task", error); return false; }
   }
   async function unlinkItem(wiId: string) {
     try { await api(`/initiatives/${initiative.id}/links/work_item/${wiId}`, { method: "DELETE" }); setLinks(p => ({ ...p, work_item_ids: p.work_item_ids.filter(x => x !== wiId) })); toast.success("Unlinked"); return true; }
-    catch { toast.error("Failed"); return false; }
+    catch (error) { reportFailure("Failed to unlink task", error); return false; }
   }
   async function linkMod(modId: string) {
     try { await api(`/initiatives/${initiative.id}/links`, { method: "POST", body: JSON.stringify({ initiative_id: initiative.id, project_ids: [], module_ids: [modId], work_item_ids: [] }) }); setLinks(p => ({ ...p, module_ids: [...p.module_ids, modId] })); toast.success("Module linked"); return true; }
-    catch { toast.error("Failed"); return false; }
+    catch (error) { reportFailure("Failed to link module", error); return false; }
   }
   async function unlinkMod(modId: string) {
     try { await api(`/initiatives/${initiative.id}/links/module/${modId}`, { method: "DELETE" }); setLinks(p => ({ ...p, module_ids: p.module_ids.filter(x => x !== modId) })); toast.success("Unlinked"); return true; }
-    catch { toast.error("Failed"); return false; }
+    catch (error) { reportFailure("Failed to unlink module", error); return false; }
   }
 
   async function addDocPath() {
@@ -3951,9 +3972,10 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
       const p = await api<Project>("/projects", { method: "POST", body: JSON.stringify(pForm) });
       onProjectsChange([...projects, p]);
       setCreatingProject(false); setPForm({ name: "", description: "", folder_path: "" });
+      clearFailure("Failed to create project");
       toast.success("Project created");
       onSelect({ type: "project", item: p });
-    } catch (error) { toast.error(`Failed to create project: ${error instanceof Error ? error.message.slice(0, 160) : "Please try again"}`); }
+    } catch (error) { reportFailure("Failed to create project", error); }
     finally { setSaving(false); }
   }
 
@@ -3965,7 +3987,7 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
       if (selection?.type === "project" && selection.item.id === p.id) onSelect(null);
       toast.success("Project archived");
       return true;
-    } catch { toast.error("Failed to archive project"); return false; }
+    } catch (error) { reportFailure("Failed to archive project", error); return false; }
   }
 
   async function duplicateProject(p: Project) {
@@ -3974,7 +3996,7 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
       const created = await api<Project>("/projects", { method: "POST", body: JSON.stringify({ ...rest, name: `${p.name} (copy)` }) });
       onProjectsChange([...projects, created]);
       toast.success("Duplicated");
-    } catch { toast.error("Failed to duplicate"); }
+    } catch (error) { reportFailure("Failed to duplicate", error); }
   }
 
   async function createInit() {
@@ -3985,9 +4007,10 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
       const init = await api<Initiative>("/initiatives", { method: "POST", body: JSON.stringify(iForm) });
       onInitiativesChange([...initiatives, init]);
       setCreatingInit(false); setIForm({ title: "", description: "", external_id: "", state: "planned" });
+      clearFailure("Failed to create initiative");
       toast.success("Initiative created");
       onSelect({ type: "initiative", item: init });
-    } catch { toast.error("Failed to create initiative"); }
+    } catch (error) { reportFailure("Failed to create initiative", error); }
     finally { setSaving(false); }
   }
 
@@ -3999,7 +4022,7 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
       onInitiativesChange(initiatives.map(i => i.id === id ? updated : i));
       if (selection?.type === "initiative" && selection.item.id === id) onSelect({ type: "initiative", item: updated });
       setEditInit(null); toast.success("Updated");
-    } catch { toast.error("Failed to update initiative"); }
+    } catch (error) { reportFailure("Failed to update initiative", error); }
     finally { setSaving(false); }
   }
 
@@ -4011,7 +4034,7 @@ function Sidebar({ projects, initiatives, selection, onSelect, onProjectsChange,
       if (selection?.type === "initiative" && selection.item.id === init.id) onSelect(null);
       toast.success("Initiative archived");
       return true;
-    } catch { toast.error("Failed to archive initiative"); return false; }
+    } catch (error) { reportFailure("Failed to archive initiative", error); return false; }
   }
 
   return (
@@ -4272,8 +4295,9 @@ export default function App({
       const updated = await api<Project>(`/projects/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
       setProjects(prev => prev.map(p => p.id === id ? updated : p));
       if (selection?.type === "project" && selection.item.id === id) setSelection({ type: "project", item: updated });
+      clearFailure("Failed to update project");
       toast.success("Project updated");
-    } catch { toast.error("Failed to update project"); throw new Error("save failed"); }
+    } catch (error) { reportFailure("Failed to update project", error); throw error; }
   }
 
   async function updateInitiative(id: string, patch: Partial<Initiative>) {
@@ -4283,7 +4307,7 @@ export default function App({
       if (selection?.type === "initiative" && selection.item.id === id) {
         setSelection({ type: "initiative", item: updated });
       }
-    } catch { toast.error("Failed to update initiative"); throw new Error("save failed"); }
+    } catch (error) { reportFailure("Failed to update initiative", error); throw error; }
   }
 
   // Keep selection in sync when lists change

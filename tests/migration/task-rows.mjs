@@ -135,7 +135,7 @@ try{
  const move=page.getByRole('dialog',{name:'Move task',exact:true});await settle(move);
  assert(await move.getByRole('button',{name:'Move',exact:true}).isDisabled());
  await move.getByLabel('Module',{exact:true}).click();await page.getByRole('option',{name:'Module fixture',exact:true}).click();
- failSave=true;await move.getByRole('button',{name:'Move',exact:true}).click();await page.getByText(/Failed to move:/).waitFor();
+ failSave=true;await move.getByRole('button',{name:'Move',exact:true}).click();await page.getByText(/Failed to move/).waitFor();
  assert(await move.isVisible());assert((await move.getByLabel('Module',{exact:true}).innerText()).includes('Module fixture'));
  await page.setViewportSize({width:390,height:844});await page.screenshot({path:evidence+'/move-task-narrow.png'});
  failSave=false;await move.getByRole('button',{name:'Move',exact:true}).click();await move.waitFor({state:'detached'});assert.equal(tasks[2].module_id,'module-fixture');

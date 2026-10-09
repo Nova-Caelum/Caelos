@@ -717,6 +717,34 @@ await page.screenshot({
   path: "/tmp/caelos-panda-verified.png",
   fullPage: true,
 });
+await test("Error surfaces render under React 18 (ErrorMessage, Alert, Notification)", async () => {
+  const warnings = [];
+  const onConsole = (msg) => { if (/inert|non-boolean|Unknown prop|tooltip/i.test(msg.text())) warnings.push(msg.text()); };
+  page.on("console", onConsole);
+  try {
+    const block = page.locator("[data-error-surfaces]");
+    await block.scrollIntoViewIfNeeded();
+    const failure = block.getByRole("alert").filter({ hasText: "Sample failed action" });
+    assert.equal(await failure.getAttribute("data-failed"), "true");
+    assert.ok(await failure.getByText("The server's reason, then the next step.").isVisible());
+    assert.ok(await block.getByRole("heading", { name: "Sample alert" }).isVisible());
+    await block.getByRole("button", { name: "Publish sample error", exact: true }).click();
+    const card = page.getByLabel("Error: Sample failure", { exact: true });
+    await card.waitFor();
+    const detail = card.locator("[data-notification-detail]");
+    // React 18 drops a boolean `inert`; the port sets the string attribute instead.
+    assert.equal(await detail.evaluate((el) => el.inert), true, "collapsed detail is not inert");
+    await card.getByRole("button", { name: "Notification details", exact: true }).click();
+    assert.equal(await detail.evaluate((el) => el.inert), false, "expanded detail is still inert");
+    await card.getByText("The server's reason appears here.").waitFor();
+    assert.ok(await page.getByRole("button", { name: /^Notifications \(1 unaddressed\)$/ }).isVisible());
+    await card.getByRole("button", { name: "Dismiss popup", exact: true }).click();
+    await card.waitFor({ state: "detached" });
+    assert.deepEqual(warnings, [], `React warnings: ${warnings.join(" | ")}`);
+  } finally {
+    page.off("console", onConsole);
+  }
+});
 await test("No runtime errors", async () => assert.deepEqual(errors, []));
 await browser.close();
 if (failures.length) {
