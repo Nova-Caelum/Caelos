@@ -17,6 +17,9 @@ import {
   lettering,
 } from "./recipes";
 import { composerCss, composerKeyframes } from "./composer-styles";
+import { errorMessage } from "./error-message-recipe";
+import { alert } from "./alert-recipe";
+import { notification } from "./notification-recipe";
 const dark = {
   ...approvedTokens,
   "--nc-ground": "var(--sys-ground)",
@@ -107,7 +110,7 @@ export default definePreset({
         },
       },
       recipes: { foundation, typography, avatar, button, card, chip, row, tooltip },
-      slotRecipes: { overlay, disclosure, identity, field: input, menu, scroll: scrollArea },
+      slotRecipes: { overlay, disclosure, identity, field: input, menu, scroll: scrollArea, errorMessage, alert, notification },
       keyframes: {
         "nc-overlay-in": { from: { opacity: 0 }, to: { opacity: 1 } },
         "nc-overlay-out": { to: { opacity: 0 } },
@@ -132,6 +135,8 @@ export default definePreset({
           to: { opacity: 1, transform: "none" },
         },
         "nc-tooltip-out": { to: { opacity: 0 } },
+        // Notification rail entrance (ported with Notification from the React 19 package).
+        "nc-welcome-in": { from: { opacity: 0, transform: "translateY(var(--sys-space-3))" }, to: { opacity: 1, transform: "translateY(0)" } },
         ...composerKeyframes,
       },
     },

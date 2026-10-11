@@ -9,14 +9,19 @@ import {
   StatusPill,
   ActivityButton,
   FOUNDRY_DEMO_PROJECT,
+  loadProjectRuns,
+  loadProjectWorklog,
   type ProjectViewShellProps,
 } from "./App";
+import { OpenRuns } from "./OpenRuns";
+import { WorklogTab, useWorklogRoute } from "./WorklogTab";
 
 const TABS = [
   { value: "info", label: "Info" },
   { value: "tasks", label: "Tasks" },
   { value: "cycles", label: "Cycles" },
   { value: "team", label: "Team" },
+  { value: "worklog", label: "Worklog" },
 ];
 
 export function ProjectViewLayeredShell({
@@ -29,6 +34,9 @@ export function ProjectViewLayeredShell({
   foundryMode = false,
 }: ProjectViewShellProps) {
   const [tab, setTab] = useState<string>("tasks");
+  // Only offered when this server serves the worklog read (not Nova's ops-server).
+  const worklogServed = useWorklogRoute(project.id, loadProjectWorklog);
+  const tabs = worklogServed ? TABS : TABS.filter(t => t.value !== "worklog");
 
   useEffect(() => {
     if (pendingTab) {
@@ -46,7 +54,7 @@ export function ProjectViewLayeredShell({
       style={{ padding: "28px 48px 48px 48px", gap: 40 }}
     >
       <TabsList aria-label="Project sections" className="flex-shrink-0">
-        {TABS.map(t => <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>)}
+        {tabs.map(t => <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>)}
       </TabsList>
       <Card variant="glass" data-foundry-surface="project" className="flex-1 flex flex-col overflow-hidden" style={{ padding: 0, minHeight: 0 }}>
           {/* Header block — verbatim from canonical ProjectView (App.tsx:2948-2960) */}
@@ -83,6 +91,7 @@ export function ProjectViewLayeredShell({
                 <span>{project.folder_path}</span>
               </Text>
             )}
+            <OpenRuns projectCode={project.id} load={loadProjectRuns} where="project" className="mt-5" />
           </div>
 
           <Separator />
@@ -122,6 +131,15 @@ export function ProjectViewLayeredShell({
           >
             <TeamTab projectId={project.id} />
           </TabsContent>
+          {worklogServed && (
+            <TabsContent
+              style={{ paddingTop: 0, minHeight: 0 }}
+              value="worklog"
+              className="flex-1 flex flex-col overflow-hidden data-[state=inactive]:hidden"
+            >
+              <WorklogTab key={project.id} projectCode={project.id} load={loadProjectWorklog} />
+            </TabsContent>
+          )}
       </Card>
     </TabsRoot>
   );

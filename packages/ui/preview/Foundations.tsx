@@ -1,6 +1,13 @@
 import React, { useState } from "react";
 import { toast } from "sonner";
-import { Badge, Button, Card, Checkbox, Heading, Input, LinkButton, Loading, Popover, PopoverTrigger, PopoverContent, PopoverClose, Progress, Range, ResizeHandle, Separator, Surface, Text } from "../dist/index.js";
+import { TriangleAlert } from "lucide-react";
+import { Alert, Badge, Button, Card, Checkbox, ErrorMessage, Heading, Input, LinkButton, Loading, NotificationButton, NotificationProvider, Popover, PopoverTrigger, PopoverContent, PopoverClose, Progress, Range, ResizeHandle, Separator, Surface, Text, useNotifications } from "../dist/index.js";
+
+/** Publishes one local error notification; nothing is sent anywhere. */
+function PublishSampleError() {
+  const { publish } = useNotifications();
+  return <Button onClick={() => publish({ id: "sample-error", kind: "error", title: "Sample failure", source: "Preview", detail: "The server's reason appears here." })}>Publish sample error</Button>;
+}
 
 /** Shared-package example only: no network, application records, or persistence. */
 export function Foundations() {
@@ -31,6 +38,14 @@ export function Foundations() {
       <label className="line"><Checkbox checked={checked} onChange={e => setChecked(e.target.checked)} /><Text>Include completed items</Text></label>
       <Progress label="Sample completion" value={amount} style={{ margin: "16px 0" }} />
       <Loading>Waiting for an application action…</Loading>
+    </Card>
+    <Card data-error-surfaces style={{ marginTop: 16 }}>
+      <Heading as="h3" size="title">Error surfaces</Heading>
+      <ErrorMessage title="Sample failed action" description="The server's reason, then the next step." onDismiss={() => {}} />
+      <Alert tone="danger" icon={<TriangleAlert size={16} />} title="Sample alert" lede="An alert's one-line reason." style={{ marginTop: 16 }} />
+      <NotificationProvider popupDuration={0}>
+        <div className="line" style={{ marginTop: 16 }}><NotificationButton /><PublishSampleError /></div>
+      </NotificationProvider>
     </Card>
     <div style={{ display: "flex", width: "100%", marginTop: 16, minWidth: 0 }}>
       <Surface texture="graph" style={{ width, maxWidth: "80%", padding: 16 }}><Text>Graph surface</Text></Surface>

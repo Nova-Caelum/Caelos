@@ -22,6 +22,9 @@ export default defineConfig({
       field: ["*"],
       menu: ["*"],
       scroll: ["*"],
+      errorMessage: ["*"],
+      alert: ["*"],
+      notification: ["*"],
     },
   },
 });
