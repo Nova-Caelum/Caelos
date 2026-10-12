@@ -660,7 +660,10 @@ export const overlay = defineSlotRecipe({
     content: { position: "fixed", zIndex: 51, display: "flex", flexDirection: "column", padding: 0, minHeight: 0, outline: "none", maxHeight: "calc(100dvh - 32px)", animation: "nc-overlay-in 200ms var(--il-ease)", "&[data-state=closed]": { animation: "nc-overlay-out 160ms var(--il-ease)" } },
     header: { display: "flex", alignItems: "flex-start", gap: "8px", flexShrink: 0, padding: "24px 24px 16px" },
     title: { flex: 1, minWidth: 0, "&[data-heading]": { fontFamily: "'Yrsa',serif", fontSize: "26px", fontWeight: 400, lineHeight: 1.15 } },
-    body: { flex: 1, minHeight: 0, padding: "10px 24px 24px" },
+    // Size the viewport by flex: under a max-height-only dialog, height:100% never resolves,
+    // so tall forms (e.g. zoomed in) overflowed unscrollably and hid the footer.
+    body: { flex: 1, minHeight: 0, padding: "10px 24px 24px", display: "flex", flexDirection: "column",
+      "& > [data-radix-scroll-area-viewport]": { flex: "1 1 auto", minHeight: 0, height: "auto" } },
   },
   variants: { placement: {
     dialog: { content: { top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: "calc(100vw - 32px)", maxWidth: "448px" }, backdrop: { backdropFilter: "blur(6px)" } },
