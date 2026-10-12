@@ -21,7 +21,7 @@ import type { WorklogRow } from "./WorklogTab";
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 // Set A — task_workflow_state (work_items, modules)
-export type WorkItemState = "pending-review" | "ready" | "in-progress" | "blocked" | "done" | "deferred" | "archived";
+export type WorkItemState = "pending-review" | "ready" | "in-progress" | "blocked" | "paused" | "done" | "deferred" | "archived";
 // Set B — project_lifecycle_state (projects, initiatives, cycles)
 export type ProjectStatus    = "planned" | "in-progress" | "paused" | "completed" | "closed" | "archived";
 type InitiativeStatus = ProjectStatus;
@@ -38,7 +38,7 @@ export type Project  = { id: string; name: string; description: string; folder_p
 // the same reason as acceptance_criteria above — FOUNDRY_DEMO_* / mockApi literals don't
 // carry them. `position` mirrors the server's nullable double precision column (null =
 // unpositioned, sorts last); `created_at` is the tie-break for equal/null positions.
-export type Mod      = { id: string; project_id: string; name: string; folder_path: string; description: string; state: WorkItemState; team: string[]; parent_module_id?: string | null; acceptance_criteria?: string | null; acceptance_criteria_ref?: string | null; position?: number | null; created_at?: string };
+export type Mod      = { id: string; project_id: string; name: string; folder_path: string; code_repo?: string; description: string; state: WorkItemState; team: string[]; parent_module_id?: string | null; acceptance_criteria?: string | null; acceptance_criteria_ref?: string | null; position?: number | null; created_at?: string };
 type Cycle    = { id: string; project_id: string; name: string; start_date: string; end_date: string; state: CycleStatus; description: string };
 
 export type WorkItemPriority = "none" | "low" | "medium" | "high" | "urgent";
@@ -349,6 +349,7 @@ function adaptModuleRead(x: any): Mod {
     project_id: x.project_code ?? x.project_id ?? "",
     name: x.name ?? "",
     folder_path: x.folder_path ?? "",
+    code_repo: x.code_repo ?? "",
     description: x.description ?? "",
     acceptance_criteria: x.acceptance_criteria ?? null,
     acceptance_criteria_ref: x.acceptance_criteria_ref ?? null,
@@ -645,6 +646,7 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
           state: body.state ?? "pending-review",
           team: body.team ?? [],
           folder_path: body.folder_path || null,
+          code_repo: body.code_repo || null,
           idempotency_key: idempKey("idem"),
         };
       } else {
@@ -763,7 +765,7 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
 
   if (/^\/work-items\/[^/]+\/promote$/.test(path) && method === "POST") {
     const backendPath = path.replace(/\/promote$/, "/promote-to-module").replace(/^\/work-items/, "/api/work-items");
-    const backendBody = { module_name: body?.module_name ?? body?.name ?? "New module", idempotency_key: idempKey("idem") };
+    const backendBody = { module_name: body?.module_name ?? body?.name ?? "New module", folder_path: body?.folder_path, code_repo: body?.code_repo, idempotency_key: idempKey("idem") };
     const data = await restFetch(backendPath, backendBody);
     return adaptModuleRead(unwrapRow(data)) as T;
   }
@@ -833,6 +835,7 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
       state: method === "DELETE" ? "archived" : (body?.state !== undefined ? body.state : current.state),
       team: body?.team !== undefined ? body.team : (current.team ?? []),
       folder_path: body?.folder_path !== undefined ? body.folder_path : (current.folder_path ?? null),
+      code_repo: body?.code_repo !== undefined ? body.code_repo : (current.code_repo ?? null),
       // Acceptance criteria (2026-08-24, slice S3). Merged like every other field so a
       // delta-shaped drawer save cannot reset them. Unlike `description` these ARE
       // returned by get_module (not a _HEAVY_FIELDS entry), so `current` genuinely
@@ -1251,6 +1254,7 @@ const STATE_CFG: Record<WorkItemState, { label: string; color: string; bg: strin
   "in-progress":    { label: "In Progress",    color: "#E8B87A", bg: "rgba(232,184,122,0.14)" },
   blocked:          { label: "Blocked",        color: "#C25B62", bg: "rgba(194,91,98,0.15)"  },
   done:             { label: "Done",           color: "#5B7D73", bg: "rgba(91,125,115,0.22)" },
+  paused:           { label: "Paused",         color: "#B8955D", bg: "rgba(184,149,93,0.12)" },
   deferred:         { label: "Deferred",       color: "#8F8A80", bg: "rgba(143,138,128,0.08)" },
   archived:         { label: "Archived",       color: "#55506A", bg: "rgba(85,80,106,0.16)"  },
 };
@@ -2042,7 +2046,7 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onBack, onC
   onCreateCycle: (name: string) => Promise<string>;
 }) {
   const [form, setForm] = useState({
-    name: mod.name, description: mod.description ?? "", folder_path: mod.folder_path ?? "",
+    name: mod.name, description: mod.description ?? "", folder_path: mod.folder_path ?? "", code_repo: mod.code_repo ?? "",
     acceptance_criteria: mod.acceptance_criteria ?? "",
     acceptance_criteria_ref: mod.acceptance_criteria_ref ?? "",
   });
@@ -2061,7 +2065,7 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onBack, onC
     const openedProject = mod.project_id;
     dirtyRef.current = false;
     setForm({
-      name: mod.name, description: mod.description ?? "", folder_path: mod.folder_path ?? "",
+      name: mod.name, description: mod.description ?? "", folder_path: mod.folder_path ?? "", code_repo: mod.code_repo ?? "",
       acceptance_criteria: mod.acceptance_criteria ?? "",
       acceptance_criteria_ref: mod.acceptance_criteria_ref ?? "",
     });
@@ -2190,6 +2194,7 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onBack, onC
             (Prior standalone chip in the drawer body was removed 2026-07-29 — redundant
             with this field. Progress bar moved to the Tasks section header.) */}
         <Input label="Folder Path" name="folder_path" leadingIcon={<Folder size={13} />} value={form.folder_path} onChange={e => setForm(p => ({ ...p, folder_path: e.target.value }))} placeholder="/path/to/module" />
+        <Input label="Code repository" name="code_repo" value={form.code_repo} onChange={e => setForm(p => ({ ...p, code_repo: e.target.value }))} placeholder="Repository path or URL; none for non-code modules" />
 
         <div className="flex items-center gap-2">
           <Button variant="primary" loading={saving} disabled={hydrating || saving} onClick={handleSave}>Save changes</Button>
@@ -2245,7 +2250,7 @@ function ModuleDetailSlideOver({ mod, allItems, cycles, projectName, onBack, onC
 
 const WORK_STATE_TONE: Record<WorkItemState, Tone> = {
   "pending-review": "atmospheric", ready: "ready", "in-progress": "progress",
-  blocked: "danger", done: "done", deferred: "neutral", archived: "structural",
+  blocked: "danger", paused: "neutral", done: "done", deferred: "neutral", archived: "structural",
 };
 
 const WORK_STATE_OPTIONS = Object.entries(STATE_CFG).map(([value, cfg]) => ({ value, label: cfg.label, tone: WORK_STATE_TONE[value as WorkItemState] }));
@@ -2520,6 +2525,9 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
 
   const [creatingMod, setCreatingMod] = useState(false);
   const [modName, setModName] = useState("");
+  const [modFolder, setModFolder] = useState("");
+  const [modRepo, setModRepo] = useState("");
+  const [promotingTask, setPromotingTask] = useState<WorkItem | null>(null);
   const [modDescription, setModDescription] = useState("");
   const [modCriteria, setModCriteria] = useState("");
   const [modCriteriaRef, setModCriteriaRef] = useState("");
@@ -2774,13 +2782,9 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
   }
 
   async function promoteTask(task: WorkItem) {
-    try {
-      const mod = await api<Mod>(`/work-items/${task.id}/promote`, { method: "POST" });
-      setMods(p => [...p, mod]);
-      setItems(p => p.filter(i => i.id !== task.id).map(i => i.parent_item_id === task.id ? { ...i, parent_item_id: null, module_id: task.id } : i));
-      if (selectedTaskId === task.id) setSelectedTaskId(null);
-      toast.success(`"${task.title}" promoted to module`);
-    } catch (error) { reportFailure("Failed to promote", error); }
+    setPromotingTask(task); setModName(task.title); setModFolder(""); setModRepo("");
+    setModDescription(""); setModCriteria(task.acceptance_criteria ?? "");
+    setModCriteriaRef(task.acceptance_criteria_ref ?? ""); setCreatingMod(true);
   }
 
   // The quick-add row bypasses the create modal with a literal payload, so it needs its
@@ -2846,20 +2850,25 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
   async function createMod() {
     if (modSaving) return;
     if (!modName.trim()) return toast.error("Name is required");
+    if (!modFolder.trim() || !modRepo.trim()) return toast.error("Folder path and code repository are required");
     setModSaving(true);
     try {
-      const m = await api<Mod>(`/projects/${projectId}/modules`, {
+      const m = await api<Mod>(promotingTask ? `/work-items/${promotingTask.id}/promote` : `/projects/${projectId}/modules`, {
         method: "POST",
         body: JSON.stringify({
           name: modName,
+          module_name: modName,
+          folder_path: modFolder.trim(),
+          code_repo: modRepo.trim(),
           description: modDescription,
           acceptance_criteria: modCriteria,
           acceptance_criteria_ref: modCriteriaRef,
         }),
       });
-      setMods(p => [...p, m]); setItemOrder(prev => [...prev, m.id]);
+      if (promotingTask) { await load(); if (selectedTaskId === promotingTask.id) setSelectedTaskId(null); }
+      else { setMods(p => [...p, m]); setItemOrder(prev => [...prev, m.id]); }
       setCreatingMod(false); setModName(""); setModDescription("");
-      setModCriteria(""); setModCriteriaRef("");
+      setModCriteria(""); setModCriteriaRef(""); setModFolder(""); setModRepo(""); setPromotingTask(null);
       clearFailure("Failed to create module");
       toast.success("Module created");
     } catch (error) { reportFailure("Failed to create module", error); }
@@ -2967,7 +2976,7 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
               </ActionMenuTrigger>
               <ActionMenuContent side="bottom" align="end" onCloseAutoFocus={event => { if (creatingTask || creatingMod) event.preventDefault(); }}>
                 <ActionMenuItem onSelect={() => openAddTask()}><Plus size={13} /> Task</ActionMenuItem>
-                <ActionMenuItem onSelect={() => { setModName(""); setModDescription(""); setCreatingMod(true); }}><Layers size={13} /> Module</ActionMenuItem>
+                <ActionMenuItem onSelect={() => { setPromotingTask(null); setModName(""); setModDescription(""); setModFolder(""); setModRepo(""); setModCriteria(""); setModCriteriaRef(""); setCreatingMod(true); }}><Layers size={13} /> Module</ActionMenuItem>
               </ActionMenuContent>
             </ActionMenuRoot>
           </div>
@@ -3136,9 +3145,11 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
         </Dialog>
 
         {/* Create module modal */}
-        <Dialog open={creatingMod} returnFocusRef={addTaskTriggerRef} onOpenChange={setCreatingMod} title="New Module" style={{ maxWidth: 384 }}>
+        <Dialog open={creatingMod} returnFocusRef={addTaskTriggerRef} onOpenChange={setCreatingMod} title={promotingTask ? "Promote to Module" : "New Module"} style={{ maxWidth: 384 }}>
           <Input label="Name" name="name" wrapperClassName="mb-4" value={modName} onChange={e => setModName(e.target.value)} placeholder="Module name" autoFocus onKeyDown={e => e.key === "Enter" && createMod()} />
-          <TextArea label="Description" name="description" wrapperClassName="mb-4" value={modDescription} onChange={e => setModDescription(e.target.value)} placeholder="Optional — what is this for?" rows={3} />
+          <Input label="Folder path" name="folder_path" required wrapperClassName="mb-4" value={modFolder} onChange={e => setModFolder(e.target.value)} placeholder="Vault folder path" />
+          <Input label="Code repository" name="code_repo" required wrapperClassName="mb-4" value={modRepo} onChange={e => setModRepo(e.target.value)} placeholder="Repository path or URL; none for non-code modules" />
+          {!promotingTask && <><TextArea label="Description" name="description" wrapperClassName="mb-4" value={modDescription} onChange={e => setModDescription(e.target.value)} placeholder="Optional — what is this for?" rows={3} />
           <div className="mb-4">
             <AcceptanceCriteriaFields
               criteria={modCriteria}
@@ -3147,7 +3158,9 @@ export function TasksPane({ projectId, projectName, pendingTaskId, onClearPendin
               onCriteriaRef={setModCriteriaRef}
             />
           </div>
-          <div className="flex gap-2 justify-end pt-1"><Button variant="text" onClick={() => setCreatingMod(false)}>Cancel</Button><Button variant="primary" loading={modSaving} onClick={createMod}>Create</Button></div>
+          </>}
+          {promotingTask && <p className="text-sm mb-4">The module inherits this task’s acceptance criteria.</p>}
+          <div className="flex gap-2 justify-end pt-1"><Button variant="text" onClick={() => setCreatingMod(false)}>Cancel</Button><Button variant="primary" loading={modSaving} onClick={createMod}>{promotingTask ? "Promote" : "Create"}</Button></div>
         </Dialog>
 
         <ConfirmDelete open={!!deleteMod} onClose={() => setDeleteMod(null)} onConfirm={() => deleteMod ? deleteMod_(deleteMod) : Promise.resolve(false)} label="module" />
