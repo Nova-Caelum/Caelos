@@ -44,7 +44,7 @@ jobs:
       issues: write
       actions: read
       id-token: write
-    uses: Nova-Caelum/devops-lead/.github/workflows/devops-lead-pr-review.yml@0d1b16cee071fcd8896c7dc5130a2644f0360a30
+    uses: Nova-Caelum/devops-lead/.github/workflows/devops-lead-pr-review.yml@fd0398b73ae19513b378d8a558aa295b877763bb
     # PIN NOTE: bumped 2026-07-31 from 4729b2b2 (single-tenant, ops-mirror-shaped
     # hardcoded policy) to 0d1b16ce (multi-tenant parameterization — inputs added
     # to workflow_call, defaults preserve ops-mirror behavior). Caelos passes
