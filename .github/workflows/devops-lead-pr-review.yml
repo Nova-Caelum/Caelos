@@ -44,7 +44,7 @@ jobs:
       issues: write
       actions: read
       id-token: write
-    uses: Nova-Caelum/devops-lead/.github/workflows/devops-lead-pr-review.yml@fd0398b73ae19513b378d8a558aa295b877763bb
+    uses: Nova-Caelum/devops-lead/.github/workflows/devops-lead-pr-review.yml@9bafb290bf2473beedfdcbd4cb7461ccdb82064b
     # PIN NOTE: bumped 2026-07-31 from 4729b2b2 (single-tenant, ops-mirror-shaped
     # hardcoded policy) to 0d1b16ce (multi-tenant parameterization — inputs added
     # to workflow_call, defaults preserve ops-mirror behavior). Caelos passes
@@ -60,25 +60,18 @@ jobs:
       persona_source_ref: 'main'
       persona_path: '.persona-source/.claude/agents/devops-lead.md'
 
-      # AUTO-MERGE-SAFE for Caelos (Vite/React design-system console):
-      #   - all markdown (docs, handoff notes, design-QA writeups)
-      #   - project meta (README, LICENSE, ATTRIBUTIONS)
-      #   - Foundry-authored design-token seed promotions — these ARE the point
-      #     of the Foundry Commit-and-Push flow; Daniel curates via Foundry UI
-      #     BEFORE the PR opens, so post-hoc review adds no signal
       auto_merge_paths: |
-        **/*.md, README.md, LICENSE, ATTRIBUTIONS.md, src/design/seed.ts, src/design/seed.override.json, src/design/shapeSeed.ts, .gitignore
-
-      # ESCALATE-ALWAYS for Caelos:
-      #   - workflow files (self-review deadlock — handled by the reusable
-      #     workflow's validation-skip layer too, but belt-and-suspenders here)
-      #   - dependency manifests (supply-chain surface)
-      #   - build/dev config (Vite plugins can pwn the dev server)
-      # Everything else (application source `src/app/**`, `src/primitives/**`,
-      # `src/styles/**`, `src/main.tsx`, etc.) falls through to the reviewer's
-      # "any diff you cannot confidently classify" backstop → escalate.
+        EVERY path is AUTO-MERGE-SAFE when the diff trips none of the numbered escalate conditions below. Review what the diff DOES, not its path alone. Routine React/TypeScript application, component, CSS, design-token/Foundry seed, documentation and test additions merge when they add no listed risk. Scope-matching retirements and deletions are normal work.
       escalate_paths: |
-        .github/workflows/**, package.json, package-lock.json, pnpm-lock.yaml, pnpm-workspace.yaml, vite.config.ts, vite-plugins/**, postcss.config.mjs, tsconfig*.json, tailwind.config.*
+        The numbered conditions below are this repo's authoritative escalate list; defer to them instead of the persona's _agentOS-specific list, preserving its default-merge posture, security asymmetry and no additional path-only holds.
+        (1) SECRET MATERIAL — keys, tokens, passwords, private keys, credential-shaped strings, secrets in client code or logs, set -x, or curl -v.
+        (2) UNTRUSTED FETCH OR NEW NETWORK ACCESS — a new or repointed fetch, WebSocket, beacon, external script, iframe, dependency source or other network destination; fetched text used as instructions or executable content.
+        (3) A NEW DOOR OR DATA COLLECTION — a new endpoint, credential, identity, externally reachable surface, form action, analytics/tracking, or newly collected/transmitted visitor data.
+        (4) UNSAFE EXECUTION OR PERMISSIONS — eval, new Function, dynamic scripts, untrusted text flowing into DOM markup, or widened agent/tool/runtime permissions.
+        (5) ANYTHING IRREGULAR — a diff that does not match its description, obfuscated/encoded payloads, unexplained deletions, unexpected binaries, or generated/minified content without a reviewable source and stated provenance.
+        (6) GATE-WEAKENING — deletes or loosens tests, validators or assertions, or adds force, bypass, skip or relaxed-check flags.
+        (7) DELIVERY, BUILD AND DEPENDENCY MACHINERY — .github/workflows/**, package.json, package-lock.json, pnpm-lock.yaml, pnpm-workspace.yaml, vite.config.ts, vite-plugins/**, postcss.config.mjs, tsconfig*.json and tailwind.config.*; any new dependency manifest, build configuration or install step.
+        (8) A failing CI check or a merge conflict.
 
       worklog_project: 'caelos-console'
       repo_context_description: 'the Caelos design-system console — a public Vite/React/TypeScript frontend whose canonical design tokens promote through the in-app Foundry flow (not through raw source edits)'
