@@ -11,7 +11,9 @@
     "build:ui": "npm run build --workspace @nova-caelum/ui",
     "typecheck:ui": "npm run typecheck --workspace @nova-caelum/ui",
     "preview:ui": "npm run build:ui && vite packages/ui/preview --host 127.0.0.1 --port 5182 --strictPort",
-    "test:ui": "npm run test:browser --workspace @nova-caelum/ui"
+    "test:ui": "npm run test:browser --workspace @nova-caelum/ui",
+    "test:dashboard": "node --test \"tests/dashboard/*.test.mjs\"",
+    "check:client-secrets": "node scripts/check-no-client-secrets.mjs"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

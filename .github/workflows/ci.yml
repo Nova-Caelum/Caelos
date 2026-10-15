@@ -20,6 +20,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build:ui
+      - run: npm run test:dashboard
+      - name: Build the app and refuse any credential in the client bundle
+        run: |
+          npm run build
+          npm run check:client-secrets -- --require-dist
       - name: Resolve Playwright version
         id: playwright
         run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"

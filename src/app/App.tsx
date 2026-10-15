@@ -206,8 +206,12 @@ function getLinks(initId: string): InitLinks {
 // ── Real backend adapter (Nova Task Graph MVP, VITE_API_BASE_URL) ─────────────
 // If VITE_API_BASE_URL is unset (local dev), falls through to mockApi below.
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "");
-const BEARER = import.meta.env.VITE_BEARER_TOKEN as string | undefined;
+// The browser never talks to the ops server directly and never holds a token: every call goes to the
+// same-origin proxy (functions/ops/[[path]].ts), which verifies Cloudflare Access and attaches the ops
+// bearer server-side. In `vite dev` the proxy is replaced by a dev-server proxy (vite.config.ts) when
+// VITE_OPS_PROXY=1; otherwise dev falls through to the in-memory mock.
+const API_BASE: string | undefined =
+  import.meta.env.PROD || import.meta.env.VITE_OPS_PROXY === "1" ? "/ops" : undefined;
 // Pinned human owner shown first in owner pickers (build-time, not a literal in source —
 // see .env.production / .env.development / .env.example).
 const HUMAN_OWNER = import.meta.env.VITE_HUMAN_OWNER as string | undefined;
@@ -275,9 +279,7 @@ async function primeModuleIds(code: string): Promise<void> {
   if (!API_BASE || modulesPrimedFor.has(code)) return;
   modulesPrimedFor.add(code);
   try {
-    const headers: Record<string, string> = {};
-    if (BEARER) headers.Authorization = `Bearer ${BEARER}`;
-    const response = await fetch(`${API_BASE}/api/projects/${code}/modules`, { headers });
+    const response = await fetch(`${API_BASE}/api/projects/${code}/modules`);
     if (!response.ok) throw new Error(`prime modules → ${response.status}`);
     ((await response.json()) as any[]).forEach(rememberExternalId);
   } catch {
@@ -388,7 +390,6 @@ function adaptInitiativeRead(x: any): Initiative {
 
 async function mcpCall<T>(name: string, args: Record<string, unknown>): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (BEARER) headers.Authorization = `Bearer ${BEARER}`;
   const response = await fetch(`${API_BASE}/mcp`, {
     method: "POST",
     headers,
@@ -456,7 +457,6 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T> {
   const body = opts?.body ? JSON.parse(opts.body as string) : undefined;
 
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (BEARER) headers.Authorization = `Bearer ${BEARER}`;
 
   async function restFetch(backendPath: string, backendBody?: any): Promise<any> {
     const response = await fetch(`${API_BASE}${backendPath}`, {

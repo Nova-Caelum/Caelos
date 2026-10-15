@@ -1,0 +1,278 @@
+{
+  "contract_version": 1,
+  "notes": [
+    "Same-origin, server-side. The browser calls GET /api/dashboard and GET /api/queue on console.novacaelum.com with its Cloudflare Access cookie; it never holds an ops, vault or GitHub token.",
+    "Every panel is independent: switch on panel.status. 'ok' = data fields are valid. 'error' = the source failed (panel.error is an error TYPE name only, never text). 'unavailable' = no cloud source exists for it yet (panel.reason says why). A failed panel never fails the response.",
+    "Timestamps are ISO-8601 UTC strings. Format to ET in the UI.",
+    "Completing a queue row = POST /api/queue/complete {id}. Daniel's own rows only; it writes state=done and nothing else.",
+    "Cache-Control is private, no-store. Poll no faster than every 30 s.",
+    "GET /api/queue extra errors: 503 {error:'not_configured', secret: NAME}, 502 {error: '<source>_denied'|'<source>_unreachable'|...}. Errors for the whole request: 401 {error:'no_access_token'|'invalid_access_token'}, 403 {error:'not_allowed'}, 500 {error:'misconfigured', missing:[names]}. 405 for non-GET."
+  ],
+  "endpoints": {
+    "GET /api/dashboard": "Dashboard (below). Response example under examples.dashboard.",
+    "GET /api/queue": "Queue (below). Open Task Graph rows with assignee_agent = daniel, full description. Example under examples.queue.",
+    "POST /api/queue/complete": "Body {id: external_id of a queue row}. Marks the row done through the console's existing done path (state=done, completed_by caelos-console). 200 {ok:true,id,state:'done',already_done:boolean}. Errors: 400 bad_request, 403 not_your_row (assignee is not daniel), 404 row_not_found, 409 row_not_open (e.g. deferred/archived), 502 ops_http_<status>|ops_unreachable, 503 not_configured. Plus the whole-request errors below. Refetch GET /api/queue afterwards."
+  },
+  "types": {
+    "PanelStatus": "'ok' | 'error' | 'unavailable'",
+    "Dashboard": {
+      "contract_version": "number (1)",
+      "generated_at": "ISO string",
+      "viewer": {
+        "email": "string | null"
+      },
+      "panels": {
+        "waiting_on_daniel": "{ status, count: number (prs.total + queue_rows.length), prs: PrGroups | {status:'error'|'unavailable'}, queue_status: PanelStatus (status of the Task Graph half; prs carries its own), queue_rows: QueueRowSummary[], rows_to_decide: { status:'unavailable', reason } }",
+        "queue": "{ status, count: number, by_state: { [state]: number } }  (QueueRowSummary list lives in waiting_on_daniel.queue_rows; GET /api/queue has the full rows)",
+        "next_priority": "{ status, note: string | null, items: { depth: number, text: string }[] }  (Daniel's own words, tab nesting as depth; render as a numbered outline)",
+        "crazy_list": "{ status, count: number, entries: { name: string, area: string, added: string, note: string, source: string }[] }  (open entries only)",
+        "workstream": "{ status, live: boolean, slug: string | null, orchestrator: string | null, deadline: ISO | null, seconds_left: number | null, agents: { name, used: number | null, budget: number | null, rows: string[], state: string | null, note: string | null }[] }",
+        "loops": "{ status, count: number, items: { goal: string, status: string, node: string | null, folder: string }[] }  (live first, then others by goal; 'live' means Daniel's test is owed)",
+        "open_work": "{ status, total: number, truncated: boolean, by_state: { [state]: number }, by_project: { project: string, count: number }[], in_progress: { short_id, name, project, assignee: string | null, updated_at: ISO, link: string | null }[] }",
+        "open_prs": "{ status, total: number, truncated: boolean, items: { repo, number, title, url, author: string | null, draft: boolean, opened: ISO, escalated: boolean }[] }  (every open PR in the Nova-Caelum org)",
+        "verifier_closes": "{ status, items: { row: string (project:slug), project: string, at: ISO, run_id: string | null, work_item_id: string | null, link: string | null }[] }  (latest 10, author tg_verifier)",
+        "runtime_deploys": "{ status, current: boolean | null (null = cannot tell), installed_sha: string | null, origin_main_sha: string | null, items: { at: ISO, author: string, summary: string }[] }  (latest 5, tag runtime-deploy; installed_sha parsed from 'origin/main <sha>' in the summary)",
+        "ci": "{ status, checked: number (repos), red: { repo, workflow: string, url: string | null }[] }"
+      }
+    },
+    "PrGroups": "{ status:'ok', total: number, groups: { repo, items: { number, title, url, opened: ISO }[] }[], repins: { repo, number, url }[] }  (label escalate-daniel; 'devops-lead reviewer: re-pin' PRs are collapsed into repins)",
+    "QueueRowSummary": "{ id: external_id, short_id: string | null, project: string, name: string, state: 'pending-review'|'ready'|'in-progress'|'blocked', type: string, effort_level: string | null, updated_at: ISO, link: string | null (null for legacy rows with no project; project is then '') }",
+    "QueueRow": "QueueRowSummary + { created_at: ISO, description: string (Go / look / send live here), acceptance_criteria: string | null, source_references: { uri, anchor? }[], team: string[] }"
+  },
+  "examples": {
+    "dashboard": {
+      "contract_version": 1,
+      "generated_at": "2026-10-15T14:02:11.482Z",
+      "viewer": {
+        "email": "daniel@novacaelum.com"
+      },
+      "panels": {
+        "waiting_on_daniel": {
+          "status": "ok",
+          "count": 3,
+          "prs": {
+            "status": "ok",
+            "total": 2,
+            "groups": [
+              {
+                "repo": "technical-cofounder",
+                "items": [
+                  {
+                    "number": 53,
+                    "title": "Codex compatibility build",
+                    "url": "https://github.com/Nova-Caelum/technical-cofounder/pull/53",
+                    "opened": "2026-10-14T18:40:00Z"
+                  }
+                ]
+              }
+            ],
+            "repins": [
+              {
+                "repo": "Caelos",
+                "number": 37,
+                "url": "https://github.com/Nova-Caelum/Caelos/pull/37"
+              }
+            ]
+          },
+          "queue_status": "ok",
+          "queue_rows": [
+            {
+              "id": "novacaelum-landing:landing-entrance-motion-ship-decision",
+              "short_id": "WEB-28",
+              "project": "novacaelum-landing",
+              "name": "Decide whether the landing entrance motion ships on the website",
+              "state": "ready",
+              "type": "decision",
+              "effort_level": "quick",
+              "updated_at": "2026-10-14T20:07:14.722Z",
+              "link": "https://console.novacaelum.com/taskgraph/projects/novacaelum-landing?tab=tasks&item=novacaelum-landing%3Alanding-entrance-motion-ship-decision"
+            }
+          ],
+          "rows_to_decide": {
+            "status": "unavailable",
+            "reason": "Verifier 'unverifiable' verdicts live in Mac-only run files; no cloud source yet."
+          }
+        },
+        "queue": {
+          "status": "ok",
+          "count": 1,
+          "by_state": {
+            "ready": 1
+          }
+        },
+        "next_priority": {
+          "status": "ok",
+          "note": "1) Main Quest",
+          "items": [
+            {
+              "depth": 0,
+              "text": "Main Quest - Governance Sprint"
+            },
+            {
+              "depth": 1,
+              "text": "Finish Nova Comms"
+            }
+          ]
+        },
+        "crazy_list": {
+          "status": "ok",
+          "count": 1,
+          "entries": [
+            {
+              "name": "stale-runtime-warning",
+              "area": "preload",
+              "added": "2026-10-13",
+              "note": "Warns about a stale runtime that is not stale.",
+              "source": "daniel"
+            }
+          ]
+        },
+        "workstream": {
+          "status": "ok",
+          "live": true,
+          "slug": "stream_2026-10-12-1700_cleanup",
+          "orchestrator": "cto",
+          "deadline": "2026-10-16T03:59:00.000Z",
+          "seconds_left": 90000,
+          "agents": [
+            {
+              "name": "da-vinci",
+              "used": 2,
+              "budget": 4,
+              "rows": [
+                "9b",
+                "9a"
+              ],
+              "state": "handed-off",
+              "note": "v3 on local branch"
+            }
+          ]
+        },
+        "loops": {
+          "status": "ok",
+          "count": 1,
+          "items": [
+            {
+              "goal": "tc-setup-redesign",
+              "status": "live",
+              "node": "executing",
+              "folder": "AgentSecretBase/workspace/technical-cofounder/tc-setup-redesign"
+            }
+          ]
+        },
+        "open_work": {
+          "status": "ok",
+          "total": 214,
+          "truncated": false,
+          "by_state": {
+            "ready": 150,
+            "in-progress": 12,
+            "blocked": 40,
+            "pending-review": 12
+          },
+          "by_project": [
+            {
+              "project": "governance-evolution",
+              "count": 80
+            }
+          ],
+          "in_progress": [
+            {
+              "short_id": "TCF-49",
+              "name": "TC on Codex friend test",
+              "project": "technical-cofounder",
+              "assignee": "daniel",
+              "updated_at": "2026-10-14T20:12:55.096Z",
+              "link": "https://console.novacaelum.com/taskgraph/projects/technical-cofounder?tab=tasks&item=technical-cofounder%3Atc-codex-friend-test"
+            }
+          ]
+        },
+        "open_prs": {
+          "status": "ok",
+          "total": 1,
+          "truncated": false,
+          "items": [
+            {
+              "repo": "technical-cofounder",
+              "number": 53,
+              "title": "Codex compatibility build",
+              "url": "https://github.com/Nova-Caelum/technical-cofounder/pull/53",
+              "author": "NovaCaelum-Founder",
+              "draft": false,
+              "opened": "2026-10-14T18:40:00Z",
+              "escalated": true
+            }
+          ]
+        },
+        "verifier_closes": {
+          "status": "ok",
+          "items": [
+            {
+              "row": "governance-evolution:move-launcher-scripts",
+              "project": "governance-evolution",
+              "at": "2026-10-14T21:21:13.046Z",
+              "run_id": "0636126a-c9bb-4998-8ad2-4f3bba3a1666",
+              "work_item_id": "a428e538-1b6e-4270-b114-4be2fcdd13b9",
+              "link": "https://console.novacaelum.com/taskgraph/projects/governance-evolution?tab=tasks&item=governance-evolution%3Amove-launcher-scripts"
+            }
+          ]
+        },
+        "runtime_deploys": {
+          "status": "ok",
+          "current": false,
+          "installed_sha": "68e2539",
+          "origin_main_sha": "9c1f0ab",
+          "items": [
+            {
+              "at": "2026-10-08T17:51:02.172Z",
+              "author": "devops-local",
+              "summary": "Applied deploy-claude_mac from origin/main 68e2539"
+            }
+          ]
+        },
+        "ci": {
+          "status": "ok",
+          "checked": 18,
+          "red": [
+            {
+              "repo": "hyperspace-engine",
+              "workflow": "tests",
+              "url": "https://github.com/Nova-Caelum/hyperspace-engine/actions/runs/1"
+            }
+          ]
+        }
+      }
+    },
+    "queue": {
+      "contract_version": 1,
+      "generated_at": "2026-10-15T14:02:11.482Z",
+      "count": 1,
+      "rows": [
+        {
+          "id": "novacaelum-landing:landing-entrance-motion-ship-decision",
+          "short_id": "WEB-28",
+          "project": "novacaelum-landing",
+          "name": "Decide whether the landing entrance motion ships on the website",
+          "state": "ready",
+          "type": "decision",
+          "effort_level": "quick",
+          "updated_at": "2026-10-14T20:07:14.722Z",
+          "link": "https://console.novacaelum.com/taskgraph/projects/novacaelum-landing?tab=tasks&item=novacaelum-landing%3Alanding-entrance-motion-ship-decision",
+          "created_at": "2026-10-14T20:07:14.754Z",
+          "description": "Go: https://landing-motion.novacaelum-landing.pages.dev\nLook: the entrance animation on first load.\nSend: say ship (rebase and PR) or drop.",
+          "acceptance_criteria": "Daniel states ship or drop [manual]",
+          "source_references": [
+            {
+              "uri": "https://landing-motion.novacaelum-landing.pages.dev",
+              "anchor": "preview"
+            }
+          ],
+          "team": [
+            "daniel",
+            "da-vinci"
+          ]
+        }
+      ]
+    }
+  }
+}

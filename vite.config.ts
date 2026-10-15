@@ -33,6 +33,20 @@ export default defineConfig({
     },
   },
 
+  server: {
+    // Dev stand-in for the same-origin /ops proxy (functions/ops/[[path]].ts). Enabled in the app by
+    // VITE_OPS_PROXY=1. The bearer is read from the dev shell (CONSOLE_OPS_BEARER, no VITE_ prefix), so
+    // it stays in the dev server process and never reaches the bundle.
+    proxy: {
+      '/ops': {
+        target: process.env.OPS_API_URL || 'https://nova-caelum-ops-production.up.railway.app',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/ops/, ''),
+        headers: process.env.CONSOLE_OPS_BEARER ? { Authorization: `Bearer ${process.env.CONSOLE_OPS_BEARER}` } : {},
+      },
+    },
+  },
+
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })
