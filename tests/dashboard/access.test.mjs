@@ -6,6 +6,22 @@ import { AUD, ENV, makeAccess, makeFetch, req } from "./fixtures.mjs";
 
 const { config } = readConfig(ENV);
 
+// Flip a character in the MIDDLE of the signature: every middle base64url char carries 6 data bits, so the
+// signed bytes always change. The last char of a 256-byte RS256 signature carries 4 padding bits, so flipping
+// it (A<->B) left the decoded signature identical about 1 run in 4 and the token still verified (flaky).
+const tamperSignature = (t) => {
+  const [h, p, s] = t.split(".");
+  const i = Math.floor(s.length / 2);
+  return [h, p, s.slice(0, i) + (s[i] === "A" ? "B" : "A") + s.slice(i + 1)].join(".");
+};
+// Valid signature over the original payload, attached to a different (re-encoded) payload.
+const tamperPayload = (t) => {
+  const [h, p, s] = t.split(".");
+  const claims = JSON.parse(Buffer.from(p, "base64url").toString());
+  claims.email = "attacker@example.com";
+  return [h, Buffer.from(JSON.stringify(claims)).toString("base64url"), s].join(".");
+};
+
 describe("Cloudflare Access verification", () => {
   let access, f;
   beforeEach(async () => {
@@ -33,7 +49,8 @@ describe("Cloudflare Access verification", () => {
       [req("/", await access.sign({ iss: "https://evil.cloudflareaccess.com" })), "invalid_access_token"],
       [req("/", await access.sign({ exp: now - 5 })), "invalid_access_token"],
       [req("/", await access.sign({ nbf: now + 3600 })), "invalid_access_token"],
-      [req("/", (await access.sign()).replace(/.$/, (c) => (c === "A" ? "B" : "A"))), "invalid_access_token"],
+      [req("/", tamperSignature(await access.sign())), "invalid_access_token"],
+      [req("/", tamperPayload(await access.sign())), "invalid_access_token"],
       [req("/", await access.sign({}, { alg: "none" })), "invalid_access_token"],
       [req("/", await access.sign({}, { kid: "unknown" })), "invalid_access_token"],
     ];
