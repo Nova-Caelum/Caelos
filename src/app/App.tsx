@@ -11,12 +11,14 @@ import {
   GripVertical, FileText, Folder, Users, UserPlus, Atom,
   Settings, FolderInput,
 } from "lucide-react";
+import { LayoutDashboard } from "lucide-react";
 import wordmarkUrl from "@/imports/nova-caelum-wordmark-transparent.png";
 import { NC } from "../design/tokens";
 import { ProjectViewLayeredShell } from "./ProjectViewLayeredShell";
 import { ApiError, apiErrorFromResponse, clearFailure, reportFailure } from "./failures";
 import { OpenRuns, type Run } from "./OpenRuns";
 import type { WorklogRow } from "./WorklogTab";
+import { DashboardView } from "./dashboard/DashboardView";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -4226,6 +4228,16 @@ function Welcome() {
   );
 }
 
+// Dashboard view: canonical deep link is `?view=dashboard`; a `/dashboard` pathname is accepted too.
+const isDashboardLocation = () =>
+  new URLSearchParams(window.location.search).get("view") === "dashboard" || window.location.pathname.startsWith("/dashboard");
+function pushDashboardView(on: boolean) {
+  const url = new URL(window.location.href);
+  if (on) url.searchParams.set("view", "dashboard");
+  else { url.searchParams.delete("view"); if (url.pathname.startsWith("/dashboard")) url.pathname = "/"; }
+  window.history.pushState(null, "", url);
+}
+
 export default function App({
   foundryMode = false,
   renderProjectView,
@@ -4243,6 +4255,17 @@ export default function App({
   const [booting, setBooting]         = useState(true);
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
   const [pendingProjectTab, setPendingProjectTab] = useState<string | null>(null);
+  const [dashboard, setDashboard] = useState(isDashboardLocation);
+  useEffect(() => {
+    const sync = () => setDashboard(isDashboardLocation());
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
+  const showDashboard = (on: boolean) => {
+    if (on === dashboard) return;
+    pushDashboardView(on);
+    setDashboard(on);
+  };
 
   useEffect(() => {
     Promise.all([
@@ -4340,7 +4363,7 @@ export default function App({
     <CaelosProvider className="dark"><Surface data-surface="ground" className="h-screen flex overflow-hidden">
       <Sidebar
         projects={projects} initiatives={initiatives} selection={selection}
-        onSelect={setSelection}
+        onSelect={(next) => { showDashboard(false); setSelection(next); }}
         onProjectsChange={setProjects}
         onInitiativesChange={setInitiatives}
         onPendingTask={setPendingTaskId}
@@ -4348,8 +4371,13 @@ export default function App({
         onSaveProject={saveProject}
         onUpdateInitiative={updateInitiative}
       />
-      <Surface as="main" layer="elevated" data-surface="elevated" className="flex-1 flex flex-col overflow-hidden">
-        {booting ? (
+      <Surface as="main" layer="elevated" data-surface="elevated" className="flex-1 flex flex-col overflow-hidden relative">
+        <div className="nc-dash-launch" data-on-dashboard={dashboard || undefined}>
+          <IconButton variant={dashboard ? "tonal" : "text"} label="Dashboard" aria-pressed={dashboard} icon={<LayoutDashboard size={16} />} onClick={() => showDashboard(true)} />
+        </div>
+        {dashboard ? (
+          <DashboardView onOpenTaskGraph={() => showDashboard(false)} />
+        ) : booting ? (
           <div className="flex-1 flex items-center justify-center"><Spinner /></div>
         ) : selection?.type === "project" ? (
           renderProjectView ? (

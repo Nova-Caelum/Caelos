@@ -1,0 +1,112 @@
+/* Console dashboard. Composition only: every colour, space, radius and motion value is a --sys-* token.
+   --dash-max and --dash-row are layout caps built from space tokens, not new spacing. */
+.nc-dash {
+  --dash-max: calc(var(--sys-space-8) * 38);
+  --dash-row: calc(var(--sys-space-7) + var(--sys-space-6));
+  --dash-top-h: calc(var(--sys-space-7) + var(--sys-space-4));
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  /* The end padding clears the console's top-right Dashboard button. */
+  padding: var(--sys-space-8) calc(var(--sys-space-8) * 2) var(--sys-space-8) var(--sys-space-8);
+  box-sizing: border-box;
+}
+.nc-dash__page { display: grid; gap: var(--sys-space-8); max-width: var(--dash-max); margin-inline: auto; min-width: 0; }
+.nc-dash__stack { display: grid; gap: var(--sys-space-4); }
+.nc-dash__actionrow { display: flex; align-items: center; gap: var(--sys-space-3); }
+.nc-dash__cluster { display: flex; align-items: center; gap: var(--sys-space-3); flex-wrap: wrap; }
+.nc-dash__state { padding: var(--sys-space-5) var(--sys-space-4); }
+
+/* Header: identity + health left, actions right, one row */
+.nc-dash__top { min-height: var(--dash-top-h); display: flex; align-items: center; justify-content: space-between; gap: var(--sys-space-6); flex-wrap: wrap; }
+.nc-dash__identity { display: flex; align-items: center; gap: var(--sys-space-6); flex-wrap: wrap; min-width: 0; }
+.nc-dash__identity h1 { margin: 0; }
+.nc-dash__actions { flex-wrap: nowrap; }
+.nc-dash__refresh { min-width: 25ch; justify-content: center; }
+.nc-dash__refresh[data-phase="done"] svg { color: var(--sys-sem-sage); }
+.nc-dash__refresh svg[data-spinning] { animation: nc-dash-spin 900ms linear infinite; }
+@keyframes nc-dash-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .nc-dash__refresh svg[data-spinning] { animation: none; } }
+.nc-dash__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Health popover */
+.nc-dash__pop { width: min(22rem, calc(100vw - var(--sys-space-8))); padding: var(--sys-space-6); }
+.nc-dash__pop h2 { margin: 0; }
+.nc-dash__fact { display: grid; gap: var(--sys-space-1); }
+
+/* Tabbed block */
+.nc-dash__block { padding: var(--sys-space-5); }
+.nc-dash__panels { display: grid; }
+.nc-dash__panel { grid-area: 1 / 1; padding-top: var(--sys-space-5); min-width: 0; }
+/* forceMount keeps both panels in layout; the inactive one is invisible and inert (hidden from AT and tab order). */
+.nc-dash__panel[data-state="inactive"] { visibility: hidden; pointer-events: none; }
+
+.nc-dash__label { display: flex; align-items: baseline; gap: var(--sys-space-3); padding: 0 var(--sys-space-4) var(--sys-space-2); }
+.nc-dash__row { min-height: var(--dash-row); padding-block: 0; }
+.nc-dash__yours { --nc-status-color: var(--sys-accent); }
+.nc-dash__coord { white-space: nowrap; flex-shrink: 0; margin-inline-end: var(--sys-space-3); }
+
+/* Tab 1: big count rail + lists */
+.nc-dash__waiting { display: grid; grid-template-columns: calc(var(--sys-space-8) * 7) minmax(0, 1fr); gap: var(--sys-space-8); align-items: start; }
+.nc-dash__count { display: grid; gap: var(--sys-space-3); padding: var(--sys-space-2) var(--sys-space-4); }
+.nc-dash__big { font-size: 40px; line-height: 1; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--sys-text-primary); }
+.nc-dash__lists { display: grid; gap: var(--sys-space-6); min-width: 0; }
+
+/* Tab 2: workstream | loops, one box */
+.nc-dash__flight { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--sys-space-7); align-items: stretch; }
+.nc-dash__flight > section { min-width: 0; }
+.nc-dash__rule { align-self: stretch; width: 1px; height: auto; }
+.nc-dash__stream { display: flex; align-items: baseline; gap: var(--sys-space-4); padding: var(--sys-space-2) var(--sys-space-4) var(--sys-space-4); flex-wrap: wrap; }
+.nc-dash__left { font-size: 18px; font-weight: 600; color: var(--sys-text-primary); }
+.nc-dash__agents, .nc-dash__priority, .nc-dash__crazy, .nc-dash__queue { list-style: none; margin: 0; padding: 0; }
+.nc-dash__agents li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) 4ch; align-items: center; gap: var(--sys-space-5); min-height: var(--dash-row); padding: 0 var(--sys-space-4); border-top: 1px solid var(--sys-hair-1); }
+.nc-dash__agents li:first-child { border-top: 0; }
+.nc-dash__agents li > :last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.nc-dash__agents progress { width: 100%; }
+.nc-dash__unknown { height: 0; border-top: 1px dashed var(--sys-hair-3); }
+
+/* Lower row: no boxes, two columns on the ground, aligned to the page edge */
+.nc-dash__lower { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--sys-space-8); }
+.nc-dash__lower > section { min-width: 0; }
+.nc-dash__lower .nc-dash__label { padding-inline: 0; }
+.nc-dash__priority { display: grid; gap: var(--sys-space-3); }
+.nc-dash__priority > li { display: grid; grid-template-columns: var(--sys-space-7) 1fr; align-items: baseline; margin-inline-start: calc(var(--depth, 0) * var(--sys-space-7)); }
+.nc-dash__priority > li[data-depth="0"]:not(:first-child) { margin-top: var(--sys-space-3); }
+.nc-dash__num { font-variant-numeric: tabular-nums; }
+.nc-dash__strong { font-weight: 600; color: var(--sys-text-primary); }
+.nc-dash__crazy { display: grid; }
+.nc-dash__crazy li { display: flex; align-items: center; justify-content: space-between; gap: var(--sys-space-4); min-height: var(--dash-row); padding-block: var(--sys-space-2); border-top: 1px solid var(--sys-hair-1); }
+.nc-dash__crazy li:first-child { border-top: 0; }
+
+.nc-dash__crazytext { display: grid; gap: var(--sys-space-1); min-width: 0; }
+
+/* Per-panel error and unavailable: a quiet line inside the panel's own box. */
+.nc-dash__note { display: flex; align-items: center; gap: var(--sys-space-3); flex-wrap: wrap; padding: var(--sys-space-3) var(--sys-space-4); }
+.nc-dash__lower .nc-dash__note { padding-inline: 0; }
+.nc-dash__panelnote { padding-block: var(--sys-space-5); }
+
+/* Workstream queue drawer */
+.nc-dash__queue { display: grid; }
+.nc-dash__queue > li { border-top: 1px solid var(--sys-hair-1); transition: opacity var(--sys-motion-slow) var(--sys-ease-out); }
+.nc-dash__queue > li:first-child { border-top: 0; }
+.nc-dash__queue > li[data-phase="done"] { opacity: 0.5; }
+.nc-dash__queue [data-complete="done"] svg { color: var(--sys-sem-sage); }
+/* In the drawer the controls take their own line: status and project left, Complete right, always visible. */
+.nc-dash__queue [data-task-controls] { flex: 1 1 100%; justify-content: flex-start; margin-left: 0; }
+.nc-dash__queue [data-row-actions] { opacity: 1; margin-left: auto; }
+.nc-dash__project { white-space: nowrap; }
+.nc-dash__desc { display: block; padding: 0 var(--sys-space-4) var(--sys-space-3); white-space: pre-line; overflow-wrap: anywhere; }
+.nc-dash__desc a { color: var(--sys-accent-hover); text-decoration: underline; text-underline-offset: 2px; }
+.nc-dash__rowerror { display: block; padding: 0 var(--sys-space-4) var(--sys-space-3); color: var(--sys-sem-danger); }
+
+@media (max-width: 900px) {
+  .nc-dash__waiting, .nc-dash__flight, .nc-dash__lower { grid-template-columns: 1fr; }
+  .nc-dash__rule { display: none; }
+  .nc-dash__actions { flex-wrap: wrap; }
+}
+
+/* Console-wide launcher: top-right corner of the main surface, in every view. On the dashboard it
+   sits in the same band as the header row (same top, same height, centred), so the centres match. */
+.nc-dash-launch { --dash-top-h: calc(var(--sys-space-7) + var(--sys-space-4)); position: absolute; top: var(--sys-space-4); right: var(--sys-space-4); z-index: 2; }
+.nc-dash-launch[data-on-dashboard] { top: var(--sys-space-8); height: var(--dash-top-h); display: flex; align-items: center; }
+.nc-dash-launch[data-on-dashboard] button { color: var(--sys-accent-hover); background: var(--sys-accent-tint); border-color: var(--sys-accent-line); }
