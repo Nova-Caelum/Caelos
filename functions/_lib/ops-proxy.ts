@@ -7,7 +7,9 @@ import { readConfig, type Env } from "./dashboard/config.ts";
 
 const METHODS = new Set(["GET", "POST", "PATCH", "DELETE"]);
 // Only what the console uses: the REST facade and the MCP endpoint. Never /keys, /deploy, /admin, ...
-const ALLOWED = /^(api\/[A-Za-z0-9._~%\-\/]*|mcp)$/;
+// `:` is in the class because external_ids are `<project-code>:<slug>` and the console sends them raw in
+// the path (TME-71: without it every work-item save for a namespaced row was refused as not_found here).
+const ALLOWED = /^(api\/[A-Za-z0-9._~%:\-\/]*|mcp)$/;
 
 const deny = (status: number, error: string) =>
   new Response(JSON.stringify({ error }), { status, headers: { "Content-Type": "application/json", "Cache-Control": "private, no-store" } });
